@@ -226,6 +226,41 @@ void GetDeviceInfo() {
   DEBUG_SERIAL.println(serJsonResponse);
 }
 
+void rpcEMGetStatus(){
+  JsonDocument jsonResponse;
+  // Preparing JSON with empty array
+  String prepar = "{\"user_calibrated_phase\":[],\"errors\":[\"phase_sequence\"]}";
+  deserializeJson(jsonResponse, prepar);
+
+  jsonResponse["id"] = 1;
+  //jsonResponse["a_current"] = PhasePower[0].current;
+  jsonResponse["a_current"] = 11;
+  //jsonResponse["a_voltage"] = PhasePower[0].voltage;
+  jsonResponse["a_voltage"] = 235;
+  jsonResponse["a_act_power"] = PhasePower[0].power;
+  jsonResponse["a_aprt_power"] = PhasePower[0].apparentPower;
+  jsonResponse["a_pf"] = PhasePower[0].powerFactor;
+  jsonResponse["a_freq"] = PhasePower[0].frequency;
+  jsonResponse["b_current"] = PhasePower[1].current;
+  jsonResponse["b_voltage"] = PhasePower[1].voltage;
+  jsonResponse["b_act_power"] = PhasePower[1].power;
+  jsonResponse["b_aprt_power"] = PhasePower[1].apparentPower;
+  jsonResponse["b_pf"] = PhasePower[1].powerFactor;
+  jsonResponse["b_freq"] = PhasePower[1].frequency;
+  jsonResponse["c_current"] = PhasePower[2].current;
+  jsonResponse["c_voltage"] = PhasePower[2].voltage;
+  jsonResponse["c_act_power"] = PhasePower[2].power;
+  jsonResponse["c_aprt_power"] = PhasePower[2].apparentPower;
+  jsonResponse["c_pf"] = PhasePower[2].powerFactor;
+  jsonResponse["c_freq"] = PhasePower[2].frequency;
+  jsonResponse["n_current"] = 0.0;
+  jsonResponse["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / 230);
+  jsonResponse["total_act_power"] = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
+  jsonResponse["total_aprt_power"] = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
+  serializeJson(jsonResponse,serJsonResponse);
+  DEBUG_SERIAL.println(serJsonResponse);
+}
+
 void EMGetStatus(){
   JsonDocument jsonResponse;
   jsonResponse["id"] = rpcId;
@@ -909,10 +944,18 @@ void setup(void) {
     request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
   });
 
+  // https://shelly-api-docs.shelly.cloud/gen2/Devices/Gen2/ShellyPro3EM/
+  // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EM/#emgetstatus-example
+  // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EMData/#emdatagetstatus-example
   server.on("/rpc/EM.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-    EMGetStatus();
+    rpcEMGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
+
+  // server.on("/rpc/EM1.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+  //   rpcEMGetStatus();
+  //   request->send(200, "application/json", serJsonResponse);
+  // });
 
   server.on("/rpc/EMData.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMDataGetStatus();
@@ -927,6 +970,10 @@ void setup(void) {
   server.on("/rpc/Shelly.GetDeviceInfo", HTTP_GET, [](AsyncWebServerRequest *request) {
     GetDeviceInfo();
     request->send(200, "application/json", serJsonResponse);
+  });
+
+  server.on("/rpc/Webhook.List", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json", "{\"hooks\":[], \"rev\":0}");
   });
 
   server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {
