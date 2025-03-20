@@ -27,24 +27,47 @@
 unsigned long startMillis;
 unsigned long currentMillis;
 
-//define your default values here, if there are different values in config.json, they are overwritten.
+// standard values ​​for the WiFi manager
+// !! some values ​​are overwritten by the WifiManager !!
+char wifi_AP[14] = "Energy2Shelly";
+String wifi_ssid;
+
 char input_type[40];
 char mqtt_server[80];
 char mqtt_port[6] = "1883";
 char mqtt_topic[60] = "tele/meter/SENSOR";
 char mqtt_user[40] = "";
 char mqtt_passwd[40] = "";
-char power_path[60] = "";
+// Energy values ​​input | example MQTT testvalue ->  {"ENERGY":{"Power": 9.99,"Consumption":77,"Production":33}}
+// Prerequisite, no change to the default values power_path energy_in_path energy_out_path
+char power_path[60] = "ENERGY.Power";
 char power_l1_path[60] = "";
 char power_l2_path[60] = "";
 char power_l3_path[60] = "";
-char energy_in_path[60] ="";
-char energy_out_path[60] ="";
+char energy_in_path[60] ="ENERGY.Consumption";
+char energy_out_path[60] ="ENERGY.Production";
+
+// Shelly emulated device configuration
+char shelly_app[7] = "Pro3EM";
+char shelly_gen[2] = "2";
+uint8_t shelly_slot = 1;
+char shelly_fw_id[32] = "20241011-114455/1.4.4-g6d2a586";
 char shelly_mac[13];
+char shelly_model[15] = "SPEM-003CEBEU";
 char shelly_name[26] = "shellypro3em-";
-char query_period[10] = "1000";
+char shelly_ver[7] = "1.4.4";
+char shelly_verBeta[12] = "1.4.9-beta6";
+char query_period[10] = "1000";   // milliseconds
+String power_variant = "monophase";
+
+uint8_t VALvoltage = 230;
+uint8_t VALfrequency = 50;
+uint8_t VALpowerFactor = 1;
 
 unsigned long period = 1000;
+unsigned long uptime = 0;         // uptime uC
+unsigned long secTick = 0;        // Zeit, zu der die Uhr zuletzt „tickte“
+
 int rpcId = 1;
 char rpcUser[20] = "user_1";
 
@@ -122,11 +145,11 @@ void setPowerData(double totalPower) {
   PhasePower[1].power = round2(totalPower * 0.3333);
   PhasePower[2].power = round2(totalPower * 0.3333);
   for(int i=0;i<=2;i++) {
-    PhasePower[i].voltage = 230;
+    PhasePower[i].voltage = VALvoltage;
     PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
     PhasePower[i].apparentPower = PhasePower[i].power;
-    PhasePower[i].powerFactor = 1;
-    PhasePower[i].frequency = 50;
+    PhasePower[i].powerFactor = VALpowerFactor;
+    PhasePower[i].frequency = VALfrequency;
   }
   DEBUG_SERIAL.print("Current total power: ");
   DEBUG_SERIAL.println(totalPower);
@@ -137,11 +160,11 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
   PhasePower[1].power = round2(phase2Power);
   PhasePower[2].power = round2(phase3Power);
   for(int i=0;i<=2;i++) {
-    PhasePower[i].voltage = 230;
+    PhasePower[i].voltage = VALvoltage;
     PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
     PhasePower[i].apparentPower = PhasePower[i].power;
-    PhasePower[i].powerFactor = 1;
-    PhasePower[i].frequency = 50;
+    PhasePower[i].powerFactor = VALpowerFactor;
+    PhasePower[i].frequency = VALfrequency;
   }
   DEBUG_SERIAL.print("Current power L1: ");
   DEBUG_SERIAL.print(phase1Power);
@@ -171,12 +194,14 @@ void saveConfigCallback () {
 void setJsonPathPower(JsonDocument json) {
   if (strcmp(power_path, "TRIPHASE") == 0) {
     DEBUG_SERIAL.println("resolving triphase");
+    power_variant = "triphase";
     double power1 = resolveJsonPath(json, power_l1_path);
     double power2 = resolveJsonPath(json, power_l2_path);
     double power3 = resolveJsonPath(json, power_l3_path);
     setPowerData(power1, power2, power3);
   } else {
     DEBUG_SERIAL.println("resolving monophase");
+    power_variant = "monophase";
     double power = resolveJsonPath(json, power_path);
     setPowerData(power);
   }
@@ -203,16 +228,73 @@ void rpcWSWrapper() {
 void GetDeviceInfo() {
   JsonDocument jsonResponse;
   jsonResponse["name"] = shelly_name;
-  jsonResponse["id"] = shelly_name;
+  jsonResponse["id"] = shelly_name; // ???? ToDo check
   jsonResponse["mac"] = shelly_mac;
-  jsonResponse["slot"] = 1;
-  jsonResponse["model"] = "SPEM-003CEBEU";
-  jsonResponse["gen"] = 2;
-  jsonResponse["fw_id"] = "20241011-114455/1.4.4-g6d2a586";
-  jsonResponse["ver"] = "1.4.4";
-  jsonResponse["app"] = "Pro3EM";
+  jsonResponse["slot"] = shelly_slot;
+  jsonResponse["model"] = shelly_model;
+  jsonResponse["gen"] = shelly_gen;
+  jsonResponse["fw_id"] = shelly_fw_id;
+  jsonResponse["ver"] = shelly_ver;
+  jsonResponse["app"] = shelly_app;
   jsonResponse["auth_en"] = false;
-  jsonResponse["profile"] = "triphase";
+  jsonResponse["auth_domain"] = nullptr;
+  jsonResponse["profile"] = power_variant;
+  serializeJson(jsonResponse,serJsonResponse);
+  DEBUG_SERIAL.println(serJsonResponse);
+}
+
+void EM1GetStatus_mono(){
+  JsonDocument jsonResponse;
+  // Reconstruction structure for FHEM -> no WARNINGS 
+  jsonResponse["id"] = 0;
+  jsonResponse["current"] = 2.22;
+  jsonResponse["act_power"] = 3.33;
+  jsonResponse["aprt_power"] = 4.44;
+  jsonResponse["voltage"] = VALvoltage;
+  jsonResponse["freq"] = VALfrequency;
+  jsonResponse["pf"] = VALpowerFactor;
+  serializeJson(jsonResponse,serJsonResponse);
+  DEBUG_SERIAL.println(serJsonResponse);
+}
+
+void EM1DataGetStatus_mono(){
+  JsonDocument jsonResponse;
+  // Reconstruction structure for FHEM -> no WARNINGS 
+  jsonResponse["id"] = 0;
+  jsonResponse["total_act_energy"] = 222; // Wirkenergie_Bezug
+  jsonResponse["total_act_ret_energy"] = 444; // Wirkenergie_Einspeisung
+  serializeJson(jsonResponse,serJsonResponse);
+  DEBUG_SERIAL.println(serJsonResponse);
+}
+
+void EMGetStatus_tri(){
+  JsonDocument jsonResponse;
+  String prepar = "{\"user_calibrated_phase\":[],\"errors\":[\"phase_sequence\"]}";     // Preparing JSON with empty array
+  deserializeJson(jsonResponse, prepar);
+
+  jsonResponse["id"] = 1;
+  jsonResponse["a_current"] = PhasePower[0].current;
+  jsonResponse["a_voltage"] = PhasePower[0].voltage;
+  jsonResponse["a_act_power"] = PhasePower[0].power;
+  jsonResponse["a_aprt_power"] = PhasePower[0].apparentPower;
+  jsonResponse["a_pf"] = PhasePower[0].powerFactor;
+  jsonResponse["a_freq"] = PhasePower[0].frequency;
+  jsonResponse["b_current"] = PhasePower[1].current;
+  jsonResponse["b_voltage"] = PhasePower[1].voltage;
+  jsonResponse["b_act_power"] = PhasePower[1].power;
+  jsonResponse["b_aprt_power"] = PhasePower[1].apparentPower;
+  jsonResponse["b_pf"] = PhasePower[1].powerFactor;
+  jsonResponse["b_freq"] = PhasePower[1].frequency;
+  jsonResponse["c_current"] = PhasePower[2].current;
+  jsonResponse["c_voltage"] = PhasePower[2].voltage;
+  jsonResponse["c_act_power"] = PhasePower[2].power;
+  jsonResponse["c_aprt_power"] = PhasePower[2].apparentPower;
+  jsonResponse["c_pf"] = PhasePower[2].powerFactor;
+  jsonResponse["c_freq"] = PhasePower[2].frequency;
+  jsonResponse["n_current"] = 0.0;
+  jsonResponse["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / VALvoltage);
+  jsonResponse["total_act_power"] = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
+  jsonResponse["total_aprt_power"] = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
   serializeJson(jsonResponse,serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
 }
@@ -268,6 +350,135 @@ void EMGetConfig() {
   jsonResponse["phase_selector"] = "a";
   jsonResponse["monitor_phase_sequence"] = true;
   jsonResponse["ct_type"] = "120A";
+  serializeJson(jsonResponse,serJsonResponse);
+  DEBUG_SERIAL.println(serJsonResponse);
+}
+
+void ShellyGetConfig() {
+  JsonDocument jsonResponse;
+  String prepar = "{\"sys\":{\"ui_data\":{}}}";   // Preparing JSON with empty array
+  deserializeJson(jsonResponse, prepar);
+
+  jsonResponse["ble"]["enable"] = false;
+  jsonResponse["ble"]["rpc"]["enable"] = false;
+  jsonResponse["ble"]["observer"]["enable"] = false;
+  jsonResponse["cloud"]["enable"] = false;
+  jsonResponse["cloud"]["server"] = "iot.shelly.cloud:6012/jrpc";
+  jsonResponse["mqtt"]["enable"] = true;                   // ToDO Echtzeitwerte
+  jsonResponse["mqtt"]["server"] = mqtt_server;
+  jsonResponse["mqtt"]["client_id"] = shelly_name;
+  jsonResponse["mqtt"]["user"] = nullptr;
+  jsonResponse["mqtt"]["ssl_ca"] = nullptr;
+  jsonResponse["mqtt"]["topic_prefix"] = mqtt_topic;
+  jsonResponse["mqtt"]["rpc_ntf"] = true;
+  jsonResponse["mqtt"]["status_ntf"] = true;
+  jsonResponse["mqtt"]["use_client_cert"] = false;
+  jsonResponse["mqtt"]["enable_rpc"] = true;
+  jsonResponse["mqtt"]["enable_control"] = true;
+  jsonResponse["sys"]["device"]["name"] = nullptr;
+  jsonResponse["sys"]["device"]["mac"] = shelly_mac;
+  jsonResponse["sys"]["device"]["fw_id"] = shelly_fw_id;
+  jsonResponse["sys"]["device"]["discoverable"] = true;
+  jsonResponse["sys"]["device"]["eco_mode"] = false;
+  jsonResponse["sys"]["location"]["tz"] = "Europe/Berlin";
+  jsonResponse["sys"]["location"]["lat"] = 51.342;
+  jsonResponse["sys"]["location"]["lon"] = 12.3819;
+  jsonResponse["sys"]["debug"]["level"] = 2;
+  jsonResponse["sys"]["debug"]["file_level"] = nullptr;
+  jsonResponse["sys"]["debug"]["mqtt"]["enable"] = false;
+  jsonResponse["sys"]["debug"]["websocket"]["enable"] = false;
+  jsonResponse["sys"]["debug"]["udp"]["addr"] = nullptr;
+  jsonResponse["sys"]["debug"]["rpc_udp"]["dst_addr"] = nullptr;
+  jsonResponse["sys"]["debug"]["rpc_udp"]["listen_port"] = nullptr;
+  jsonResponse["sys"]["debug"]["sntp"]["server"] = "time.google.com";
+  jsonResponse["sys"]["debug"]["cfg_rev"] = 13;
+  jsonResponse["wifi"]["ap"]["ssid"] = wifi_AP;
+  jsonResponse["wifi"]["ap"]["is_open"] = true;
+  jsonResponse["wifi"]["ap"]["enable"] = false;
+  jsonResponse["wifi"]["ap"]["range_extender"]["enable"] = false;
+  jsonResponse["wifi"]["sta"]["ssid"] = wifi_ssid;
+  jsonResponse["wifi"]["sta"]["is_open"] = false;
+  jsonResponse["wifi"]["sta"]["enable"] = true;
+  jsonResponse["wifi"]["sta"]["ipv4mode"] = "dhcp";
+  jsonResponse["wifi"]["sta"]["ip"] = nullptr;
+  jsonResponse["wifi"]["sta"]["netmask"] = nullptr;
+  jsonResponse["wifi"]["sta"]["gw"] = nullptr;
+  jsonResponse["wifi"]["sta"]["nameserver"] = nullptr;
+  jsonResponse["wifi"]["sta1"]["ssid"] = nullptr;
+  jsonResponse["wifi"]["sta1"]["is_open"] = true;
+  jsonResponse["wifi"]["sta1"]["enable"] = false;
+  jsonResponse["wifi"]["sta1"]["ipv4mode"] = "dhcp";
+  jsonResponse["wifi"]["sta1"]["ip"] = nullptr;
+  jsonResponse["wifi"]["sta1"]["netmask"] = nullptr;
+  jsonResponse["wifi"]["sta1"]["gw"] = nullptr;
+  jsonResponse["wifi"]["sta1"]["nameserver"] = nullptr;
+  jsonResponse["wifi"]["roam"]["rssi_thr"] = WiFi.RSSI();
+  jsonResponse["wifi"]["roam"]["interval"] = 60;
+  jsonResponse["ws"]["enable"] = false;
+  jsonResponse["ws"]["server"] = nullptr;
+  jsonResponse["ws"]["ssl_ca"] = "ca.pem";
+  serializeJson(jsonResponse,serJsonResponse);
+  DEBUG_SERIAL.println(serJsonResponse);
+}
+
+void ShellyGetStatus(){
+  JsonDocument jsonResponse;
+  // https://forum.arduino.cc/t/shelly-pro-3em-esp8266-json/1152558
+  String prepar = "{\"ble\":{},\"em:0\":{\"user_calibrated_phase\":[]},\"modbus\":{}}";     // Preparing JSON with empty array
+  deserializeJson(jsonResponse, prepar);
+  jsonResponse["cloud"]["connected"] = false;
+  jsonResponse["em:0"]["id"] = 0;
+  jsonResponse["em:0"]["a_current"] = 0;
+  jsonResponse["em:0"]["a_voltage"] = 0;
+  jsonResponse["em:0"]["a_act_power"] = 0;
+  jsonResponse["em:0"]["a_aprt_power"] = 0;
+  jsonResponse["em:0"]["a_pf"] = 0;
+  jsonResponse["em:0"]["b_current"] = 0;
+  jsonResponse["em:0"]["b_voltage"] = 0;
+  jsonResponse["em:0"]["b_act_power"] = 0;
+  jsonResponse["em:0"]["b_aprt_power"] = 0;
+  jsonResponse["em:0"]["b_pf"] = 0;
+  jsonResponse["em:0"]["c_current"] = 0;
+  jsonResponse["em:0"]["c_voltage"] = 0;
+  jsonResponse["em:0"]["c_act_power"] = 0;
+  jsonResponse["em:0"]["c_aprt_power"] = 0;
+  jsonResponse["em:0"]["c_pf"] = 0;
+  jsonResponse["em:0"]["n_current"] = 0;
+  jsonResponse["em:0"]["total_current"] = 0;
+  jsonResponse["em:0"]["total_act_power"] = 0;
+  jsonResponse["em:0"]["total_aprt_power"] = 0;
+  jsonResponse["emdata:0"]["id"] = 0;
+  jsonResponse["emdata:0"]["a_total_act_energy"] = 0;
+  jsonResponse["emdata:0"]["a_total_act_ret_energy"] = 0;
+  jsonResponse["emdata:0"]["b_total_act_energy"] = 0;
+  jsonResponse["emdata:0"]["b_total_act_ret_energy"] = 0;
+  jsonResponse["emdata:0"]["c_total_act_energy"] = 0;
+  jsonResponse["emdata:0"]["c_total_act_ret_energy"] = 0;
+  jsonResponse["emdata:0"]["total_act"] = 0;
+  jsonResponse["emdata:0"]["total_act_ret"] = 0;
+  jsonResponse["eth"]["ip"] = nullptr;
+  jsonResponse["mqtt"]["connected"] = true; // ToDo Echtzeitwert
+  jsonResponse["sys"]["mac"] = shelly_mac;
+  jsonResponse["sys"]["restart_required"] = false;
+  jsonResponse["sys"]["time"] = "12:03";
+  jsonResponse["sys"]["unixtime"] = 1690538581;
+  jsonResponse["sys"]["uptime"] = uptime;
+  jsonResponse["sys"]["ram_size"] = 246644;
+  jsonResponse["sys"]["ram_free"] = 121648;
+  jsonResponse["sys"]["fs_size"] = 524288;
+  jsonResponse["sys"]["fs_free"] = 172032;
+  jsonResponse["sys"]["cfg_rev"] = 17;
+  jsonResponse["sys"]["kvs_rev"] = 0;
+  jsonResponse["sys"]["webhook_rev"] = 0;
+  jsonResponse["sys"]["available_updates"]["beta"]["version"] = shelly_verBeta;
+  jsonResponse["temperature:0"]["id"] = 0;
+  jsonResponse["temperature:0"]["tC"] = 44.9;
+  jsonResponse["temperature:0"]["tF"] = 112.7;
+  jsonResponse["wifi"]["sta_ip"] = WiFi.localIP();
+  jsonResponse["wifi"]["status"] = "got ip";
+  jsonResponse["wifi"]["ssid"] = wifi_ssid;
+  jsonResponse["wifi"]["rssi"] = WiFi.RSSI();
+  jsonResponse["ws"]["connected"] = false;
   serializeJson(jsonResponse,serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
 }
@@ -455,7 +666,7 @@ void parseSMA() {
                       break;
                     case 21:
                       PhasePower[0].power = round2(data * 0.1);
-                      PhasePower[0].frequency = 50;
+                      PhasePower[0].frequency = VALfrequency;
                       break;
                     case 22:
                       PhasePower[0].power -= round2(data * 0.1);
@@ -477,7 +688,7 @@ void parseSMA() {
                       break;
                     case 41:
                       PhasePower[1].power = round2(data * 0.1);
-                      PhasePower[1].frequency = 50;
+                      PhasePower[1].frequency = VALfrequency;
                       break;
                     case 42:
                       PhasePower[1].power -= round2(data * 0.1);
@@ -499,7 +710,7 @@ void parseSMA() {
                       break;
                     case 61:
                       PhasePower[2].power = round2(data * 0.1);
-                      PhasePower[2].frequency = 50;
+                      PhasePower[2].frequency = VALfrequency;
                       break;
                     case 62:
                       PhasePower[2].power -= round2(data * 0.1);
@@ -645,13 +856,15 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_energy_out_path);
 
 
-  if (!wifiManager.autoConnect("Energy2Shelly")) {
+  if (!wifiManager.autoConnect(wifi_AP)) {
     DEBUG_SERIAL.println("failed to connect and hit timeout");
     delay(3000);
     ESP.restart();
     delay(5000);
   }
-  DEBUG_SERIAL.println("connected");
+  DEBUG_SERIAL.print("connected to ");
+  DEBUG_SERIAL.println(wifiManager.getWiFiSSID());
+  wifi_ssid = wifiManager.getWiFiSSID();
 
   //read updated parameters
   strcpy(input_type, custom_input_type.getValue());
@@ -726,8 +939,30 @@ void setup(void) {
   DEBUG_SERIAL.begin(115200);
   WifiManagerSetup();
 
+
+  // HTTP Sites //
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "This is the Energy2Shelly for ESP converter!\r\nDevice and Energy status is available under /status\r\nTo reset configuration, goto /reset\r\n");
+  });
+
+  // https://shelly-api-docs.shelly.cloud/gen2/0.14/Devices/ShellyPro3EM/
+  // https://shelly-api-docs.shelly.cloud/gen2/Devices/Gen2/ShellyPro3EM/
+  // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Shelly/#http-endpoint-shelly
+  // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Shelly/#shellygetdeviceinfo
+  // http://${SHELLY}/shelly == this resource is equivalent to invoking Shelly.GetDeviceInfo
+  server.on("/shelly", HTTP_GET, [](AsyncWebServerRequest *request) {
+    GetDeviceInfo();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
+  server.on("/rpc/Shelly.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+    ShellyGetConfig();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
+  server.on("/rpc/Shelly.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+    ShellyGetStatus();
+    request->send(200, "application/json", serJsonResponse);
   });
 
   server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -740,24 +975,63 @@ void setup(void) {
     request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
   });
 
+  // https://shelly-api-docs.shelly.cloud/gen2/Devices/Gen2/ShellyPro3EM/
+  // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EM/#emgetstatus-example
+  // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EMData/#emdatagetstatus-example
+
+  // !!! FHEM comp.
+  server.on("/rpc/BLE.CloudRelay.List", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json", "{\"rev\":0,\"addrs\":[]}");
+  });
+
+  // !!! Leistungswerte | ./rpc/EM.GetStatus nur bei triphase
+  // !!! FHEM comp.
   server.on("/rpc/EM.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-    EMGetStatus();
+    EMGetStatus_tri();
     request->send(200, "application/json", serJsonResponse);
   });
 
+  // !!! Leistungswerte | ./rpc/EM1.GetStatus nur bei monophase
+  // !!! FHEM comp.
+  server.on("/rpc/EM1.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+    EM1GetStatus_mono();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
+  // !!! Zählerstände | ./rpc/EMData.GetStatus nur bei triphase
+  // !!! FHEM comp.
   server.on("/rpc/EMData.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMDataGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
+  // !!! Zählerstände | ./rpc/EM1Data.GetStatus nur bei monophase
+  // !!! FHEM comp.
+  server.on("/rpc/EM1Data.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+    EM1DataGetStatus_mono();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
+  // !!! FHEM comp. ???
   server.on("/rpc/EM.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetConfig();
     request->send(200, "application/json", serJsonResponse);
   });
 
+  // !!! FHEM comp.
   server.on("/rpc/Shelly.GetDeviceInfo", HTTP_GET, [](AsyncWebServerRequest *request) {
     GetDeviceInfo();
     request->send(200, "application/json", serJsonResponse);
+  });
+
+  // !!! FHEM comp.
+  server.on("/rpc/Script.List", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json", "{\"scripts\":[]}");
+  });
+
+  // !!! FHEM comp.
+  server.on("/rpc/Webhook.List", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json", "{\"hooks\":[], \"rev\":0}");
   });
 
   server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -811,10 +1085,10 @@ void setup(void) {
     MDNS.addService("http", "tcp", 80);
     MDNS.addService("shelly", "tcp", 80);
     mdns_txt_item_t serviceTxtData[4] = {
-      {"fw_id","20241011-114455/1.4.4-g6d2a586"},
+      {"fw_id",shelly_fw_id},
       {"arch","esp8266"},
       {"id",shelly_name},
-      {"gen","2"}
+      {"gen",shelly_gen}
     };
     mdns_service_instance_name_set("_http", "_tcp", shelly_name);
     mdns_service_txt_set("_http", "_tcp", serviceTxtData, 4);
@@ -825,23 +1099,27 @@ void setup(void) {
     hMDNSService2 = MDNS.addService(0, "shelly", "tcp", 80);
     if (hMDNSService) {
       MDNS.setServiceName(hMDNSService, shelly_name);
-      MDNS.addServiceTxt(hMDNSService, "fw_id", "20241011-114455/1.4.4-g6d2a586");
+      MDNS.addServiceTxt(hMDNSService, "fw_id", shelly_fw_id);
       MDNS.addServiceTxt(hMDNSService, "arch", "esp8266");
       MDNS.addServiceTxt(hMDNSService, "id", shelly_name);
-      MDNS.addServiceTxt(hMDNSService, "gen", "2");
+      MDNS.addServiceTxt(hMDNSService, "gen", shelly_gen);
     }
     if (hMDNSService2) {
       MDNS.setServiceName(hMDNSService2, shelly_name);
-      MDNS.addServiceTxt(hMDNSService2, "fw_id", "20241011-114455/1.4.4-g6d2a586");
+      MDNS.addServiceTxt(hMDNSService2, "fw_id", shelly_fw_id);
       MDNS.addServiceTxt(hMDNSService2, "arch", "esp8266");
       MDNS.addServiceTxt(hMDNSService2, "id", shelly_name);
-      MDNS.addServiceTxt(hMDNSService2, "gen", "2");
+      MDNS.addServiceTxt(hMDNSService2, "gen", shelly_gen);
     }
   #endif
   DEBUG_SERIAL.println("mDNS responder started");
 }
 
 void loop() {
+  if ((millis() - secTick) >= 1000UL) {   // jede Sekunde
+    secTick += 1000UL;
+    uptime++;
+  }
   #ifndef ESP32
     MDNS.update();
   #endif
