@@ -226,7 +226,25 @@ void GetDeviceInfo() {
   DEBUG_SERIAL.println(serJsonResponse);
 }
 
-void rpcEMGetStatus(){
+void EM1GetStatus_mono(){
+  JsonDocument jsonResponse;
+  // Preparing JSON with empty array
+  String prepar = "{\"id\":0,\"current\":2.22,\"act_power\":3.33,\"aprt_power\":4.44,\"voltage\":230,\"freq\":50,\"pf\":0}";
+  deserializeJson(jsonResponse, prepar);
+  serializeJson(jsonResponse,serJsonResponse);
+  DEBUG_SERIAL.println(serJsonResponse);
+}
+
+void EM1DataGetStatus_mono(){
+  JsonDocument jsonResponse;
+  // Preparing JSON with empty array
+  String prepar = "{\"id\":0,\"total_act_energy\":333,\"total_act_ret_energy\":444}";
+  deserializeJson(jsonResponse, prepar);
+  serializeJson(jsonResponse,serJsonResponse);
+  DEBUG_SERIAL.println(serJsonResponse);
+}
+
+void EMGetStatus_tri(){
   JsonDocument jsonResponse;
   // Preparing JSON with empty array
   String prepar = "{\"user_calibrated_phase\":[],\"errors\":[\"phase_sequence\"]}";
@@ -947,31 +965,58 @@ void setup(void) {
   // https://shelly-api-docs.shelly.cloud/gen2/Devices/Gen2/ShellyPro3EM/
   // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EM/#emgetstatus-example
   // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EMData/#emdatagetstatus-example
+  
+  // !!! FHEM comp.
+  server.on("/rpc/BLE.CloudRelay.List", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json", "{\"rev\":0,\"addrs\":[]}");
+  });
+
+  // !!! Leistungswerte | ./rpc/EM.GetStatus nur bei triphase
+  // !!! FHEM comp.
   server.on("/rpc/EM.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-    rpcEMGetStatus();
+    EMGetStatus_tri();
     request->send(200, "application/json", serJsonResponse);
   });
 
-  // server.on("/rpc/EM1.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-  //   rpcEMGetStatus();
-  //   request->send(200, "application/json", serJsonResponse);
-  // });
+  // !!! Leistungswerte | ./rpc/EM1.GetStatus nur bei monophase
+  // !!! FHEM comp.
+  server.on("/rpc/EM1.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+    EM1GetStatus_mono();
+    request->send(200, "application/json", serJsonResponse);
+  });
 
+  // !!! Zählerstände | ./rpc/EM1Data.GetStatus nur bei triphase
+  // !!! FHEM comp.
   server.on("/rpc/EMData.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMDataGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
+  // !!! Zählerstände | ./rpc/EM1Data.GetStatus nur bei monophase
+  // !!! FHEM comp.
+  server.on("/rpc/EM1Data.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+    EM1DataGetStatus_mono();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
+  // !!! FHEM comp. ???
   server.on("/rpc/EM.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetConfig();
     request->send(200, "application/json", serJsonResponse);
   });
 
+  // !!! FHEM comp.
   server.on("/rpc/Shelly.GetDeviceInfo", HTTP_GET, [](AsyncWebServerRequest *request) {
     GetDeviceInfo();
     request->send(200, "application/json", serJsonResponse);
   });
 
+  // !!! FHEM comp.
+  server.on("/rpc/Script.List", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "application/json", "{\"scripts\":[]}");
+  });
+
+  // !!! FHEM comp.
   server.on("/rpc/Webhook.List", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "application/json", "{\"hooks\":[], \"rev\":0}");
   });
