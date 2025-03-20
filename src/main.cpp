@@ -60,6 +60,10 @@ char shelly_verBeta[12] = "1.4.9-beta6";
 char query_period[10] = "1000";   // milliseconds
 String power_variant = "monophase";
 
+uint8_t VALvoltage = 230;
+uint8_t VALfrequency = 50;
+uint8_t VALpowerFactor = 1;
+
 unsigned long period = 1000;
 unsigned long uptime = 0;         // uptime uC
 unsigned long secTick = 0;        // Zeit, zu der die Uhr zuletzt „tickte“
@@ -141,11 +145,11 @@ void setPowerData(double totalPower) {
   PhasePower[1].power = round2(totalPower * 0.3333);
   PhasePower[2].power = round2(totalPower * 0.3333);
   for(int i=0;i<=2;i++) {
-    PhasePower[i].voltage = 230;
+    PhasePower[i].voltage = VALvoltage;
     PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
     PhasePower[i].apparentPower = PhasePower[i].power;
-    PhasePower[i].powerFactor = 1;
-    PhasePower[i].frequency = 50;
+    PhasePower[i].powerFactor = VALpowerFactor;
+    PhasePower[i].frequency = VALfrequency;
   }
   DEBUG_SERIAL.print("Current total power: ");
   DEBUG_SERIAL.println(totalPower);
@@ -156,11 +160,11 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
   PhasePower[1].power = round2(phase2Power);
   PhasePower[2].power = round2(phase3Power);
   for(int i=0;i<=2;i++) {
-    PhasePower[i].voltage = 230;
+    PhasePower[i].voltage = VALvoltage;
     PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
     PhasePower[i].apparentPower = PhasePower[i].power;
-    PhasePower[i].powerFactor = 1;
-    PhasePower[i].frequency = 50;
+    PhasePower[i].powerFactor = VALpowerFactor;
+    PhasePower[i].frequency = VALfrequency;
   }
   DEBUG_SERIAL.print("Current power L1: ");
   DEBUG_SERIAL.print(phase1Power);
@@ -228,33 +232,36 @@ void GetDeviceInfo() {
 
 void EM1GetStatus_mono(){
   JsonDocument jsonResponse;
-  // Preparing JSON with empty array
-  String prepar = "{\"id\":0,\"current\":2.22,\"act_power\":3.33,\"aprt_power\":4.44,\"voltage\":230,\"freq\":50,\"pf\":0}";
-  deserializeJson(jsonResponse, prepar);
+  // Reconstruction structure for FHEM -> no WARNINGS 
+  jsonResponse["id"] = 0;
+  jsonResponse["current"] = 2.22;
+  jsonResponse["act_power"] = 3.33;
+  jsonResponse["aprt_power"] = 4.44;
+  jsonResponse["voltage"] = VALvoltage;
+  jsonResponse["freq"] = VALfrequency;
+  jsonResponse["pf"] = VALpowerFactor;
   serializeJson(jsonResponse,serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
 }
 
 void EM1DataGetStatus_mono(){
   JsonDocument jsonResponse;
-  // Preparing JSON with empty array
-  String prepar = "{\"id\":0,\"total_act_energy\":333,\"total_act_ret_energy\":444}";
-  deserializeJson(jsonResponse, prepar);
+  // Reconstruction structure for FHEM -> no WARNINGS 
+  jsonResponse["id"] = 0;
+  jsonResponse["total_act_energy"] = 222; // Wirkenergie_Bezug
+  jsonResponse["total_act_ret_energy"] = 444; // Wirkenergie_Einspeisung
   serializeJson(jsonResponse,serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
 }
 
 void EMGetStatus_tri(){
   JsonDocument jsonResponse;
-  // Preparing JSON with empty array
-  String prepar = "{\"user_calibrated_phase\":[],\"errors\":[\"phase_sequence\"]}";
+  String prepar = "{\"user_calibrated_phase\":[],\"errors\":[\"phase_sequence\"]}";     // Preparing JSON with empty array
   deserializeJson(jsonResponse, prepar);
 
   jsonResponse["id"] = 1;
-  //jsonResponse["a_current"] = PhasePower[0].current;
-  jsonResponse["a_current"] = 11;
-  //jsonResponse["a_voltage"] = PhasePower[0].voltage;
-  jsonResponse["a_voltage"] = 235;
+  jsonResponse["a_current"] = PhasePower[0].current;
+  jsonResponse["a_voltage"] = PhasePower[0].voltage;
   jsonResponse["a_act_power"] = PhasePower[0].power;
   jsonResponse["a_aprt_power"] = PhasePower[0].apparentPower;
   jsonResponse["a_pf"] = PhasePower[0].powerFactor;
@@ -272,7 +279,7 @@ void EMGetStatus_tri(){
   jsonResponse["c_pf"] = PhasePower[2].powerFactor;
   jsonResponse["c_freq"] = PhasePower[2].frequency;
   jsonResponse["n_current"] = 0.0;
-  jsonResponse["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / 230);
+  jsonResponse["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / VALvoltage);
   jsonResponse["total_act_power"] = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
   jsonResponse["total_aprt_power"] = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
   serializeJson(jsonResponse,serJsonResponse);
@@ -305,7 +312,7 @@ void EMGetStatus(){
   jsonResponse["result"]["c_aprt_power"] = PhasePower[2].apparentPower;
   jsonResponse["result"]["c_pf"] = PhasePower[2].powerFactor;
   jsonResponse["result"]["c_freq"] = PhasePower[2].frequency;
-  jsonResponse["result"]["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / 230);
+  jsonResponse["result"]["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / VALvoltage);
   jsonResponse["result"]["total_act_power"] = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
   jsonResponse["result"]["total_aprt_power"] = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
   serializeJson(jsonResponse,serJsonResponse);
@@ -346,8 +353,7 @@ void EMGetConfig() {
 
 void ShellyGetConfig() {
   JsonDocument jsonResponse;
-  // Preparing JSON with empty array
-  String prepar = "{\"sys\":{\"ui_data\":{}}}";
+  String prepar = "{\"sys\":{\"ui_data\":{}}}";   // Preparing JSON with empty array
   deserializeJson(jsonResponse, prepar);
 
   jsonResponse["ble"]["enable"] = false;
@@ -415,8 +421,7 @@ void ShellyGetConfig() {
 void ShellyGetStatus(){
   JsonDocument jsonResponse;
   // https://forum.arduino.cc/t/shelly-pro-3em-esp8266-json/1152558
-  // Preparing JSON with empty array
-  String prepar = "{\"ble\":{},\"em:0\":{\"user_calibrated_phase\":[]},\"modbus\":{}}";
+  String prepar = "{\"ble\":{},\"em:0\":{\"user_calibrated_phase\":[]},\"modbus\":{}}";     // Preparing JSON with empty array
   deserializeJson(jsonResponse, prepar);
   jsonResponse["cloud"]["connected"] = false;
   jsonResponse["em:0"]["id"] = 0;
@@ -653,7 +658,7 @@ void parseSMA() {
                       break;
                     case 21:
                       PhasePower[0].power = round2(data * 0.1);
-                      PhasePower[0].frequency = 50;
+                      PhasePower[0].frequency = VALfrequency;
                       break;
                     case 22:
                       PhasePower[0].power -= round2(data * 0.1);
@@ -675,7 +680,7 @@ void parseSMA() {
                       break;
                     case 41:
                       PhasePower[1].power = round2(data * 0.1);
-                      PhasePower[1].frequency = 50;
+                      PhasePower[1].frequency = VALfrequency;
                       break;
                     case 42:
                       PhasePower[1].power -= round2(data * 0.1);
@@ -697,7 +702,7 @@ void parseSMA() {
                       break;
                     case 61:
                       PhasePower[2].power = round2(data * 0.1);
-                      PhasePower[2].frequency = 50;
+                      PhasePower[2].frequency = VALfrequency;
                       break;
                     case 62:
                       PhasePower[2].power -= round2(data * 0.1);
@@ -985,7 +990,7 @@ void setup(void) {
     request->send(200, "application/json", serJsonResponse);
   });
 
-  // !!! Zählerstände | ./rpc/EM1Data.GetStatus nur bei triphase
+  // !!! Zählerstände | ./rpc/EMData.GetStatus nur bei triphase
   // !!! FHEM comp.
   server.on("/rpc/EMData.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMDataGetStatus();
