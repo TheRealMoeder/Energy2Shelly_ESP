@@ -93,6 +93,7 @@ Preferences preferences;
 
 //flags for data sources
 bool dataMQTT = false;
+bool dataMQTTconnect = false;
 bool dataSMA = false;
 bool dataSHRDZM = false;
 bool dataHTTP = false;
@@ -377,7 +378,7 @@ void ShellyGetConfig() {
   jsonResponse["ble"]["observer"]["enable"] = false;
   jsonResponse["cloud"]["enable"] = false;
   jsonResponse["cloud"]["server"] = "iot.shelly.cloud:6012/jrpc";
-  jsonResponse["mqtt"]["enable"] = true;                   // ToDO Echtzeitwerte
+  jsonResponse["mqtt"]["enable"] = dataMQTT;
   jsonResponse["mqtt"]["server"] = mqtt_server;
   jsonResponse["mqtt"]["client_id"] = shelly_name;
   jsonResponse["mqtt"]["user"] = nullptr;
@@ -470,7 +471,7 @@ void ShellyGetStatus(){
   jsonResponse["emdata:0"]["total_act"] = 0;
   jsonResponse["emdata:0"]["total_act_ret"] = 0;
   jsonResponse["eth"]["ip"] = nullptr;
-  jsonResponse["mqtt"]["connected"] = true; // ToDo Echtzeitwert
+  jsonResponse["mqtt"]["connected"] = dataMQTTconnect;
   jsonResponse["sys"]["mac"] = shelly_mac;
   jsonResponse["sys"]["restart_required"] = false;
   jsonResponse["sys"]["time"] = "12:03";
@@ -559,11 +560,13 @@ void mqtt_reconnect() {
   DEBUG_SERIAL.print("Attempting MQTT connection...");
   if (mqtt_client.connect(shelly_name, String(mqtt_user).c_str(), String(mqtt_passwd).c_str())) {
     DEBUG_SERIAL.println("connected");
+    dataMQTTconnect = true;
     mqtt_client.subscribe(mqtt_topic);
   } else {
     DEBUG_SERIAL.print("failed, rc=");
     DEBUG_SERIAL.print(mqtt_client.state());
     DEBUG_SERIAL.println(" try again in 5 seconds");
+    dataMQTTconnect = false;
     delay(5000);
   }
 }
