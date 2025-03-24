@@ -1,4 +1,4 @@
-// Energy2Shelly_ESP v0.4.6
+// Energy2Shelly_ESP v0.5.0
 #include <Arduino.h>
 #include <Preferences.h>
 #ifndef ESP32
@@ -35,10 +35,12 @@ String wifi_ssid;
 char input_type[40];
 char mqtt_server[80];
 char mqtt_port[6] = "1883";
+// topic examples
+// user define:     tele/meter/SENSOR           ->  {"ENERGY":{"Power": 9.99,"Consumption":77,"Production":33}}
+// Tasmota device:  tele/tasmota_B60F3F/SENSOR  ->  {"Time":"2025-03-22T11:23:22","Main":{"power":35,"counter_pos":11241.750,"counter_neg":356.376}}
 char mqtt_topic[60] = "tele/meter/SENSOR";
 char mqtt_user[40] = "";
 char mqtt_passwd[40] = "";
-// Energy values ​​input | example MQTT testvalue ->  {"ENERGY":{"Power": 9.99,"Consumption":77,"Production":33}}
 // Prerequisite, no change to the default values power_path energy_in_path energy_out_path
 char power_path[60] = "ENERGY.Power";
 char power_l1_path[60] = "";
@@ -57,16 +59,24 @@ char shelly_model[15] = "SPEM-003CEBEU";
 char shelly_name[26] = "shellypro3em-";
 char shelly_ver[7] = "1.4.4";
 char shelly_verBeta[12] = "1.4.9-beta6";
-char query_period[10] = "1000";   // milliseconds
-String power_variant = "monophase";
+char query_period[10] = "1000";       // milliseconds
+String power_variant = "triphase";    // standard, program adjusts variables depending on usage 
 
 uint8_t VALvoltage = 230;
 uint8_t VALfrequency = 50;
 uint8_t VALpowerFactor = 1;
+// monophase
+double VALpower;      // Current
+double VALpowerCt;    // Consumption | In
+double VALpowerPrt;   // Production | Out | FeedIn
+// triphase
+double VALpowerP1;
+double VALpowerP2;
+double VALpowerP3;
 
 unsigned long period = 1000;
 unsigned long uptime = 0;         // uptime uC
-unsigned long secTick = 0;        // Zeit, zu der die Uhr zuletzt „tickte“
+unsigned long secTick = 0;        // time the watch last “ticket”
 
 int rpcId = 1;
 char rpcUser[20] = "user_1";
@@ -151,6 +161,7 @@ void setPowerData(double totalPower) {
     PhasePower[i].powerFactor = VALpowerFactor;
     PhasePower[i].frequency = VALfrequency;
   }
+  VALpower = totalPower;
   DEBUG_SERIAL.print("Current total power: ");
   DEBUG_SERIAL.println(totalPower);
 }
@@ -179,6 +190,8 @@ void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
     PhaseEnergy[i].consumption = round2(totalEnergyGridSupply * 0.3333);
     PhaseEnergy[i].gridfeedin = round2(totalEnergyGridFeedIn * 0.3333);
   }
+  VALpowerCt = totalEnergyGridSupply;
+  VALpowerPrt = totalEnergyGridFeedIn;
   DEBUG_SERIAL.print("Total consumption: ");
   DEBUG_SERIAL.print(totalEnergyGridSupply);
   DEBUG_SERIAL.print(" - Total Grid Feed-In: ");
@@ -228,7 +241,7 @@ void rpcWSWrapper() {
 void GetDeviceInfo() {
   JsonDocument jsonResponse;
   jsonResponse["name"] = shelly_name;
-  jsonResponse["id"] = shelly_name; // ???? ToDo check
+  jsonResponse["id"] = shelly_name;
   jsonResponse["mac"] = shelly_mac;
   jsonResponse["slot"] = shelly_slot;
   jsonResponse["model"] = shelly_model;
@@ -247,9 +260,9 @@ void EM1GetStatus_mono(){
   JsonDocument jsonResponse;
   // Reconstruction structure for FHEM -> no WARNINGS 
   jsonResponse["id"] = 0;
-  jsonResponse["current"] = 2.22;
-  jsonResponse["act_power"] = 3.33;
-  jsonResponse["aprt_power"] = 4.44;
+  jsonResponse["current"] = VALpower;
+  jsonResponse["act_power"] = VALpowerCt;
+  jsonResponse["aprt_power"] = VALpowerPrt;
   jsonResponse["voltage"] = VALvoltage;
   jsonResponse["freq"] = VALfrequency;
   jsonResponse["pf"] = VALpowerFactor;
@@ -261,8 +274,8 @@ void EM1DataGetStatus_mono(){
   JsonDocument jsonResponse;
   // Reconstruction structure for FHEM -> no WARNINGS 
   jsonResponse["id"] = 0;
-  jsonResponse["total_act_energy"] = 222; // Wirkenergie_Bezug
-  jsonResponse["total_act_ret_energy"] = 444; // Wirkenergie_Einspeisung
+  jsonResponse["total_act_energy"] = VALpowerCt; // Wirkenergie_Bezug
+  jsonResponse["total_act_ret_energy"] = VALpowerPrt; // Wirkenergie_Einspeisung
   serializeJson(jsonResponse,serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
 }
@@ -474,7 +487,11 @@ void ShellyGetStatus(){
   jsonResponse["temperature:0"]["id"] = 0;
   jsonResponse["temperature:0"]["tC"] = 44.9;
   jsonResponse["temperature:0"]["tF"] = 112.7;
-  jsonResponse["wifi"]["sta_ip"] = WiFi.localIP();
+  #ifdef ESP32
+  jsonResponse["wifi"]["sta_ip"] = WiFi.localIP();    // supports only ESP32
+  #else
+  jsonResponse["wifi"]["sta_ip"] = "192.168.172.21";  // ToDo for ESP8266 Variant
+  #endif
   jsonResponse["wifi"]["status"] = "got ip";
   jsonResponse["wifi"]["ssid"] = wifi_ssid;
   jsonResponse["wifi"]["rssi"] = WiFi.RSSI();
@@ -607,19 +624,29 @@ void parseSMA() {
               offset += 4;
           } else if (grouptag == 0x0010) {
               uint8_t* endOfGroup = offset + grouplen;
-              uint16_t protocolID = (offset[0] << 8) + offset[1];
+              #ifdef ESP32
+              uint16_t protocolID = (offset[0] << 8) + offset[1];   // current status | warning: unused variable 'protocolID' with ESP8266 compile
+              #endif
               offset += 2;
-              uint16_t susyID = (offset[0] << 8) + offset[1];
+              #ifdef ESP32
+              uint16_t susyID = (offset[0] << 8) + offset[1];   // current status | warning: unused variable 'susyID' with ESP8266 compile
+              #endif
               offset += 2;
+              #ifdef ESP32    // current status | warning: unused variable 'serial' with ESP8266 compile
               uint32_t serial = (offset[0] << 24) + (offset[1] << 16) + (offset[2] << 8) + offset[3];
+              #endif
               offset += 4;
+              #ifdef ESP32    // current status | warning: unused variable 'timestamp' with ESP8266 compile
               uint32_t timestamp = (offset[0] << 24) + (offset[1] << 16) + (offset[2] << 8) + offset[3];
+              #endif
               offset += 4;
               while (offset < endOfGroup) {
                   uint8_t channel = offset[0];
                   uint8_t index = offset[1];
                   uint8_t type = offset[2];
+                  #ifdef ESP32    // current status | warning: unused variable ' with ESP8266 compile
                   uint8_t tarif = offset[3];
+                  #endif
                   offset += 4;
                   if (type == 8) {
                     uint64_t data = ((uint64_t)offset[0] << 56) +
@@ -862,8 +889,7 @@ void WifiManagerSetup() {
     ESP.restart();
     delay(5000);
   }
-  DEBUG_SERIAL.print("connected to ");
-  DEBUG_SERIAL.println(wifiManager.getWiFiSSID());
+  DEBUG_SERIAL.println("connected");
   wifi_ssid = wifiManager.getWiFiSSID();
 
   //read updated parameters
