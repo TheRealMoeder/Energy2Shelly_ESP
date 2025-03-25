@@ -65,18 +65,10 @@ String power_variant = "triphase";    // standard, program adjusts variables dep
 uint8_t VALvoltage = 230;
 uint8_t VALfrequency = 50;
 uint8_t VALpowerFactor = 1;
-// monophase
-double VALpower;      // Current
-double VALpowerCt;    // Consumption | In
-double VALpowerPrt;   // Production | Out | FeedIn
-// triphase
-double VALpowerP1;
-double VALpowerP2;
-double VALpowerP3;
 
 unsigned long period = 1000;
 unsigned long uptime = 0;         // uptime uC
-unsigned long secTick = 0;        // time the watch last “ticket”
+unsigned long secTick = 0;        // time since last second
 
 int rpcId = 1;
 char rpcUser[20] = "user_1";
@@ -162,7 +154,6 @@ void setPowerData(double totalPower) {
     PhasePower[i].powerFactor = VALpowerFactor;
     PhasePower[i].frequency = VALfrequency;
   }
-  VALpower = totalPower;
   DEBUG_SERIAL.print("Current total power: ");
   DEBUG_SERIAL.println(totalPower);
 }
@@ -191,8 +182,6 @@ void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
     PhaseEnergy[i].consumption = round2(totalEnergyGridSupply * 0.3333);
     PhaseEnergy[i].gridfeedin = round2(totalEnergyGridFeedIn * 0.3333);
   }
-  VALpowerCt = totalEnergyGridSupply;
-  VALpowerPrt = totalEnergyGridFeedIn;
   DEBUG_SERIAL.print("Total consumption: ");
   DEBUG_SERIAL.print(totalEnergyGridSupply);
   DEBUG_SERIAL.print(" - Total Grid Feed-In: ");
@@ -261,9 +250,9 @@ void EM1GetStatus_mono(){
   JsonDocument jsonResponse;
   // Reconstruction structure for FHEM -> no WARNINGS 
   jsonResponse["id"] = 0;
-  jsonResponse["current"] = VALpower;
-  jsonResponse["act_power"] = VALpowerCt;
-  jsonResponse["aprt_power"] = VALpowerPrt;
+  jsonResponse["current"] = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;    // due to rounding, there is a difference to totalPower | example 12.4 -> 12.39
+  jsonResponse["act_power"] = PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption;   // due to rounding, there is a difference | example 98.00 -> 97.98
+  jsonResponse["aprt_power"] = PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin;   // due to rounding, there is a difference |  8.00 -> 8.01
   jsonResponse["voltage"] = VALvoltage;
   jsonResponse["freq"] = VALfrequency;
   jsonResponse["pf"] = VALpowerFactor;
@@ -275,8 +264,8 @@ void EM1DataGetStatus_mono(){
   JsonDocument jsonResponse;
   // Reconstruction structure for FHEM -> no WARNINGS 
   jsonResponse["id"] = 0;
-  jsonResponse["total_act_energy"] = VALpowerCt; // Wirkenergie_Bezug
-  jsonResponse["total_act_ret_energy"] = VALpowerPrt; // Wirkenergie_Einspeisung
+  jsonResponse["total_act_energy"] = PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption;    // Wirkenergie_Bezug
+  jsonResponse["total_act_ret_energy"] = PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin;   // Wirkenergie_Einspeisung
   serializeJson(jsonResponse,serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
 }
