@@ -37,17 +37,18 @@ char mqtt_server[80];
 char mqtt_port[6] = "1883";
 // topic examples
 // user define:     tele/meter/SENSOR           ->  {"ENERGY":{"Power": 9.99,"Consumption":77,"Production":33}}
+// user define:     tele/meter/SENSOR           ->  {"ENERGY":{"Power":7.3,"Power1":98,"Power2":196,"Power3":294,"Consumption":98,"Production":131}}
 // Tasmota device:  tele/tasmota_B60F3F/SENSOR  ->  {"Time":"2025-03-22T11:23:22","Main":{"power":35,"counter_pos":11241.750,"counter_neg":356.376}}
 char mqtt_topic[60] = "tele/meter/SENSOR";
 char mqtt_user[40] = "";
 char mqtt_passwd[40] = "";
-// Prerequisite, no change to the default values power_path energy_in_path energy_out_path
+
 char power_path[60] = "ENERGY.Power";
 char power_l1_path[60] = "";
 char power_l2_path[60] = "";
 char power_l3_path[60] = "";
-char energy_in_path[60] ="ENERGY.Consumption";
-char energy_out_path[60] ="ENERGY.Production";
+char energy_in_path[60] ="";
+char energy_out_path[60] ="";
 
 // Shelly emulated device configuration
 char shelly_app[7] = "Pro3EM";
@@ -338,7 +339,7 @@ void ShellyGetConfig() {
   jsonResponse["ble"]["observer"]["enable"] = false;
   jsonResponse["cloud"]["enable"] = false;
   jsonResponse["cloud"]["server"] = "iot.shelly.cloud:6012/jrpc";
-  jsonResponse["mqtt"]["enable"] = dataMQTT;
+  jsonResponse["mqtt"]["enable"] = false;
   jsonResponse["mqtt"]["server"] = mqtt_server;
   jsonResponse["mqtt"]["client_id"] = shelly_name;
   jsonResponse["mqtt"]["user"] = nullptr;
@@ -401,35 +402,35 @@ void ShellyGetStatus(){
   String prepar = "{\"ble\":{},\"em:0\":{\"user_calibrated_phase\":[]},\"modbus\":{}}";     // Preparing JSON with empty array
   deserializeJson(jsonResponse, prepar);
   jsonResponse["cloud"]["connected"] = false;
-  jsonResponse["em:0"]["id"] = 0;
-  jsonResponse["em:0"]["a_current"] = 0;
-  jsonResponse["em:0"]["a_voltage"] = 0;
-  jsonResponse["em:0"]["a_act_power"] = 0;
-  jsonResponse["em:0"]["a_aprt_power"] = 0;
-  jsonResponse["em:0"]["a_pf"] = 0;
-  jsonResponse["em:0"]["b_current"] = 0;
-  jsonResponse["em:0"]["b_voltage"] = 0;
-  jsonResponse["em:0"]["b_act_power"] = 0;
-  jsonResponse["em:0"]["b_aprt_power"] = 0;
-  jsonResponse["em:0"]["b_pf"] = 0;
-  jsonResponse["em:0"]["c_current"] = 0;
-  jsonResponse["em:0"]["c_voltage"] = 0;
-  jsonResponse["em:0"]["c_act_power"] = 0;
-  jsonResponse["em:0"]["c_aprt_power"] = 0;
-  jsonResponse["em:0"]["c_pf"] = 0;
-  jsonResponse["em:0"]["n_current"] = 0;
-  jsonResponse["em:0"]["total_current"] = 0;
-  jsonResponse["em:0"]["total_act_power"] = 0;
-  jsonResponse["em:0"]["total_aprt_power"] = 0;
-  jsonResponse["emdata:0"]["id"] = 0;
-  jsonResponse["emdata:0"]["a_total_act_energy"] = 0;
-  jsonResponse["emdata:0"]["a_total_act_ret_energy"] = 0;
-  jsonResponse["emdata:0"]["b_total_act_energy"] = 0;
-  jsonResponse["emdata:0"]["b_total_act_ret_energy"] = 0;
-  jsonResponse["emdata:0"]["c_total_act_energy"] = 0;
-  jsonResponse["emdata:0"]["c_total_act_ret_energy"] = 0;
-  jsonResponse["emdata:0"]["total_act"] = 0;
-  jsonResponse["emdata:0"]["total_act_ret"] = 0;
+  // jsonResponse["em:0"]["id"] = 0;
+  // jsonResponse["em:0"]["a_current"] = 0;
+  // jsonResponse["em:0"]["a_voltage"] = 0;
+  // jsonResponse["em:0"]["a_act_power"] = 0;
+  // jsonResponse["em:0"]["a_aprt_power"] = 0;
+  // jsonResponse["em:0"]["a_pf"] = 0;
+  // jsonResponse["em:0"]["b_current"] = 0;
+  // jsonResponse["em:0"]["b_voltage"] = 0;
+  // jsonResponse["em:0"]["b_act_power"] = 0;
+  // jsonResponse["em:0"]["b_aprt_power"] = 0;
+  // jsonResponse["em:0"]["b_pf"] = 0;
+  // jsonResponse["em:0"]["c_current"] = 0;
+  // jsonResponse["em:0"]["c_voltage"] = 0;
+  // jsonResponse["em:0"]["c_act_power"] = 0;
+  // jsonResponse["em:0"]["c_aprt_power"] = 0;
+  // jsonResponse["em:0"]["c_pf"] = 0;
+  // jsonResponse["em:0"]["n_current"] = 0;
+  // jsonResponse["em:0"]["total_current"] = 0;
+  // jsonResponse["em:0"]["total_act_power"] = 0;
+  // jsonResponse["em:0"]["total_aprt_power"] = 0;
+  // jsonResponse["emdata:0"]["id"] = 0;
+  // jsonResponse["emdata:0"]["a_total_act_energy"] = 0;
+  // jsonResponse["emdata:0"]["a_total_act_ret_energy"] = 0;
+  // jsonResponse["emdata:0"]["b_total_act_energy"] = 0;
+  // jsonResponse["emdata:0"]["b_total_act_ret_energy"] = 0;
+  // jsonResponse["emdata:0"]["c_total_act_energy"] = 0;
+  // jsonResponse["emdata:0"]["c_total_act_ret_energy"] = 0;
+  // jsonResponse["emdata:0"]["total_act"] = 0;
+  // jsonResponse["emdata:0"]["total_act_ret"] = 0;
   jsonResponse["eth"]["ip"] = nullptr;
   jsonResponse["mqtt"]["connected"] = dataMQTTconnect;
   jsonResponse["sys"]["mac"] = shelly_mac;
@@ -899,7 +900,14 @@ void WifiManagerSetup() {
     DEBUG_SERIAL.println("Enabling generic HTTP data input");
   } else {
     dataMQTT = true;
-    DEBUG_SERIAL.println("Enabling MQTT data input");
+
+    if(strcmp(power_path, "TRIPHASE") == 0){
+      power_variant = "triphase";
+    } else {
+      power_variant = "monophase";
+    }
+    DEBUG_SERIAL.print("Enabling MQTT data input with profil ");
+    DEBUG_SERIAL.println(power_variant);
   }
 
   if (shouldSaveConfig) {
