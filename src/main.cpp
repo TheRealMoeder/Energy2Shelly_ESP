@@ -246,7 +246,7 @@ void GetDeviceInfo() {
   DEBUG_SERIAL.println(serJsonResponse);
 }
 
-void EM1GetStatus_mono(){
+void EM1GetStatus(){
   JsonDocument jsonResponse;
   // Reconstruction structure for FHEM -> no WARNINGS 
   jsonResponse["id"] = 0;
@@ -260,7 +260,7 @@ void EM1GetStatus_mono(){
   DEBUG_SERIAL.println(serJsonResponse);
 }
 
-void EM1DataGetStatus_mono(){
+void EM1DataGetStatus(){
   JsonDocument jsonResponse;
   // Reconstruction structure for FHEM -> no WARNINGS 
   jsonResponse["id"] = 0;
@@ -983,7 +983,7 @@ void setup(void) {
   // !!! Leistungswerte | ./rpc/EM1.GetStatus nur bei monophase
   // !!! FHEM comp.
   server.on("/rpc/EM1.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-    EM1GetStatus_mono();
+    EM1GetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
@@ -997,7 +997,7 @@ void setup(void) {
   // !!! Zählerstände | ./rpc/EM1Data.GetStatus nur bei monophase
   // !!! FHEM comp.
   server.on("/rpc/EM1Data.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-    EM1DataGetStatus_mono();
+    EM1DataGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
