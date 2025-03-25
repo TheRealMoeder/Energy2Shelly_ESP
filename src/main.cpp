@@ -270,12 +270,11 @@ void EM1DataGetStatus_mono(){
   DEBUG_SERIAL.println(serJsonResponse);
 }
 
-void EMGetStatus_tri(){
+void EMGetStatus(){
   JsonDocument jsonResponse;
   String prepar = "{\"user_calibrated_phase\":[],\"errors\":[\"phase_sequence\"]}";     // Preparing JSON with empty array
   deserializeJson(jsonResponse, prepar);
-
-  jsonResponse["id"] = 1;
+  jsonResponse["id"] = 0;
   jsonResponse["a_current"] = PhasePower[0].current;
   jsonResponse["a_voltage"] = PhasePower[0].voltage;
   jsonResponse["a_act_power"] = PhasePower[0].power;
@@ -296,34 +295,6 @@ void EMGetStatus_tri(){
   jsonResponse["c_freq"] = PhasePower[2].frequency;
   jsonResponse["n_current"] = 0.0;
   jsonResponse["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / VALvoltage);
-  jsonResponse["total_act_power"] = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
-  jsonResponse["total_aprt_power"] = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
-  serializeJson(jsonResponse,serJsonResponse);
-  DEBUG_SERIAL.println(serJsonResponse);
-}
-
-void EMGetStatus(){
-  JsonDocument jsonResponse;
-  jsonResponse["id"] = 0;
-  jsonResponse["a_current"] = PhasePower[0].current;
-  jsonResponse["a_voltage"] = PhasePower[0].voltage;
-  jsonResponse["a_act_power"] = PhasePower[0].power;
-  jsonResponse["a_aprt_power"] = PhasePower[0].apparentPower;
-  jsonResponse["a_pf"] = PhasePower[0].powerFactor;
-  jsonResponse["a_freq"] = PhasePower[0].frequency;
-  jsonResponse["b_current"] = PhasePower[1].current;
-  jsonResponse["b_voltage"] = PhasePower[1].voltage;
-  jsonResponse["b_act_power"] = PhasePower[1].power;
-  jsonResponse["b_aprt_power"] = PhasePower[1].apparentPower;
-  jsonResponse["b_pf"] = PhasePower[1].powerFactor;
-  jsonResponse["b_freq"] = PhasePower[1].frequency;
-  jsonResponse["c_current"] = PhasePower[2].current;
-  jsonResponse["c_voltage"] = PhasePower[2].voltage;
-  jsonResponse["c_act_power"] = PhasePower[2].power;
-  jsonResponse["c_aprt_power"] = PhasePower[2].apparentPower;
-  jsonResponse["c_pf"] = PhasePower[2].powerFactor;
-  jsonResponse["c_freq"] = PhasePower[2].frequency;
-  jsonResponse["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / 230);
   jsonResponse["total_act_power"] = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
   jsonResponse["total_aprt_power"] = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
   serializeJson(jsonResponse,serJsonResponse);
@@ -1005,7 +976,7 @@ void setup(void) {
   // !!! Leistungswerte | ./rpc/EM.GetStatus nur bei triphase
   // !!! FHEM comp.
   server.on("/rpc/EM.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-    EMGetStatus_tri();
+    EMGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
