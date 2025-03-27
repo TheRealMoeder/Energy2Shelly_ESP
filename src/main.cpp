@@ -69,9 +69,9 @@ char shelly_verBeta[12] = "1.4.9-beta6";
 char query_period[10] = "1000";       // milliseconds
 String power_variant = "triphase";    // standard, program adjusts variables depending on usage 
 
-uint8_t defaultVoltage = 230;
-uint8_t defaultFrequency = 50;
-uint8_t defaultPowerFactor = 1;
+const uint8_t defaultVoltage = 230;
+const uint8_t defaultFrequency = 50;
+const uint8_t defaultPowerFactor = 1;
 
 unsigned long period = 1000;
 unsigned long uptime = 0;         // uptime uC
