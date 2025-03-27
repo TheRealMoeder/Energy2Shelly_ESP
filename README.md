@@ -1,8 +1,8 @@
 # Energy2Shelly_ESP
 
 ### Getting started
-This is a Shelly Pro 3EM Emulator running on ESP8266 or ESP32 to using various input sources for power data.<br>
-This can be used for zero feed-in with Hoymiles MS-A2 (and in the near future Marstek Venus).
+This is a Shelly Pro 3EM Emulator running on ESP8266 or ESP32 using various input sources for power data.<br>
+This can be used for zero feed-in with Hoymiles MS-A2 and Marstek Venus (testers needed!).
 
 Kudos to @sdeigms excellent work at https://github.com/sdeigm/uni-meter which made this port easily possible.<br>
 SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
@@ -15,15 +15,34 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
 
   ### On the captive portal you can currently enter:
   - <code>MQTT</code>
-    - Server IP, port and topic; power values on the MQTT topic are expected in JSON format. The are multiple fields to define the available values using a JSON Path-style syntax, e.g. <code>energy.data</code> for <code>{"energy":{"data":mypowervalue}}</code>.<br>
-  You can also select between monophase and triphase power data.
+    - Server IP, port and topic; power values on the MQTT topic are expected in JSON format. The are multiple fields to define the available values using a JSON Path-style syntax.
+      You can also select between monophase and triphase power data.<br>
+      
+      examples (monophase profile):
+        - Total power JSON path -> <code>ENERGY.Power</code> for <code>{"ENERGY":{"Power":9.99}}</code><br>
+        - Phase 1 power JSON path -> "no definition" <br>
+        - Phase 2 power JSON path -> "no definition" <br>
+        - Phase 3 power JSON path -> "no definition" <br>
+        - Energy from grid JSON path -> <code>ENERGY.Consumption</code> for <code>{"ENERGY":{"Consumption"77}}</code><br>
+        - Energy to grid JSON path ->  <code>ENERGY.Production</code> for  <code>{"ENERGY":{"Production"33}}</code><br>
+              -> Energy2Shelly_ESP responds to <br><code>{"ENERGY":{"Power": 9.99,"Consumption":77,"Production":33}}</code><br>
+
+      examples (triphase profile):
+        - Total power JSON path -> <code>ENERGY.Power</code> for <code>{"ENERGY":{"Power":7.3}}</code><br>
+        - Phase 1 power JSON path -> <code>ENERGY.Pow1</code> for <code>{"ENERGY":{"Pow1":98}}</code><br>
+        - Phase 2 power JSON path -> <code>ENERGY.Pow2</code> for <code>{"ENERGY":{"Pow2":196}}</code><br>
+        - Phase 3 power JSON path -> <code>ENERGY.Pow3</code> for <code>{"ENERGY":{"Pow3":294}}</code><br>
+        - Energy from grid JSON path -> <code>ENERGY.Consumption</code> for <code>{"ENERGY":{"Consumption"98}}</code>
+        - Energy to grid JSON path ->  <code>ENERGY.Production</code> for  <code>{"ENERGY":{"Production"131}}</code><br>
+              -> Energy2Shelly_ESP responds to <br><code>{"ENERGY":{"Power":7.3,"Pow1":98,"Pow2":196,"Pow3":294,"Consumption":98,"Production":131}}</code><br>
+        
   - <code>SMA</code>
     - SMA Energy Meter or Home Manager UDP multicast data
   - <code>SHRDZM</code>
       - SHRDZM smart meter interface (common in Austria) with UDP unicast data; please enable UDP broadcasts to the IP of the ESP and port 9522 within SHRDZM
   - <code>HTTP</code>
-      - a generic HTTP input; enter a query URL in the second parameter field which delivers JSON data and define at least the JSON Path for total power
-  
+      - a generic HTTP input; enter a query URL in the second parameter field which delivers JSON data and define at least the JSON Path for total power<br>
+
   ### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>
   - Tasmota devices: <code>http://IP-address/cm?cmnd=status%2010</code>

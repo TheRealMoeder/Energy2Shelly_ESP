@@ -218,7 +218,7 @@ void setJsonPathPower(JsonDocument json) {
   }
 }
 
-void rpcWSWrapper() {
+void rpcWrapper() {
   JsonDocument jsonResponse;
   JsonDocument doc;
   deserializeJson(doc,serJsonResponse);
@@ -458,21 +458,21 @@ void webSocketEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsE
             if (json["method"] == "Shelly.GetDeviceInfo") {
               strcpy(rpcUser, "EMPTY");
               GetDeviceInfo();
-              rpcWSWrapper();
+              rpcWrapper();
               webSocket.textAll(serJsonResponse);
             } else if(json["method"] == "EM.GetStatus") {
               strcpy(rpcUser,json["src"]);
               EMGetStatus();
-              rpcWSWrapper();
+              rpcWrapper();
               webSocket.textAll(serJsonResponse);
             } else if(json["method"] == "EMData.GetStatus") {
               strcpy(rpcUser,json["src"]);
               EMDataGetStatus();
-              rpcWSWrapper();
+              rpcWrapper();
               webSocket.textAll(serJsonResponse);
             } else if(json["method"] == "EM.GetConfig") {
               EMGetConfig();
-              rpcWSWrapper();
+              rpcWrapper();
               webSocket.textAll(serJsonResponse);
             }
             else {
@@ -523,15 +523,19 @@ void parseUdpRPC() {
       UdpRPC.beginPacket(UdpRPC.remoteIP(), UdpRPC.remotePort());
       if (json["method"] == "Shelly.GetDeviceInfo") {
         GetDeviceInfo();
+        rpcWrapper();
         UdpRPC.UDPPRINT(serJsonResponse.c_str());
       } else if(json["method"] == "EM.GetStatus") {
         EMGetStatus();
+        rpcWrapper();
         UdpRPC.UDPPRINT(serJsonResponse.c_str());
       } else if(json["method"] == "EMData.GetStatus") {
         EMDataGetStatus();
+        rpcWrapper();
         UdpRPC.UDPPRINT(serJsonResponse.c_str());
       } else if(json["method"] == "EM.GetConfig") {
         EMGetConfig();
+        rpcWrapper();
         UdpRPC.UDPPRINT(serJsonResponse.c_str());
       }
       else {
@@ -996,7 +1000,7 @@ void setup(void) {
 
   server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {
     GetDeviceInfo();
-    rpcWSWrapper();
+    rpcWrapper();
     request->send(200, "application/json", serJsonResponse);
   });
 
