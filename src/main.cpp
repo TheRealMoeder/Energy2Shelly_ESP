@@ -59,7 +59,6 @@ char energy_out_path[60] ="";
 // Shelly emulated device configuration
 char shelly_app[7] = "Pro3EM";
 char shelly_gen[2] = "2";
-uint8_t shelly_slot = 1;
 char shelly_fw_id[32] = "20241011-114455/1.4.4-g6d2a586";
 char shelly_mac[13];
 char shelly_model[15] = "SPEM-003CEBEU";
@@ -237,7 +236,7 @@ void GetDeviceInfo() {
   jsonResponse["name"] = shelly_name;
   jsonResponse["id"] = shelly_name;
   jsonResponse["mac"] = shelly_mac;
-  jsonResponse["slot"] = shelly_slot;
+  jsonResponse["slot"] = 1;
   jsonResponse["model"] = shelly_model;
   jsonResponse["gen"] = shelly_gen;
   jsonResponse["fw_id"] = shelly_fw_id;
