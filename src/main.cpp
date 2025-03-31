@@ -139,7 +139,13 @@ double round2(double value) {
 
 JsonVariant resolveJsonPath(JsonVariant variant, const char* path) {
   for (size_t n = 0; path[n]; n++) {
-    if (path[n] == '.') {
+    // Not a full array support, but works for Shelly 3EM emeters array!    
+    if (path[n] == '[') {
+      variant = variant[JsonString(path, n)][atoi(&path[n+1])];
+      path += n + 4;
+      n = 0;
+    }
+    if (path[n] == '.' ) {
       variant = variant[JsonString(path, n)];
       path += n + 1;
       n = 0;
@@ -1013,6 +1019,7 @@ void setup(void) {
 
   // Set up MQTT
   if(dataMQTT) {
+    mqtt_client.setBufferSize(2048);
     mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
     mqtt_client.setCallback(mqtt_callback);
   }
