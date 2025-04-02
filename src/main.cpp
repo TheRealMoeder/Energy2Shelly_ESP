@@ -27,7 +27,7 @@
 unsigned long startMillis;
 unsigned long currentMillis;
 
-//define your default values here, if there are different values in config.json, they are overwritten.
+// define your default values here, if there are different values in config.json, they are overwritten.
 char input_type[40];
 char mqtt_server[80];
 char mqtt_port[6] = "1883";
@@ -47,8 +47,10 @@ char query_period[10] = "1000";
 // LED blink default values
 unsigned long ledOffTime = 0;
 uint8_t led = 0;
+bool led_i = false;
 const uint8_t ledblinkduration = 50;
 char led_gpio[3] = "";
+char led_gpio_i[6];
 
 unsigned long period = 1000;
 int rpcId = 1;
@@ -214,7 +216,11 @@ void rpcWrapper() {
 
 void blinkled(int duration) {
   if(led > 0) {
-    digitalWrite(led, LOW);
+    if(led_i) {
+      digitalWrite(led, HIGH);
+    } else {
+      digitalWrite(led, LOW);
+    }  
     ledOffTime = millis() + duration;
   }
 }
@@ -222,7 +228,11 @@ void blinkled(int duration) {
 void handleblinkled() {
   if(led > 0) {
     if (ledOffTime > 0 && millis() > ledOffTime) {
-      digitalWrite(led, HIGH);
+      if(led_i) {
+        digitalWrite(led, LOW);
+      } else {
+        digitalWrite(led, HIGH);
+      }		
       ledOffTime = 0;
     }
   }
@@ -625,6 +635,7 @@ void WifiManagerSetup() {
   strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
   strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
+  strcpy(led_gpio_i, preferences.getString("led_gpio_i", led_gpio_i).c_str());
   strcpy(shelly_mac, preferences.getString("shelly_mac", shelly_mac).c_str());
   strcpy(mqtt_port, preferences.getString("mqtt_port", mqtt_port).c_str());
   strcpy(mqtt_topic, preferences.getString("mqtt_topic", mqtt_topic).c_str());
@@ -641,7 +652,8 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_input_type("type", "<b>Data source</b><br>\"MQTT\" for MQTT, \"HTTP\" for generic HTTP, \"SMA\" for SMA EM/HM multicast or \"SHRDZM\" for SHRDZM UDP data", input_type, 40);
   WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP or query url for generic HTTP", mqtt_server, 80);
   WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP, in milliseconds", query_period, 10);
-  WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 2);
+  WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
+  WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br>\"true\" or \"false\"", led_gpio_i, 6);
   WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
   WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
   WiFiManagerParameter custom_mqtt_port("port", "<b>MQTT Port</b>", mqtt_port, 6);
@@ -669,6 +681,7 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&custom_query_period);
   wifiManager.addParameter(&custom_led_gpio);
+  wifiManager.addParameter(&custom_led_gpio_i);
   wifiManager.addParameter(&custom_shelly_mac);
   wifiManager.addParameter(&custom_section2);
   wifiManager.addParameter(&custom_mqtt_port);
@@ -697,6 +710,7 @@ void WifiManagerSetup() {
   strcpy(mqtt_server, custom_mqtt_server.getValue());
   strcpy(query_period, custom_query_period.getValue());
   strcpy(led_gpio, custom_led_gpio.getValue());
+  strcpy(led_gpio_i, custom_led_gpio_i.getValue());
   strcpy(shelly_mac, custom_shelly_mac.getValue());
   strcpy(mqtt_port, custom_mqtt_port.getValue());
   strcpy(mqtt_topic, custom_mqtt_topic.getValue());
@@ -714,6 +728,7 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tmqtt_server : " + String(mqtt_server));
   DEBUG_SERIAL.println("\tquery_period : " + String(query_period));
   DEBUG_SERIAL.println("\tled_gpio : " + String(led_gpio));
+  DEBUG_SERIAL.println("\tled_gpio_i : " + String(led_gpio_i));
   DEBUG_SERIAL.println("\tshelly_mac : " + String(shelly_mac));
   DEBUG_SERIAL.println("\tmqtt_port : " + String(mqtt_port));
   DEBUG_SERIAL.println("\tmqtt_topic : " + String(mqtt_topic));
@@ -740,6 +755,12 @@ void WifiManagerSetup() {
     dataMQTT = true;
     DEBUG_SERIAL.println("Enabling MQTT data input");
   }
+  
+  if(strcmp(led_gpio_i, "true") == 0) {
+    led_i = true;
+  } else {
+    led_i = false;
+  }
 
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println("saving config");
@@ -747,6 +768,7 @@ void WifiManagerSetup() {
     preferences.putString("mqtt_server", mqtt_server);
     preferences.putString("query_period", query_period);
     preferences.putString("led_gpio", led_gpio);
+    preferences.putString("led_gpio_i", led_gpio_i);
     preferences.putString("shelly_mac", shelly_mac);
     preferences.putString("mqtt_port", mqtt_port);
     preferences.putString("mqtt_topic", mqtt_topic);
@@ -774,7 +796,11 @@ if(String(led_gpio).toInt() > 0) {
 
 if(led > 0) {
   pinMode(led, OUTPUT);
-  digitalWrite(led, HIGH);
+  if(led_i) {
+    digitalWrite(led, LOW);
+  } else {
+    digitalWrite(led, HIGH);
+  }  
 }
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
