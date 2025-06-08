@@ -770,7 +770,7 @@ void queryHTTP() {
 bool decodeSMLval(uint32_t &retval, byte * payload, byte* smlcode, uint smlsize,  uint offset) {
   byte *loc = (byte*)memmem(payload, SMLPAYLOADMAXSIZE, smlcode, smlsize);
   if (loc == NULL) {
-     DEBUG_SERIAL.printf("decodeSMLval smlcode '%s' not found\r\n", smlcode);
+     DEBUG_SERIAL.printf("ERROR decodeSMLval ID:'%x.%x.%x' not found\r\n", smlcode[4], smlcode[5], smlcode[6]);
     return false;
   }
 
@@ -858,12 +858,11 @@ Commands are accepted on:
 /// @brief query Tibber-Pulse SML raw message
 /// @return 
 bool queryTibberPulseHTTP() {
-  bool ret = false;
+  bool ret = true;
   JsonDocument json;
   DEBUG_SERIAL.print("Querying Tibber-Pulse raw SML: ");
 
   int getlength = 0;
-  http.setConnectTimeout(500); // if url not found or down
   String url = String(tibber_url);
   url += String(tibber_rpc);
   //DEBUG_SERIAL.printf("Tibber URL:%s user:%s \r\n", url.c_str(), tibber_user);
@@ -882,11 +881,13 @@ bool queryTibberPulseHTTP() {
 
     if (getlength < 260) // todo: change for other meter models
     {
-     DEBUG_SERIAL.printf("ERROR SML-data to short: smlpayload length=%d \r\n", getlength);
+     DEBUG_SERIAL.printf("ERROR SML-data to short! length=%d \r\n", getlength);
+     /* for extra debugging
      for (size_t i = 0; i < getlength; i++) {
        DEBUG_SERIAL.printf("%02xh ",smlpayload[i]);
      }
      DEBUG_SERIAL.println();
+     */
      ret = false;
     } 
     else {
@@ -894,14 +895,20 @@ bool queryTibberPulseHTTP() {
       byte sml_2_8_0[] {0x77, 0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xff};   // Energy OUT (2.8.0)
       uint32_t inputenergy  = 0;
       uint32_t outputenergy = 0;
-      if (decodeSMLval(inputenergy,smlpayload, sml_1_8_0, sizeof(sml_1_8_0), 19) && decodeSMLval(outputenergy, smlpayload, sml_2_8_0, sizeof(sml_2_8_0), 15)) {
+      if (!decodeSMLval(inputenergy,smlpayload, sml_1_8_0, sizeof(sml_1_8_0), 19))
+      {
+        ret = false;
+      }
+      if (!decodeSMLval(outputenergy, smlpayload, sml_2_8_0, sizeof(sml_2_8_0), 15)) 
+      {
+        ret = false;
+      }
+
+      if (ret == true)
+      {
         setEnergyData(double(inputenergy/ 10000.0), double(outputenergy / 10000.0));
-        ret = true;
       }
-      else {
-         DEBUG_SERIAL.println ("SML ERROR Parsing sml_1_8_0 or sml_2_8_0");
-      }
- 
+     
       // for Power:
       // length is variable !!! (2 byte= for big values)
       //                                           53=16bit int
@@ -916,14 +923,14 @@ bool queryTibberPulseHTTP() {
       // Power Sum(in= pos. out= neg)
       byte sml_16_7_0[] {0x77, 0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xff};
       uint32_t watt = 0;
-      if (decodeSMLval(watt, smlpayload, sml_16_7_0, sizeof(sml_16_7_0), 15) && (ret==true)) {
+      if (decodeSMLval(watt, smlpayload, sml_16_7_0, sizeof(sml_16_7_0), 15)) 
+      {
         setPowerData(int16_t(watt) / 1000.0);
       }
       else {
         DEBUG_SERIAL.println ("SML ERROR Parsing sml_16_7_0");
         ret = false;
       }
-      
       // extra debug info
       //if (ret == true) {
       // DEBUG_SERIAL.printf("SML OK raw Values:16.7.0:%d  1.8.0:%d  2.8.0:%d\r\n", watt, inputenergy, outputenergy);
@@ -1238,6 +1245,7 @@ void setup(void) {
   webSocket.onEvent(webSocketEvent);
   server.addHandler(&webSocket);
   server.begin();
+  http.setConnectTimeout(500); // if url not found or down
 
   // Set up RPC over UDP for Marstek users
   UdpRPC.begin(String(shelly_port).toInt()); 
@@ -1319,6 +1327,7 @@ void setup(void) {
   }
 #endif
   DEBUG_SERIAL.println("mDNS responder started");
+  delay(500);
 }
 
 void loop() {
