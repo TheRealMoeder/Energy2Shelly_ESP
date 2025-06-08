@@ -1,4 +1,5 @@
 // Energy2Shelly_ESP v0.5.2
+// by Raibisch: add support for reading data from 'Tibber-Pulse' adapter
 #include <Arduino.h>
 #include <Preferences.h>
 #ifndef ESP32
