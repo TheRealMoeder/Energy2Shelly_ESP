@@ -1,5 +1,5 @@
-// Energy2Shelly_ESP v0.5.2
-// by Raibisch: add support for reading data from 'Tibber-Pulse' adapter
+// Energy2Shelly_ESP v0.5.3
+// add support for reading data from 'Tibber-Pulse' adapter
 #include <Arduino.h>
 #include <Preferences.h>
 #ifndef ESP32
@@ -56,7 +56,6 @@ char force_pwr_decimals[6] = "true"; // to fix Marstek bug
 bool forcePwrDecimals = true; // to fix Marstek bug
 char sma_id[17] = "";
 
-// by Raibisch
 char tibber_url  [32] = "http://192.168.2.xx";
 char tibber_user[32] = "admin";
 char tibber_password[32] = "xxxx-xxxx";
@@ -98,7 +97,6 @@ bool dataSMA = false;
 bool dataSHRDZM = false;
 bool dataHTTP = false;
 bool dataSUNSPEC = false;
-// by Raibisch
 bool dataTIBBERPULSE = true;
 
 struct PowerData {
@@ -139,10 +137,8 @@ WiFiUDP UdpRPC;
 
 double round2(double value) {
   int ivalue = (int)(value * 100.0 + (value > 0.0 ? 0.5 : -0.5));
-
   // fix Marstek bug: make sure to have decimal numbers
   if(forcePwrDecimals && (ivalue % 100 == 0)) ivalue++;
-  
   return ivalue / 100.0;
 }
 
@@ -377,14 +373,14 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
             rpcWrapper();
             webSocket.textAll(serJsonResponse);
           } else if (json["method"] == "EM.GetStatus") {
-            if (!json["src"].isNull()){    // by JG only to fix testerror, 'scr' is mandantory !
+            if (!json["src"].isNull()){    // only to fix testerror, 'scr' is mandantory !
               strcpy(rpcUser, json["src"]);
             }          
             EMGetStatus();        
             rpcWrapper();     
             webSocket.textAll(serJsonResponse);
           } else if (json["method"] == "EMData.GetStatus") {
-            if (!json["src"].isNull()){   // by JG only to frix test error, 'src is mandantory !
+            if (!json["src"].isNull()){   // only to fix test error, 'src' is mandantory !
               strcpy(rpcUser, json["src"]);
             }   
             EMDataGetStatus();
@@ -758,10 +754,46 @@ void queryHTTP() {
   http.end();
 }
 
-// by Raibisch
+
+
+/*
+todo shelly MQTT output
+shelly doku: https://shelly-api-docs.shelly.cloud/gen1/#shelly-3em-overview
+
+Shelly 3EM: MQTT
+----------------
+When configured for MQTT Shelly 3EM reports data on:
+
+    shellies/shellyem3-<deviceid>/emeter/<i>/energy energy counter in Watt-minute since last report
+    shellies/shellyem3-<deviceid>/emeter/<i>/returned_energy energy returned to the grid in Watt-minute since last report
+    shellies/shellyem3-<deviceid>/emeter/<i>/total total energy in Wh (accumulated in device's non-volatile memory)
+    shellies/shellyem3-<deviceid>/emeter/<i>/total_returned total energy returned to the grid in Wh (accumulated in device's non-volatile memory)
+    shellies/shellyem3-<deviceid>/emeter/<i>/power instantaneous active power in Watts
+    shellies/shellyem3-<deviceid>/emeter/<i>/voltage grid voltage in Volts
+    shellies/shellyem3-<deviceid>/emeter/<i>/current current in Amps
+    shellies/shellyem3-<deviceid>/emeter/<i>/pf power factor (dimensionless)
+    shellies/shellyem3-<deviceid>/relay/0 reports status: on, off or overpower
+
+Note, that energy and returned_energy do not survive power cycle or reboot -- this is how the value is implemented on other Shellies. 
+Shelly 3EM features a persisted version which is not affected by power cycling or lack of connectivity. To get the persisted counters use total and total_returned.
+
+Commands are accepted on:
+
+    shellies/shellyem3-<deviceid>/relay/0/command accepts on, off or toggle
+    shellies/shellyem3-<deviceid>/emeter/<i>/command accepts message reset_totals to reset total and total_returned energy counters to 0
+    shellies/shellyem3-<deviceid>/command accepts message reset_data to reset all device data
+
+*/
+bool publishMQTTshellyem3(uint32_t &energySumInWh, uint32_t &energySumOutWh, int32_t &powerSumWatt)
+{
+  bool ret = true;
+  //... tdodo
+  return ret;
+}
+
  enum { SMLPAYLOADMAXSIZE = 300 }; 
   byte smlpayload[SMLPAYLOADMAXSIZE] {0}; 
-/// @brief Helper function for pharsing TIBBER SML-Message
+/// @brief Helper function for parsing Tibber-pulse SML-Message
 /// @param payload 
 /// @param smlcode 
 /// @param smlsize 
@@ -774,21 +806,13 @@ bool decodeSMLval(uint32_t &retval, byte * payload, byte* smlcode, uint smlsize,
     return false;
   }
 
-  /* Test fake "-1"
-  if (nlen == 2)
-  {
-    loc[offset]  = 0xff;
-    loc[offset+1] = 0xff;
-  }
-  */
-  // 'nlen' aus SML lesen (aendert sich bei Leistung je nach Größe des Wertes !!!)
+  // rean 'nlen' from SML-Data , change dynamic for different Power values !!!)
   uint8_t nlen = (loc[offset-1] & 0x0F) -1;
 
   /*
   // for extra debugging
   debug_printf("nlen=%d\r\n", nlen);
   debug_print("HEX: ");
-
   for (size_t i = 0; i < offset+nlen+1; i++)
   {
     debug_printf("%02x ", loc[i]);
@@ -820,37 +844,6 @@ bool decodeSMLval(uint32_t &retval, byte * payload, byte* smlcode, uint smlsize,
   return true;
 }
 
-
-/*
-todo shelly MQTT output
-shelly doku: https://shelly-api-docs.shelly.cloud/gen1/#shelly-3em-overview
-
-Shelly 3EM: MQTT
-----------------
-When configured for MQTT Shelly 3EM reports data on:
-
-    shellies/shellyem3-<deviceid>/emeter/<i>/energy energy counter in Watt-minute since last report
-    shellies/shellyem3-<deviceid>/emeter/<i>/returned_energy energy returned to the grid in Watt-minute since last report
-    shellies/shellyem3-<deviceid>/emeter/<i>/total total energy in Wh (accumulated in device's non-volatile memory)
-    shellies/shellyem3-<deviceid>/emeter/<i>/total_returned total energy returned to the grid in Wh (accumulated in device's non-volatile memory)
-    shellies/shellyem3-<deviceid>/emeter/<i>/power instantaneous active power in Watts
-    shellies/shellyem3-<deviceid>/emeter/<i>/voltage grid voltage in Volts
-    shellies/shellyem3-<deviceid>/emeter/<i>/current current in Amps
-    shellies/shellyem3-<deviceid>/emeter/<i>/pf power factor (dimensionless)
-    shellies/shellyem3-<deviceid>/relay/0 reports status: on, off or overpower
-
-Note, that energy and returned_energy do not survive power cycle or reboot -- this is how the value is implemented on other Shellies. 
-Shelly 3EM features a persisted version which is not affected by power cycling or lack of connectivity. To get the persisted counters use total and total_returned.
-
-Commands are accepted on:
-
-    shellies/shellyem3-<deviceid>/relay/0/command accepts on, off or toggle
-    shellies/shellyem3-<deviceid>/emeter/<i>/command accepts message reset_totals to reset total and total_returned energy counters to 0
-    shellies/shellyem3-<deviceid>/command accepts message reset_data to reset all device data
-
-*/
-
-// by Raibisch
 // Tibber-Pulse Adapter
 // REMARKS:
 // - we need intensive validating of data, because auf weak 868Mhz transmission (no handshake!) from meter adapter to wifi-bridge
@@ -859,10 +852,8 @@ Commands are accepted on:
 /// @return 
 bool queryTibberPulseHTTP() {
   bool ret = true;
-  JsonDocument json;
-  DEBUG_SERIAL.print("Querying Tibber-Pulse raw SML: ");
-
   int getlength = 0;
+  DEBUG_SERIAL.print("Querying Tibber-Pulse raw SML: ");
   String url = String(tibber_url);
   url += String(tibber_rpc);
   //DEBUG_SERIAL.printf("Tibber URL:%s user:%s \r\n", url.c_str(), tibber_user);
@@ -976,7 +967,7 @@ void WifiManagerSetup() {
   strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
   strcpy(force_pwr_decimals, preferences.getString("force_pwr_decimals", force_pwr_decimals).c_str());
   strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
-  // by Raibisch
+  // for Tibber-Pulse:
   strcpy(tibber_url,      preferences.getString("tibber_url" ,     tibber_url).c_str());
   strcpy(tibber_user,     preferences.getString("tibber_user",     tibber_user).c_str());
   strcpy(tibber_password, preferences.getString("tibber_password", tibber_password).c_str());
@@ -1007,7 +998,7 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>Phase 3 power JSON path<br>optional", power_l3_path, 60);
   WiFiManagerParameter custom_energy_in_path("energy_in_path", "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>", energy_in_path, 60);
   WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
-  // by Raibisch
+  // for Tibber-Pulse
   WiFiManagerParameter custom_section5("<hr><h3>Tibber-Pulse</h3>");
   WiFiManagerParameter custom_tibber_url("url"                 , "<b>url</b><br>e.g.:<code>http://192.168.2.55</code>", tibber_url, 32);
   WiFiManagerParameter custom_tibber_user("tibber_user"        , "<b>user</b><br>e.g.:<code>admin</code>",              tibber_user, 32);
@@ -1046,7 +1037,7 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_power_l3_path);
   wifiManager.addParameter(&custom_energy_in_path);
   wifiManager.addParameter(&custom_energy_out_path);
-  // by Raibisch
+  // for Tibber-Pulse:
   wifiManager.addParameter(&custom_section5);
   wifiManager.addParameter(&custom_tibber_url);
   wifiManager.addParameter(&custom_tibber_user);
@@ -1082,7 +1073,7 @@ void WifiManagerSetup() {
   strcpy(shelly_port, custom_shelly_port.getValue());
   strcpy(force_pwr_decimals, custom_force_pwr_decimals.getValue());
   strcpy(sma_id, custom_sma_id.getValue());
-  // by Raibisch
+  // for Tibber-Pulse:
   strcpy(tibber_url, custom_tibber_url.getValue());
   strcpy(tibber_user, custom_tibber_user.getValue());
   strcpy(tibber_password, custom_tibber_password.getValue());
@@ -1109,7 +1100,7 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tshelly_port : " + String(shelly_port));
   DEBUG_SERIAL.println("\tforce_pwr_decimals : " + String(force_pwr_decimals));
   DEBUG_SERIAL.println("\tsma_id : " + String(sma_id));
-  // by Raibisch
+  // for Tibber-Pulse:
   DEBUG_SERIAL.println("\ttibber_url:" + String(tibber_url));
   DEBUG_SERIAL.println("\ttibber_user:" + String(tibber_user));
   DEBUG_SERIAL.println("\ttibber_password:" + String(tibber_password));
@@ -1127,7 +1118,7 @@ void WifiManagerSetup() {
     dataSUNSPEC = true;
     DEBUG_SERIAL.println("Enabling SUNSPEC data input");
   }
-  // by Raibisch
+  // for Tibber-Pulse: 
   else if (strcmp(input_type, "TIBBERPULSE") == 0)
   {
     dataTIBBERPULSE = true;
@@ -1174,7 +1165,7 @@ void WifiManagerSetup() {
     preferences.putString("shelly_port", shelly_port);
     preferences.putString("force_pwr_decimals", force_pwr_decimals);
     preferences.putString("sma_id", sma_id);
-    // by Raibisch
+    // for Tibber-Pulse
     preferences.putString("tibber_url", tibber_url);
     preferences.putString("tibber_user", tibber_user);
     preferences.putString("tibber_password", tibber_password);
@@ -1364,7 +1355,6 @@ void loop() {
     }
    
   }
-
   if (dataHTTP) {
     currentMillis = millis();
     if (currentMillis - startMillis >= period) {
@@ -1372,8 +1362,7 @@ void loop() {
       startMillis = currentMillis;
     }
   }
-  
-  // by Raibisch 
+  // for Tibber-Pulse
   if (dataTIBBERPULSE) {
     currentMillis = millis();
     if (currentMillis - startMillis_tibberpulse >= period) {
@@ -1381,7 +1370,5 @@ void loop() {
       startMillis_tibberpulse = currentMillis;
     }
   }
-    
-
   handleblinkled();
 }
