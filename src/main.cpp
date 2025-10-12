@@ -1325,22 +1325,25 @@ void setup(void) {
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {
-    GetDeviceInfo();
-    rpcWrapper();
-    request->send(200, "application/json", serJsonResponse);
-  });
-
   // EM1
    server.on("/rpc/EM1.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
     EM1GetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
-  
+
    server.on("/rpc/EM1.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
     EM1GetConfig();
     request->send(200, "application/json", serJsonResponse);
   });
+
+  /*
+  server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {
+    GetDeviceInfo();
+    rpcWrapper();
+    request->send(200, "application/json", serJsonResponse);
+  });
+  */
+
 
   
 
