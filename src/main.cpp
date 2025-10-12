@@ -1345,8 +1345,6 @@ void setup(void) {
   */
 
 
-  
-
   webSocket.onEvent(webSocketEvent);
   server.addHandler(&webSocket);
   server.begin();
