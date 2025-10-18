@@ -23,11 +23,22 @@
 #include <ModbusIP_ESP8266.h>
 
 #define DEBUG true // set to false for no DEBUG output
+
+// REMARK: for MARSTEK Venus V3 (from github.com/raibisch) 
+// full story:
+// the 'Shelly PRO EM3' simulation shows valid values but the zero-feed-in (german: Nulleinspeisung) mode does not work !
+// so I tried to select at the MARSTEK App the 'Shelly PRO EM-50' (a single phase meter):
+// MARSTEK sends per UDP-Multicast (to local IP xxxx.xxx.xxx.255 Port 2223) a "EM1.GetStatus" request
+// ...so I extended the code to answer to this request (a quick and dirty hack - not extensive testet !)
+// ...first test: WOOW  now the zero-energy-mode works :-))
+#define DEBUG_CUSTOM_UDP_PORT 2223 // Test for emulation of Shelly EM-50 (single phase) 
+
 #define DEBUG_SERIAL if(DEBUG)Serial
 
 unsigned long startMillis = 0;
 unsigned long startMillis_sunspec = 0;
 unsigned long currentMillis;
+unsigned long startMillis_tibberpulse = 0; // for Tibber
 
 // define your default values here, if there are different values in config.json, they are overwritten.
 char input_type[40];
@@ -49,10 +60,15 @@ char shelly_mac[13];
 char shelly_name[26] = "shellypro3em-";
 char query_period[10] = "1000";
 char modbus_dev[10] = "71"; // default for KSEM
-char shelly_port[6] = "2220"; // old: 1010; new (FW>=226): 2220
+char shelly_port[6] = "1010"; // old: 1010; new (FW>=226): 2220; Venus-E V3: 1010 !
 char force_pwr_decimals[6] = "true"; // to fix Marstek bug
 bool forcePwrDecimals = true; // to fix Marstek bug
 char sma_id[17] = "";
+
+char tibber_url  [32] = "192.168.2.xx";         // replace with your IP from Tibber-Pulse
+char tibber_user[32] = "admin";                 // fixed!
+char tibber_password[32] = "xxxx-xxxx";         // replace with password printed on Tibbel-Pulse-Adapter
+char tibber_rpc[32]  =  "/data.json?node_id=1"; // fixed!
 
 IPAddress modbus_ip;
 ModbusIP modbus1;
@@ -70,7 +86,7 @@ const uint8_t ledblinkduration = 50;
 char led_gpio[3] = "";
 char led_gpio_i[6];
 
-unsigned long period = 1000;
+unsigned long period = 1500; // TEST !! old: 1000
 int rpcId = 1;
 char rpcUser[20] = "user_1";
 
@@ -90,6 +106,7 @@ bool dataSMA = false;
 bool dataSHRDZM = false;
 bool dataHTTP = false;
 bool dataSUNSPEC = false;
+bool dataTIBBERPULSE = false;
 
 struct PowerData {
   double current;
@@ -105,6 +122,7 @@ struct EnergyData {
   double consumption;
 };
 
+PowerData TotalPower;     // by JG
 PowerData PhasePower[3];
 EnergyData PhaseEnergy[3];
 String serJsonResponse;
@@ -136,6 +154,28 @@ double round2(double value) {
   return ivalue / 100.0;
 }
 
+/*
+double round3(double value) {
+  int ivalue = (int)(value * 1000.0 + (value > 0.0 ? 0.5 : -0.5));
+
+  // fix Marstek bug: make sure to have decimal numbers
+  if(forcePwrDecimals && (ivalue % 1000 == 0)) ivalue++;
+  
+  return ivalue / 1000.0;
+}
+
+double round1(double value) {
+  int ivalue = (int)(value * 10.0 + (value > 0.0 ? 0.5 : -0.5));
+
+  // fix Marstek bug: make sure to have decimal numbers
+  if(forcePwrDecimals && (ivalue % 10 == 0)) ivalue++;
+  
+  return ivalue / 10.0;
+}
+*/
+
+
+
 JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
   for (size_t n = 0; path[n]; n++) {
     // Not a full array support, but works for Shelly 3EM emeters array!
@@ -154,35 +194,67 @@ JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
 }
 
 void setPowerData(double totalPower) {
-  for (int i = 0; i <= 2; i++) {
-    PhasePower[i].power = round2(totalPower * 0.3333);
-    PhasePower[i].voltage = defaultVoltage;
-    PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
-    PhasePower[i].apparentPower = round2(PhasePower[i].power);
-    PhasePower[i].powerFactor = defaultPowerFactor;
-    PhasePower[i].frequency = defaultFrequency;
+  // for Shelly EM1
+  double power_raw = totalPower;
+  double power_filter = 0;
+  if (abs(totalPower < 100))
+  {
+    power_filter = totalPower * 0.5;   
+  } 
+  else
+  {
+    power_filter = totalPower;
   }
-  DEBUG_SERIAL.print("Current total power: ");
-  DEBUG_SERIAL.println(totalPower);
+  /*
+  else
+  if ((totalPower > 0) && (totalPower < 50))
+  {
+    totalPower = totalPower*0.8;   
+  }
+  else
+  if ((totalPower > 0) && (totalPower < 150))
+  {
+    totalPower = totalPower*0.9;
+  }
+  */
+
+  TotalPower.power         = round2(power_filter);
+  TotalPower.apparentPower = round2(power_filter);
+  TotalPower.voltage       = defaultVoltage;
+  TotalPower.current       = round2(power_filter / double(defaultVoltage));
+  TotalPower.frequency     = defaultFrequency;
+  TotalPower.powerFactor   = defaultPowerFactor;
+  
+  // for Shelly 3EM
+  for (int i = 0; i <= 2; i++) {
+    PhasePower[i].power         = round2(totalPower * 0.3333);
+    PhasePower[i].voltage       = round2(defaultVoltage);
+    PhasePower[i].current       = round2(PhasePower[i].power / PhasePower[i].voltage);
+    PhasePower[i].apparentPower = round2(PhasePower[i].power);
+    PhasePower[i].powerFactor   = defaultPowerFactor;
+    PhasePower[i].frequency     = defaultFrequency;
+  }
+  //DEBUG_SERIAL.print("Current total power: ");
+  DEBUG_SERIAL.printf("POWER: raw:%4.1f filterd: %4.1f[W]\r\n", power_raw, TotalPower.power);
 }
 
 void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
-  PhasePower[0].power = round2(phase1Power);
-  PhasePower[1].power = round2(phase2Power);
-  PhasePower[2].power = round2(phase3Power);
+  PhasePower[0].power = phase1Power;
+  PhasePower[1].power = phase2Power;
+  PhasePower[2].power = phase3Power;
   for (int i = 0; i <= 2; i++) {
-    PhasePower[i].voltage = defaultVoltage;
+    PhasePower[i].voltage = round2(defaultVoltage); 
     PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
     PhasePower[i].apparentPower = round2(PhasePower[i].power);
     PhasePower[i].powerFactor = defaultPowerFactor;
-    PhasePower[i].frequency = defaultFrequency;
+    PhasePower[i].frequency   = defaultFrequency;
   }
   DEBUG_SERIAL.print("Current power L1: ");
   DEBUG_SERIAL.print(phase1Power);
   DEBUG_SERIAL.print(" - L2: ");
   DEBUG_SERIAL.print(phase2Power);
   DEBUG_SERIAL.print(" - L3: ");
-  DEBUG_SERIAL.println(phase3Power);
+  DEBUG_SERIAL.print(phase3Power);
 }
 
 void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
@@ -190,10 +262,10 @@ void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
     PhaseEnergy[i].consumption = round2(totalEnergyGridSupply * 0.3333);
     PhaseEnergy[i].gridfeedin = round2(totalEnergyGridFeedIn * 0.3333);
   }
-  DEBUG_SERIAL.print("Total consumption: ");
-  DEBUG_SERIAL.print(totalEnergyGridSupply);
-  DEBUG_SERIAL.print(" - Total Grid Feed-In: ");
-  DEBUG_SERIAL.println(totalEnergyGridFeedIn);
+  //DEBUG_SERIAL.print("Total consuption: ");
+  //DEBUG_SERIAL.print(totalEnergyGridSupply);
+  //DEBUG_SERIAL.print(" - Total Grid Feed-In: ");
+  //DEBUG_SERIAL.println(totalEnergyGridFeedIn);
 }
 
 //callback notifying us of the need to save WifiManager config
@@ -287,6 +359,35 @@ void GetDeviceInfo() {
   blinkled(ledblinkduration);
 }
 
+/*
+Example Data for EM3 Pro
+id	0
+a_current	0.593
+a_voltage	230.5
+a_act_power	-75.4
+a_aprt_power	136.9
+a_pf	0.68
+a_freq	50
+b_current	11.608
+b_voltage	228.5
+b_act_power	2655.2
+b_aprt_power	2656.6
+b_pf	1
+b_freq	50
+c_current	0.058
+c_voltage	232.1
+c_act_power	2.1
+c_aprt_power	13.5
+c_pf	0.54
+c_freq	50
+n_current	null
+total_current	12.259
+total_act_power	2581.781
+total_aprt_power	2806.935
+user_calibrated_phase	[]
+
+*/
+
 void EMGetStatus() {
   JsonDocument jsonResponse;
   jsonResponse["id"] = 0;
@@ -309,8 +410,8 @@ void EMGetStatus() {
   jsonResponse["c_pf"] = PhasePower[2].powerFactor;
   jsonResponse["c_freq"] = PhasePower[2].frequency;
   jsonResponse["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / ((float)defaultVoltage));
-  jsonResponse["total_act_power"] = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
-  jsonResponse["total_aprt_power"] = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
+  jsonResponse["total_act_power"] = round2(PhasePower[0].power + PhasePower[1].power + PhasePower[2].power);
+  jsonResponse["total_aprt_power"] = round2(PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower);
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
@@ -328,7 +429,7 @@ void EMDataGetStatus() {
   jsonResponse["total_act"] = PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption;
   jsonResponse["total_act_ret"] = PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin;
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.println(serJsonResponse);
+  //DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
 
@@ -340,6 +441,54 @@ void EMGetConfig() {
   jsonResponse["phase_selector"] = "a";
   jsonResponse["monitor_phase_sequence"] = true;
   jsonResponse["ct_type"] = "120A";
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.println(serJsonResponse);
+  blinkled(ledblinkduration);
+}
+
+
+// for EM1
+void EM1GetDeviceInfo() {
+   JsonDocument jsonResponse;
+  jsonResponse["name"] = shelly_name;
+  jsonResponse["id"] = shelly_name;
+  jsonResponse["mac"] = shelly_mac;
+  jsonResponse["slot"] = 1;
+  jsonResponse["model"] = "SPEM-003CEBEU";
+  jsonResponse["gen"] = shelly_gen;
+  jsonResponse["fw_id"] = shelly_fw_id;
+  jsonResponse["ver"] = "1.4.4";
+  jsonResponse["app"] = "ProEM50";
+  jsonResponse["auth_en"] = false;
+  jsonResponse["profile"] = "monophase";
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.println(serJsonResponse);
+  blinkled(ledblinkduration);
+}
+
+void EM1GetConfig() {
+  JsonDocument jsonResponse;
+  jsonResponse["id"] = 0;
+  jsonResponse["name"] = nullptr;
+  jsonResponse["reverse"] = false;
+  jsonResponse["ct_type"] = "50A";
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.println(serJsonResponse);
+  blinkled(ledblinkduration);
+}
+
+
+void EM1GetStatus()
+{
+  JsonDocument jsonResponse;
+  jsonResponse["id"] = 0;
+  jsonResponse["voltage"]    = TotalPower.voltage;
+  jsonResponse["current"]    = TotalPower.current;
+  jsonResponse["act_power"]  = TotalPower.power;
+  jsonResponse["aprt_power"] = TotalPower.apparentPower;
+  jsonResponse["pf"] = 1;
+  jsonResponse["freq"] = 50;
+  jsonResponse["calibration"] = "factory";
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
@@ -419,10 +568,11 @@ void parseUdpRPC() {
     JsonDocument json;
     int rSize = UdpRPC.read(buffer, 1024);
     buffer[rSize] = 0;
-    DEBUG_SERIAL.print("Received UDP packet on port 1010: ");
+    DEBUG_SERIAL.printf("Rx UDP packet from %s:%d\r\n",UdpRPC.remoteIP().toString().c_str(), UdpRPC.remotePort());
     DEBUG_SERIAL.println((char *)buffer);
     deserializeJson(json, buffer);
-    if (json["method"].is<JsonVariant>()) {
+    if (json["method"].is<JsonVariant>()) 
+    {
       rpcId = json["id"];
       strcpy(rpcUser, "EMPTY");
       UdpRPC.beginPacket(UdpRPC.remoteIP(), UdpRPC.remotePort());
@@ -442,6 +592,16 @@ void parseUdpRPC() {
         EMGetConfig();
         rpcWrapper();
         UdpRPC.UDPPRINT(serJsonResponse.c_str());
+        // EM1
+       } else if (json["method"] == "EM1.GetStatus") {
+        EM1GetStatus();
+        rpcWrapper();
+        UdpRPC.UDPPRINT(serJsonResponse.c_str());
+      } else if (json["method"] == "EM1.GetConfig") {
+        EM1GetConfig();
+        rpcWrapper();
+        UdpRPC.UDPPRINT(serJsonResponse.c_str());
+
       } else {
         DEBUG_SERIAL.printf("RPC over UDP: unknown request: %s\n", buffer);
       }
@@ -743,6 +903,158 @@ void queryHTTP() {
   http.end();
 }
 
+// functions for Tibber-Pulse 
+ enum { SMLPAYLOADMAXSIZE = 300 }; 
+  byte smlpayload[SMLPAYLOADMAXSIZE] {0}; 
+/// @brief Helper function for parsing Tibber-pulse SML-Message
+/// @param payload 
+/// @param smlcode 
+/// @param smlsize 
+/// @param offset 
+/// @return 
+bool decodeSMLval(uint32_t &retval, byte * payload, byte* smlcode, uint smlsize,  uint offset) {
+  byte *loc = (byte*)memmem(payload, SMLPAYLOADMAXSIZE, smlcode, smlsize);
+  if (loc == NULL) {
+     DEBUG_SERIAL.printf("ERROR decodeSMLval ID:'%x.%x.%x' not found\r\n", smlcode[4], smlcode[5], smlcode[6]);
+    return false;
+  }
+
+  // rean 'nlen' from SML-Data , change dynamic for different Power values !!!)
+  uint8_t nlen = (loc[offset-1] & 0x0F) -1;
+
+  /*
+  // for extra debugging
+  debug_printf("nlen=%d\r\n", nlen);
+  debug_print("HEX: ");
+  for (size_t i = 0; i < offset+nlen+1; i++)
+  {
+    debug_printf("%02x ", loc[i]);
+  }
+  debug_println();
+  */
+  
+  if ((nlen < 1) ||(nlen > 8))
+  {
+    DEBUG_SERIAL.printf("decodeSMLval unvalid length %d\r\n", nlen);
+    return false;
+  }
+  
+  
+ byte* pval = loc + offset;
+ uint32_t value=0;
+ if (nlen == 1){
+   value = (int8_t) *(pval);
+ }
+ else {
+  nlen=nlen+1; 
+  while (--nlen) {
+      //value<<=8;
+      value = value << 8;
+      value|=*(pval)++;
+  }
+ }
+ retval = value;
+  return true;
+}
+
+// Tibber-Pulse Adapter
+// REMARKS:
+// - we need intensive validating of data, because auf weak 868Mhz transmission (no handshake!) from meter adapter to wifi-bridge
+// - only tested with my ISKRA-meter
+/// @brief query Tibber-Pulse SML raw message
+/// @return 
+bool queryTibberPulseHTTP() {
+  bool ret = true;
+  int getlength = 0;
+  //DEBUG_SERIAL.print("Querying Tibber-Pulse raw SML: ");
+  String url = "http://";
+  url += String(tibber_url);
+  url += String(tibber_rpc);
+  //DEBUG_SERIAL.printf("Tibber URL:%s user:%s \r\n", url.c_str(), tibber_user);
+  http.begin(wifi_client, url);
+  http.setAuthorization(tibber_user, tibber_password);
+  int httpResponseCode = http.GET();
+  if (httpResponseCode > 0) {
+    getlength = http.getSize();
+    //DEBUG_SERIAL.printf(" message size=%d\r\n", getlength);
+    if ((getlength > SMLPAYLOADMAXSIZE) || (getlength ==0)) {
+      http.end();
+      return false;
+    }
+    WiFiClient * w = http.getStreamPtr();
+    w->readBytes(smlpayload, getlength);
+
+    if (getlength < 260) // todo: change for other meter models
+    {
+     //DEBUG_SERIAL.printf("ERROR SML-data to short! length=%d \r\n", getlength);
+     /* for extra debugging
+     for (size_t i = 0; i < getlength; i++) {
+       DEBUG_SERIAL.printf("%02xh ",smlpayload[i]);
+     }
+     DEBUG_SERIAL.println();
+     */
+     ret = false;
+    } 
+    else {
+      byte sml_1_8_0[] {0x77, 0x07, 0x01, 0x00, 0x01, 0x08, 0x00, 0xff};   // Energy IN (1.8.0)
+      byte sml_2_8_0[] {0x77, 0x07, 0x01, 0x00, 0x02, 0x08, 0x00, 0xff};   // Energy OUT (2.8.0)
+      uint32_t inputenergy  = 0;
+      uint32_t outputenergy = 0;
+      if (!decodeSMLval(inputenergy,smlpayload, sml_1_8_0, sizeof(sml_1_8_0), 19))
+      {
+        ret = false;
+      }
+      if (!decodeSMLval(outputenergy, smlpayload, sml_2_8_0, sizeof(sml_2_8_0), 15)) 
+      {
+        ret = false;
+      }
+
+      if (ret == true)
+      {
+        setEnergyData(double(inputenergy/ 10000.0), double(outputenergy / 10000.0));
+      }
+     
+      // for Power:
+
+      // length is variable !!! (2 byte= for big values)
+      //                                           53=16bit int
+      // 77 07 01 00 10 07 00 ff 01 01 62 1b 52 00 53 00 91 01 =145W
+      // 77 07 01 00 10 07 00 ff 01 01 62 1b 52 00 53 00 95 01 =149W
+      // 77 07 01 00 10 07 00 ff 01 01 62 1b 52 00 53 00 8d 01 =141W
+
+      // length is variable !!! (1 byte for small values)
+      //                                           52=8bit int 
+      // 77 07 01 00 10 07 00 ff 01 01 62 1b 52 00 52 76 01 01 
+      // 77 07 01 00 10 07 00 ff 01 01 62 1b 52 00 52 66 01 01
+
+      // Power Sum(in= pos. out= neg)
+      byte sml_16_7_0[] {0x77, 0x07, 0x01, 0x00, 0x10, 0x07, 0x00, 0xff};
+      uint32_t watt = 0;
+      if (decodeSMLval(watt, smlpayload, sml_16_7_0, sizeof(sml_16_7_0), 15)) 
+      {
+        setPowerData(int16_t(watt));
+      }
+      else {
+        //DEBUG_SERIAL.println ("SML ERROR Parsing sml_16_7_0");
+        ret = false;
+      }
+      // extra debug info
+      //if (ret == true) {
+      // DEBUG_SERIAL.printf("SML OK raw Values:16.7.0:%d  1.8.0:%d  2.8.0:%d\r\n", watt, inputenergy, outputenergy);
+      //}
+    }
+  }
+  else 
+  {
+    //DEBUG_SERIAL.printf("TIBBER httpGETRequest Error code:%d \r\n", httpResponseCode);
+    ret =false;
+  }
+  // Free resources
+  http.end();
+
+  return ret;
+}
+
 void WifiManagerSetup() {
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
@@ -771,12 +1083,17 @@ void WifiManagerSetup() {
   strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
   strcpy(force_pwr_decimals, preferences.getString("force_pwr_decimals", force_pwr_decimals).c_str());
   strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
+   // Tibber-Pulse:
+  strcpy(tibber_url,      preferences.getString("tibber_url" ,     tibber_url).c_str());
+  strcpy(tibber_user,     preferences.getString("tibber_user",     tibber_user).c_str());
+  strcpy(tibber_password, preferences.getString("tibber_password", tibber_password).c_str());
   
   WiFiManagerParameter custom_section1("<h3>General settings</h3>");
-  WiFiManagerParameter custom_input_type("type", "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data", input_type, 40);
+  WiFiManagerParameter custom_input_type("type", "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data<br><code>TIBBERPULSE</code> for Tibber-Pulse", input_type, 40);
+
   WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 80);
   WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
-  WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
+  WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP, SUNSPEC and TIBBERPULSE, in milliseconds", query_period, 10);
   WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
   WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
@@ -797,6 +1114,11 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>Phase 3 power JSON path<br>optional", power_l3_path, 60);
   WiFiManagerParameter custom_energy_in_path("energy_in_path", "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>", energy_in_path, 60);
   WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
+  // for Tibber-Pulse
+  WiFiManagerParameter custom_section5("<hr><h3>Tibber-Pulse</h3>");
+  WiFiManagerParameter custom_tibber_url("url"                 , "<b>url</b><br>e.g.:<code>192.168.xx.xx</code>", tibber_url, 32);
+  WiFiManagerParameter custom_tibber_user("tibber_user"        , "<b>user</b><br><code>admin</code>",             tibber_user, 32);
+  WiFiManagerParameter custom_tibber_password("tibber_password", "<b>password</b><br>form:<code>xxxx-xxxx</code>",tibber_password, 32);
 
   WiFiManager wifiManager;
   if (!DEBUG) {
@@ -831,6 +1153,11 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_power_l3_path);
   wifiManager.addParameter(&custom_energy_in_path);
   wifiManager.addParameter(&custom_energy_out_path);
+  // for Tibber-Pulse:
+  wifiManager.addParameter(&custom_section5);
+  wifiManager.addParameter(&custom_tibber_url);
+  wifiManager.addParameter(&custom_tibber_user);
+  wifiManager.addParameter(&custom_tibber_password);
   
 
   if (!wifiManager.autoConnect("Energy2Shelly")) {
@@ -863,6 +1190,10 @@ void WifiManagerSetup() {
   strcpy(shelly_port, custom_shelly_port.getValue());
   strcpy(force_pwr_decimals, custom_force_pwr_decimals.getValue());
   strcpy(sma_id, custom_sma_id.getValue());
+   // for Tibber-Pulse:
+  strcpy(tibber_url, custom_tibber_url.getValue());
+  strcpy(tibber_user, custom_tibber_user.getValue());
+  strcpy(tibber_password, custom_tibber_password.getValue());
 
   DEBUG_SERIAL.println("The values in the preferences are: ");
   DEBUG_SERIAL.println("\tinput_type : " + String(input_type));
@@ -886,6 +1217,10 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tshelly_port : " + String(shelly_port));
   DEBUG_SERIAL.println("\tforce_pwr_decimals : " + String(force_pwr_decimals));
   DEBUG_SERIAL.println("\tsma_id : " + String(sma_id));
+  // for Tibber-Pulse:
+  DEBUG_SERIAL.println("\ttibber_url:" + String(tibber_url));
+  DEBUG_SERIAL.println("\ttibber_user:" + String(tibber_user));
+  DEBUG_SERIAL.println("\ttibber_password:" + String(tibber_password));
 
   if (strcmp(input_type, "SMA") == 0) {
     dataSMA = true;
@@ -899,11 +1234,17 @@ void WifiManagerSetup() {
   } else if (strcmp(input_type, "SUNSPEC") == 0) {
     dataSUNSPEC = true;
     DEBUG_SERIAL.println("Enabling SUNSPEC data input");
+  } 
+  // for Tibber-Pulse:
+  else if (strcmp(input_type, "TIBBERPULSE") == 0) {
+    dataTIBBERPULSE = true;
+    DEBUG_SERIAL.println("Enabling TIBBERPULSE data input");
   }
   else {
     dataMQTT = true;
     DEBUG_SERIAL.println("Enabling MQTT data input");
   }
+
 
   if (strcmp(led_gpio_i, "true") == 0) {
     led_i = true;
@@ -940,6 +1281,11 @@ void WifiManagerSetup() {
     preferences.putString("shelly_port", shelly_port);
     preferences.putString("force_pwr_decimals", force_pwr_decimals);
     preferences.putString("sma_id", sma_id);
+     // for Tibber-Pulse
+    preferences.putString("tibber_url", tibber_url);
+    preferences.putString("tibber_user", tibber_user);
+    preferences.putString("tibber_password", tibber_password);
+
     wifiManager.reboot();
   }
   DEBUG_SERIAL.println("local ip");
@@ -977,6 +1323,8 @@ void setup(void) {
     request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
   });
 
+  // Shelly Documentation
+  // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EM/#emgetstatus-example
   server.on("/rpc/EM.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetStatus();
     request->send(200, "application/json", serJsonResponse);
@@ -997,18 +1345,39 @@ void setup(void) {
     request->send(200, "application/json", serJsonResponse);
   });
 
+  // EM1
+   server.on("/rpc/EM1.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+    EM1GetStatus();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
+   server.on("/rpc/EM1.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+    EM1GetConfig();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
+  /*
   server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {
     GetDeviceInfo();
     rpcWrapper();
     request->send(200, "application/json", serJsonResponse);
   });
+  */
+
 
   webSocket.onEvent(webSocketEvent);
   server.addHandler(&webSocket);
   server.begin();
-
+#ifdef ESP32
+  http.setConnectTimeout(500); // if url not found or down
+#endif
+  
+#ifdef DEBUG_CUSTOM_UDP_PORT
+  UdpRPC.begin(2223); // Test EM1
+#else
   // Set up RPC over UDP for Marstek users
   UdpRPC.begin(String(shelly_port).toInt()); 
+#endif
 
   // Set up MQTT
   if (dataMQTT) {
@@ -1128,6 +1497,14 @@ void loop() {
     if (currentMillis - startMillis >= period) {
       queryHTTP();
       startMillis = currentMillis;
+    }
+  }
+  // for Tibber-Pulse
+  if (dataTIBBERPULSE) {
+    currentMillis = millis();
+    if (currentMillis - startMillis_tibberpulse >= period) {
+      queryTibberPulseHTTP();
+      startMillis_tibberpulse = currentMillis;
     }
   }
   handleblinkled();

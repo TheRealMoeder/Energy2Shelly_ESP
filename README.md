@@ -50,6 +50,13 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
       - a generic HTTP input; enter a query URL in the second parameter field which delivers JSON data and define at least the JSON Path for total power. For full details on JSONPath configuration, check the section on MQTT above.<br>
   - <code>SUNSPEC</code>
       - generic SUNSPEC register data polling via Modbus TCP; use server for address of Modbus device (e.g. Kostal Smart energy meter), port for Modbus TCP port (usually 502) and Modbus device ID for the unit ID (71 for KSEM)
+  - <code>TIBBERPULSE</code>
+      - Tibber-Pulse Adapter (support for Tibber-Pluse for reading from optical SML-Interface from german Power-Meter, Parameter:TCP-Port, user:admin, password:xxx-xxx
+      
+      - HOWTO Hack Tibber-Pulse adapter: https://github.com/SonnenladenGmbH/tibber_local_lib?tab=readme-ov-file (works in local network! You do **not need** a Tibber-account, Tibber-contract, or connect to the external Tibber-API)
+
+  
+  
 
   ### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>
