@@ -86,7 +86,7 @@ const uint8_t ledblinkduration = 50;
 char led_gpio[3] = "";
 char led_gpio_i[6];
 
-unsigned long period = 1000;
+unsigned long period = 1500; // TEST !! old: 1000
 int rpcId = 1;
 char rpcUser[20] = "user_1";
 
@@ -154,6 +154,7 @@ double round2(double value) {
   return ivalue / 100.0;
 }
 
+/*
 double round3(double value) {
   int ivalue = (int)(value * 1000.0 + (value > 0.0 ? 0.5 : -0.5));
 
@@ -171,6 +172,7 @@ double round1(double value) {
   
   return ivalue / 10.0;
 }
+*/
 
 
 
@@ -193,30 +195,47 @@ JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
 
 void setPowerData(double totalPower) {
   // for Shelly EM1
-  // Test for MARSTEK (because of weak regulation)
+  double power_raw = totalPower;
+  double power_filter = 0;
+  if (abs(totalPower < 100))
+  {
+    power_filter = totalPower * 0.5;   
+  } 
+  else
+  {
+    power_filter = totalPower;
+  }
+  /*
+  else
   if ((totalPower > 0) && (totalPower < 50))
+  {
+    totalPower = totalPower*0.8;   
+  }
+  else
+  if ((totalPower > 0) && (totalPower < 150))
   {
     totalPower = totalPower*0.9;
   }
+  */
 
-  TotalPower.power         = round1(totalPower);
-  TotalPower.apparentPower = round1(totalPower);
+  TotalPower.power         = round2(power_filter);
+  TotalPower.apparentPower = round2(power_filter);
   TotalPower.voltage       = defaultVoltage;
-  TotalPower.current       = round3(totalPower / double(defaultVoltage));
+  TotalPower.current       = round2(power_filter / double(defaultVoltage));
   TotalPower.frequency     = defaultFrequency;
   TotalPower.powerFactor   = defaultPowerFactor;
   
   // for Shelly 3EM
   for (int i = 0; i <= 2; i++) {
-    PhasePower[i].power         = round1(totalPower * 0.3333);
-    PhasePower[i].voltage       = round1(defaultVoltage);
+    PhasePower[i].power         = round2(totalPower * 0.3333);
+    PhasePower[i].voltage       = round2(defaultVoltage);
     PhasePower[i].current       = round2(PhasePower[i].power / PhasePower[i].voltage);
     PhasePower[i].apparentPower = round2(PhasePower[i].power);
     PhasePower[i].powerFactor   = defaultPowerFactor;
     PhasePower[i].frequency     = defaultFrequency;
   }
   //DEBUG_SERIAL.print("Current total power: ");
-  DEBUG_SERIAL.printf("   %.1f[W]\r\n",totalPower);
+  DEBUG_SERIAL.printf("POWER: raw:%4.1f filterd: %4.1f[W]\r\n", power_raw, TotalPower.power);
 }
 
 void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
@@ -224,7 +243,7 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
   PhasePower[1].power = phase2Power;
   PhasePower[2].power = phase3Power;
   for (int i = 0; i <= 2; i++) {
-    PhasePower[i].voltage = round1(defaultVoltage); 
+    PhasePower[i].voltage = round2(defaultVoltage); 
     PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
     PhasePower[i].apparentPower = round2(PhasePower[i].power);
     PhasePower[i].powerFactor = defaultPowerFactor;
@@ -410,7 +429,7 @@ void EMDataGetStatus() {
   jsonResponse["total_act"] = PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption;
   jsonResponse["total_act_ret"] = PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin;
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.println(serJsonResponse);
+  //DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
 
@@ -549,10 +568,11 @@ void parseUdpRPC() {
     JsonDocument json;
     int rSize = UdpRPC.read(buffer, 1024);
     buffer[rSize] = 0;
-    DEBUG_SERIAL.print("Received UDP packet on port 1010: ");
+    DEBUG_SERIAL.printf("Rx UDP packet from %s:%d\r\n",UdpRPC.remoteIP().toString().c_str(), UdpRPC.remotePort());
     DEBUG_SERIAL.println((char *)buffer);
     deserializeJson(json, buffer);
-    if (json["method"].is<JsonVariant>()) {
+    if (json["method"].is<JsonVariant>()) 
+    {
       rpcId = json["id"];
       strcpy(rpcUser, "EMPTY");
       UdpRPC.beginPacket(UdpRPC.remoteIP(), UdpRPC.remotePort());
