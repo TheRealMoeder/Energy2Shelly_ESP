@@ -50,6 +50,10 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
       - a generic HTTP input; enter a query URL in the second parameter field which delivers JSON data and define at least the JSON Path for total power. For full details on JSONPath configuration, check the section on MQTT above.<br>
   - <code>SUNSPEC</code>
       - generic SUNSPEC register data polling via Modbus TCP; use server for address of Modbus device (e.g. Kostal Smart energy meter), port for Modbus TCP port (usually 502) and Modbus device ID for the unit ID (71 for KSEM)
+- <code>VDBC</code>
+- input your Volkszaehler Server ID like MQTT
+- when Monophase input UUID at Total Power
+- When Threepahse than use "TRIPHASE" keyword and Input the 3 diffirent UUID for L1,L2 and L3 at the correct field
 
   ### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>
@@ -65,6 +69,7 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
 # Tested microcontrollers
 * ESP32 (ESP32-WROOM-32)
 * ESP8266
+* ESP32-S3 (Waveshare ESP32-S3 Geek USB-Dongle)
 
 # You found a bug
 First, sorry. This software is not perfect.
