@@ -1,4 +1,6 @@
 // Energy2Shelly_ESP v0.5.2
+//Implementierungsanleitung für VDB (VolkszählerDB) Integration
+
 #include <Arduino.h>
 #include <Preferences.h>
 #ifndef ESP32
@@ -90,6 +92,7 @@ bool dataSMA = false;
 bool dataSHRDZM = false;
 bool dataHTTP = false;
 bool dataSUNSPEC = false;
+bool dataVDB = false;
 
 struct PowerData {
   double current;
@@ -109,6 +112,12 @@ PowerData PhasePower[3];
 EnergyData PhaseEnergy[3];
 String serJsonResponse;
 
+//New Variable for UUID
+char vdb_uuid_total[60] = "";      // UUID für Monophase Gesamtleistung
+char vdb_uuid_l1[60] = "";         // UUID für L1 bei TRIPHASE
+char vdb_uuid_l2[60] = "";         // UUID für L2 bei TRIPHASE
+char vdb_uuid_l3[60] = "";         // UUID für L3 bei TRIPHASE
+
 #ifndef ESP32
   MDNSResponder::hMDNSService hMDNSService = 0; // handle of the http service in the MDNS responder
   MDNSResponder::hMDNSService hMDNSService2 = 0; // handle of the shelly service in the MDNS responder
@@ -126,6 +135,116 @@ WiFiUDP UdpRPC;
 #else
 #define UDPPRINT write
 #endif
+
+
+//TEIL 2: Neue Funktion für VDB HTTP-Abfrage hinzufügen (vor queryHTTP()
+void queryVDB() {
+  DEBUG_SERIAL.println("Querying VolkszählerDB source");
+
+  // Prüfe ob TRIPHASE Modus
+  if (strcmp(power_path, "TRIPHASE") == 0) {
+    DEBUG_SERIAL.println("VDB: TRIPHASE mode detected");
+
+    // Abfrage für L1
+    if (strlen(vdb_uuid_l1) > 0) {
+      String url_l1 = String("http://") + mqtt_server + "/data/" + vdb_uuid_l1 + ".json?from=now";
+      DEBUG_SERIAL.print("VDB L1 URL: ");
+      DEBUG_SERIAL.println(url_l1);
+
+      http.begin(wifi_client, url_l1);
+      int httpCode_l1 = http.GET();
+      if (httpCode_l1 > 0) {
+        JsonDocument json_l1;
+        deserializeJson(json_l1, http.getStream());
+        if (json_l1["data"]["average"].is<double>()) {
+          double power_l1 = json_l1["data"]["average"].as<double>();
+          PhasePower[0].power = round2(power_l1);
+          DEBUG_SERIAL.print("VDB L1 Power: ");
+          DEBUG_SERIAL.println(power_l1);
+        }
+      }
+      http.end();
+    }
+
+    // Abfrage für L2
+    if (strlen(vdb_uuid_l2) > 0) {
+      String url_l2 = String("http://") + mqtt_server + "/data/" + vdb_uuid_l2 + ".json?from=now";
+      DEBUG_SERIAL.print("VDB L2 URL: ");
+      DEBUG_SERIAL.println(url_l2);
+
+      http.begin(wifi_client, url_l2);
+      int httpCode_l2 = http.GET();
+      if (httpCode_l2 > 0) {
+        JsonDocument json_l2;
+        deserializeJson(json_l2, http.getStream());
+        if (json_l2["data"]["average"].is<double>()) {
+          double power_l2 = json_l2["data"]["average"].as<double>();
+          PhasePower[1].power = round2(power_l2);
+          DEBUG_SERIAL.print("VDB L2 Power: ");
+          DEBUG_SERIAL.println(power_l2);
+        }
+      }
+      http.end();
+    }
+
+    // Abfrage für L3
+    if (strlen(vdb_uuid_l3) > 0) {
+      String url_l3 = String("http://") + mqtt_server + "/data/" + vdb_uuid_l3 + ".json?from=now";
+      DEBUG_SERIAL.print("VDB L3 URL: ");
+      DEBUG_SERIAL.println(url_l3);
+
+      http.begin(wifi_client, url_l3);
+      int httpCode_l3 = http.GET();
+      if (httpCode_l3 > 0) {
+        JsonDocument json_l3;
+        deserializeJson(json_l3, http.getStream());
+        if (json_l3["data"]["average"].is<double>()) {
+          double power_l3 = json_l3["data"]["average"].as<double>();
+          PhasePower[2].power = round2(power_l3);
+          DEBUG_SERIAL.print("VDB L3 Power: ");
+          DEBUG_SERIAL.println(power_l3);
+        }
+      }
+      http.end();
+    }
+
+    // Setze Standard-Werte für Voltage, Current etc.
+    for (int i = 0; i <= 2; i++) {
+      PhasePower[i].voltage = defaultVoltage;
+      PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
+      PhasePower[i].apparentPower = round2(PhasePower[i].power);
+      PhasePower[i].powerFactor = defaultPowerFactor;
+      PhasePower[i].frequency = defaultFrequency;
+    }
+
+  } else {
+    // MONOPHASE Modus - Gesamtleistung
+    DEBUG_SERIAL.println("VDB: MONOPHASE mode detected");
+
+    if (strlen(vdb_uuid_total) > 0) {
+      String url_total = String("http://") + mqtt_server + "/data/" + vdb_uuid_total + ".json?from=now";
+      DEBUG_SERIAL.print("VDB Total URL: ");
+      DEBUG_SERIAL.println(url_total);
+
+      http.begin(wifi_client, url_total);
+      int httpCode = http.GET();
+      if (httpCode > 0) {
+        JsonDocument json;
+        deserializeJson(json, http.getStream());
+        if (json["data"]["average"].is<double>()) {
+          double total_power = json["data"]["average"].as<double>();
+          setPowerData(total_power);
+          DEBUG_SERIAL.print("VDB Total Power: ");
+          DEBUG_SERIAL.println(total_power);
+        }
+      }
+      http.end();
+    }
+  }
+}
+
+
+
 
 double round2(double value) {
   int ivalue = (int)(value * 100.0 + (value > 0.0 ? 0.5 : -0.5));
@@ -749,6 +868,7 @@ void WifiManagerSetup() {
   WiFi.macAddress(mac);
   sprintf(shelly_mac, "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
+  //new UUID
   preferences.begin("e2s_config", false);
   strcpy(input_type, preferences.getString("input_type", input_type).c_str());
   strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
@@ -771,9 +891,14 @@ void WifiManagerSetup() {
   strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
   strcpy(force_pwr_decimals, preferences.getString("force_pwr_decimals", force_pwr_decimals).c_str());
   strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
-  
+  strcpy(vdb_uuid_total, preferences.getString("vdb_uuid_total", vdb_uuid_total).c_str());
+  strcpy(vdb_uuid_l1, preferences.getString("vdb_uuid_l1", vdb_uuid_l1).c_str());
+  strcpy(vdb_uuid_l2, preferences.getString("vdb_uuid_l2", vdb_uuid_l2).c_str());
+  strcpy(vdb_uuid_l3, preferences.getString("vdb_uuid_l3", vdb_uuid_l3).c_str());
+
+  //New UUID
   WiFiManagerParameter custom_section1("<h3>General settings</h3>");
-  WiFiManagerParameter custom_input_type("type", "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data", input_type, 40);
+  WiFiManagerParameter custom_input_type("type", "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data<br><code>VDB</code> for VolkszählerDB", input_type, 40);
   WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 80);
   WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
   WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
@@ -797,6 +922,11 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>Phase 3 power JSON path<br>optional", power_l3_path, 60);
   WiFiManagerParameter custom_energy_in_path("energy_in_path", "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>", energy_in_path, 60);
   WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
+  WiFiManagerParameter custom_section_vdb("<hr><h3>VolkszählerDB (VDB) options</h3>");
+  WiFiManagerParameter custom_vdb_uuid_total("vdb_uuid_total", "<b>VDB UUID Total Power</b><br>UUID für Gesamtleistung (MONOPHASE)<br>z.B. <code>b7e1ced0-3e8f-11ed-9423-d36e0a30be66</code>", vdb_uuid_total, 60);
+  WiFiManagerParameter custom_vdb_uuid_l1("vdb_uuid_l1", "<b>VDB UUID Phase 1</b><br>UUID für L1 (bei TRIPHASE)<br>z.B. <code>e8305be0-3e8f-11ed-ad36-d3d66fdcda52</code>", vdb_uuid_l1, 60);
+  WiFiManagerParameter custom_vdb_uuid_l2("vdb_uuid_l2", "<b>VDB UUID Phase 2</b><br>UUID für L2 (bei TRIPHASE)<br>z.B. <code>02820880-3e90-11ed-a7db-67a92978b5a6</code>", vdb_uuid_l2, 60);
+  WiFiManagerParameter custom_vdb_uuid_l3("vdb_uuid_l3", "<b>VDB UUID Phase 3</b><br>UUID für L3 (bei TRIPHASE)<br>z.B. <code>21f0c820-3e90-11ed-b992-556971f26f9c</code>", vdb_uuid_l3, 60);
 
   WiFiManager wifiManager;
   if (!DEBUG) {
@@ -805,7 +935,7 @@ void WifiManagerSetup() {
   wifiManager.setTitle("Energy2Shelly for ESP");
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
-  //add all your parameters here
+  //add all your parameters here ;New UUID
   wifiManager.addParameter(&custom_section1);
   wifiManager.addParameter(&custom_input_type);
   wifiManager.addParameter(&custom_mqtt_server);
@@ -831,6 +961,11 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_power_l3_path);
   wifiManager.addParameter(&custom_energy_in_path);
   wifiManager.addParameter(&custom_energy_out_path);
+  wifiManager.addParameter(&custom_section_vdb);
+  wifiManager.addParameter(&custom_vdb_uuid_total);
+  wifiManager.addParameter(&custom_vdb_uuid_l1);
+  wifiManager.addParameter(&custom_vdb_uuid_l2);
+  wifiManager.addParameter(&custom_vdb_uuid_l3);
   
 
   if (!wifiManager.autoConnect("Energy2Shelly")) {
@@ -917,6 +1052,7 @@ void WifiManagerSetup() {
     forcePwrDecimals = false;
   }
 
+  //new UUID
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println("saving config");
     preferences.putString("input_type", input_type);
@@ -940,6 +1076,10 @@ void WifiManagerSetup() {
     preferences.putString("shelly_port", shelly_port);
     preferences.putString("force_pwr_decimals", force_pwr_decimals);
     preferences.putString("sma_id", sma_id);
+    preferences.putString("vdb_uuid_total", custom_vdb_uuid_total.getValue());
+    preferences.putString("vdb_uuid_l1", custom_vdb_uuid_l1.getValue());
+    preferences.putString("vdb_uuid_l2", custom_vdb_uuid_l2.getValue());
+    preferences.putString("vdb_uuid_l3", custom_vdb_uuid_l3.getValue());
     wifiManager.reboot();
   }
   DEBUG_SERIAL.println("local ip");
@@ -1054,6 +1194,12 @@ void setup(void) {
   if (!MDNS.begin(shelly_name)) {
     DEBUG_SERIAL.println("Error setting up MDNS responder!");
   }
+  
+  //Set up VDS query
+  if (strcmp(input_type, "VDB") == 0) {
+  dataVDB = true;
+  DEBUG_SERIAL.println("Input mode: VDB (VolkszählerDB)");
+}
 
 #ifdef ESP32
   MDNS.addService("http", "tcp", 80);
@@ -1121,7 +1267,14 @@ void loop() {
        parseSUNSPEC();
       startMillis_sunspec = currentMillis;
     }
-   
+    //NEw VDB
+   if (dataVDB) {
+  currentMillis = millis();
+  if (currentMillis - startMillis >= period) {
+    queryVDB();
+    startMillis = currentMillis;
+  }
+}
   }
   if (dataHTTP) {
     currentMillis = millis();
@@ -1132,4 +1285,5 @@ void loop() {
   }
   handleblinkled();
 }
+
 
