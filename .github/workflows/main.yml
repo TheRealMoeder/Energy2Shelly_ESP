@@ -40,7 +40,7 @@ jobs:
           cp .pio/build/esp32/merged-flash.bin ./.github/pages/esp32.bin
           cp .pio/build/esp8266/firmware.bin ./.github/pages/esp8266.bin
       - name: Upload firmware artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: firmware
           path: |
