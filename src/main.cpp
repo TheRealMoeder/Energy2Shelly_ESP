@@ -273,7 +273,7 @@ void setJsonPathPower(JsonDocument json) {
 
 // Helper: parse a raw Shelly JSON string and forward to setJsonPathPower
 void parseShellyString(const char *jsonStr) {
-  DynamicJsonDocument doc(1024);
+  JsonDocument doc;
   DeserializationError err = deserializeJson(doc, jsonStr);
   if (err) {
     DEBUG_SERIAL.print("deserializeJson failed: ");
