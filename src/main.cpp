@@ -48,7 +48,7 @@ struct Config {
   String shellyFwId = "20241011-114455/1.4.4-g6d2a586";
   String shellyMac;
   String shellyName = "shellypro3em-";
-  String queryPeriod = "1000";
+  String queryPeriod = "1100";
   String modbusDevice = "71";
   String shellyPort = "2220";
   bool forcePwrDecimals = true;
@@ -58,7 +58,7 @@ struct Config {
   int mqttPortInt = 1883;
   int shellyPortInt = 2220;
   int ledGpioInt = 0;
-  int queryPeriodMs = 1000;
+  int queryPeriodMs = 1300;
   int modbusDeviceId = 71;
   bool ledInverted = false;
 } config;
@@ -81,7 +81,7 @@ uint8_t led = 0;
 bool led_i = false;
 const uint8_t ledblinkduration = 50;
 
-unsigned long period = 1000;
+unsigned long period = 1430;
 int rpcId = 1;
 String rpcUser = "user_1";
 
@@ -815,8 +815,8 @@ void queryHTTP() {
   DEBUG_SERIAL.println("DEBUG: queryHTTP() called, server=" + config.mqttServer);
   String serverAddr = config.mqttServer;
   serverAddr.trim();
-  if (serverAddr.length() == 0) {
-    DEBUG_SERIAL.println("HTTP server not configured - skipping HTTP query");
+  if (serverAddr.length() == 0 || serverAddr == "http://" || serverAddr == "https://") {
+    DEBUG_SERIAL.println("HTTP server not configured or invalid - skipping HTTP query");
     return;
   }
   DEBUG_SERIAL.println("Querying HTTP source");
