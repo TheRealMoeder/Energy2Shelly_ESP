@@ -1359,7 +1359,11 @@ void setup(void) {
   // Set up MQTT
   if (dataMQTT) {
     mqtt_client.setBufferSize(2048);
-    mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
+    if (isValidIPAddress(mqtt_server)) {
+      mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
+    } else {
+      mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
+    }
     mqtt_client.setCallback(mqtt_callback);
   }
 
@@ -1477,5 +1481,10 @@ void loop() {
     }
   }
   handleblinkled();
+}
+
+bool isValidIPAddress(const char* ipString) {
+  IPAddress ip;
+  return ip.fromString(ipString);
 }
 
