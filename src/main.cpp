@@ -101,6 +101,7 @@ bool dataSMA = false;
 bool dataSHRDZM = false;
 bool dataHTTP = false;
 bool dataSUNSPEC = false;
+bool mqtt_configured = false;  // Flag to indicate MQTT is fully configured and safe to use
 
 struct PowerData {
   double current;
@@ -473,6 +474,13 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
 }
 
 void mqtt_reconnect() {
+  DEBUG_SERIAL.println("DEBUG: mqtt_reconnect() called, server=" + config.mqttServer + ", mqtt_configured=" + String(mqtt_configured));
+  // Prevent reconnection if MQTT not properly configured
+  if (!mqtt_configured || config.mqttServer == "" || config.mqttServer.length() == 0) {
+    DEBUG_SERIAL.println("DEBUG: mqtt_reconnect() aborting - MQTT not configured or empty server");
+    return;
+  }
+  
   DEBUG_SERIAL.print("Attempting MQTT connection...");
   if (mqtt_client.connect(config.shellyName.c_str(), config.mqttUser.c_str(), config.mqttPasswd.c_str())) {
     DEBUG_SERIAL.println("connected");
@@ -722,6 +730,7 @@ double SUNSPEC_scale(int n)
 }
 
 void parseSUNSPEC() {
+  DEBUG_SERIAL.println("DEBUG: parseSUNSPEC() called, server=" + config.mqttServer);
   #define SUNSPEC_BASE 40072
   #define SUNSPEC_VOLTAGE 40077
   #define SUNSPEC_VOLTAGE_SCALE 40084
@@ -736,6 +745,9 @@ void parseSUNSPEC() {
   #define SUNSPEC_FREQUENCY 40085
   #define SUNSPEC_FREQUENCY_SCALE 40086
   
+  if (config.mqttServer == "" || config.mqttServer.length() == 0) {
+    return;
+  }
   modbus_ip.fromString(config.mqttServer.c_str());
   if (!modbus1.isConnected(modbus_ip)) {
     modbus1.connect(modbus_ip, config.mqttPortInt);
@@ -800,8 +812,15 @@ void parseSUNSPEC() {
 }
 
 void queryHTTP() {
+  DEBUG_SERIAL.println("DEBUG: queryHTTP() called, server=" + config.mqttServer);
+  String serverAddr = config.mqttServer;
+  serverAddr.trim();
+  if (serverAddr.length() == 0) {
+    DEBUG_SERIAL.println("HTTP server not configured - skipping HTTP query");
+    return;
+  }
   DEBUG_SERIAL.println("Querying HTTP source");
-  http.begin(wifi_client, config.mqttServer.c_str());
+  http.begin(wifi_client, serverAddr.c_str());
   http.GET();
   deserializeJson(globalJsonDoc, http.getStream());
   if (config.powerPath == "") {
@@ -814,6 +833,8 @@ void queryHTTP() {
 }
 
 void WifiManagerSetup() {
+  DEBUG_SERIAL.println("DEBUG: WifiManagerSetup() START");
+  
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
   WiFi.macAddress(mac);
@@ -821,9 +842,15 @@ void WifiManagerSetup() {
   sprintf(macBuffer, "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   config.shellyMac = macBuffer;
 
+  DEBUG_SERIAL.println("DEBUG: About to call preferences.begin()");
   preferences.begin("e2s_config", false);
+  DEBUG_SERIAL.println("DEBUG: preferences.begin() done, now loading values");
+  
+  // Load all preferences first - avoid any network operations during loading
   config.inputType = preferences.getString("input_type", config.inputType);
+  DEBUG_SERIAL.println("DEBUG: loaded inputType=" + config.inputType);
   config.mqttServer = preferences.getString("mqtt_server", config.mqttServer);
+  DEBUG_SERIAL.println("DEBUG: loaded mqttServer=" + config.mqttServer);
   config.queryPeriod = preferences.getString("query_period", config.queryPeriod);
   String ledGpio = preferences.getString("led_gpio", "");
   config.ledGpioInt = ledGpio.toInt();
@@ -846,8 +873,7 @@ void WifiManagerSetup() {
   config.energyOutPath = preferences.getString("energy_out_path", config.energyOutPath);
   config.shellyPort = preferences.getString("shelly_port", config.shellyPort);
   config.shellyPortInt = config.shellyPort.toInt();
-  String forcePwrDec = preferences.getString("force_pwr_decimals", "true");
-  config.forcePwrDecimals = (forcePwrDec == "true");
+  config.forcePwrDecimals = preferences.getBool("force_pwr_decimals", true);
   config.smaId = preferences.getString("sma_id", config.smaId);
   
   WiFiManagerParameter custom_section1("<h3>General settings</h3>");
@@ -859,7 +885,7 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", ledInvert.c_str(), 6);
   WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", config.shellyMac.c_str(), 13);
   WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> for old Marstek FW, <code>2220</code> for new Marstek FW v226+/v108+", config.shellyPort.c_str(), 6);
-  WiFiManagerParameter custom_force_pwr_decimals("force_pwr_decimals", "<b>Force decimals numbers for Power values</b><br><code>true</code> to fix Marstek bug", forcePwrDec.c_str(), 6);
+  WiFiManagerParameter custom_force_pwr_decimals("force_pwr_decimals", "<b>Force decimals numbers for Power values</b><br><code>true</code> to fix Marstek bug", (config.forcePwrDecimals ? "true" : "false"), 6);
   WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", config.smaId.c_str(), 16);
   WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
   WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", config.mqttTopic.c_str(), 90);
@@ -911,17 +937,42 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_energy_out_path);
   
 
-  if (!wifiManager.autoConnect("Energy2Shelly")) {
-    DEBUG_SERIAL.println("failed to connect and hit timeout");
-    delay(3000);
-    ESP.restart();
-    delay(5000);
+  DEBUG_SERIAL.println("DEBUG: About to call wifiManager.autoConnect()");
+  // Only attempt WiFiManager if configuration is invalid or incomplete
+  bool needsConfiguration = (config.inputType == "" || config.mqttServer == "");
+  if (needsConfiguration) {
+    DEBUG_SERIAL.println("DEBUG: Configuration incomplete, running WiFiManager.autoConnect()");
+    if (!wifiManager.autoConnect("Energy2Shelly")) {
+      DEBUG_SERIAL.println("failed to connect and hit timeout");
+      delay(3000);
+      ESP.restart();
+      delay(5000);
+    }
+    DEBUG_SERIAL.println("DEBUG: wifiManager.autoConnect() completed");
+  } else {
+    DEBUG_SERIAL.println("DEBUG: Configuration complete, attempting normal WiFi connection");
+    WiFi.mode(WIFI_STA);
+    WiFi.begin();
+    int timeout = 20;
+    while (WiFi.status() != WL_CONNECTED && timeout--) {
+      delay(500);
+      DEBUG_SERIAL.print(".");
+    }
+    if (WiFi.status() != WL_CONNECTED) {
+      DEBUG_SERIAL.println("\nFailed to connect, entering WiFiManager");
+      if (!wifiManager.autoConnect("Energy2Shelly")) {
+        DEBUG_SERIAL.println("failed to connect and hit timeout");
+        delay(3000);
+        ESP.restart();
+      }
+    }
   }
   DEBUG_SERIAL.println("connected");
 
   //read updated parameters
   config.inputType = custom_input_type.getValue();
   config.mqttServer = custom_mqtt_server.getValue();
+  config.mqttServer.trim();
   config.mqttPort = custom_mqtt_port.getValue();
   config.mqttPortInt = config.mqttPort.toInt();
   config.queryPeriod = custom_query_period.getValue();
@@ -944,7 +995,7 @@ void WifiManagerSetup() {
   config.energyOutPath = custom_energy_out_path.getValue();
   config.shellyPort = custom_shelly_port.getValue();
   config.shellyPortInt = config.shellyPort.toInt();
-  String forcePwrStr = custom_force_pwr_decimals.getValue();
+  String forcePwrStr(custom_force_pwr_decimals.getValue());
   config.forcePwrDecimals = (forcePwrStr == "true");
   config.smaId = custom_sma_id.getValue();
 
@@ -978,15 +1029,27 @@ void WifiManagerSetup() {
     dataSHRDZM = true;
     DEBUG_SERIAL.println("Enabling SHRDZM UDP data input");
   } else if (config.inputType == "HTTP") {
-    dataHTTP = true;
-    DEBUG_SERIAL.println("Enabling generic HTTP data input");
+    if (config.mqttServer != "" && config.mqttServer.length() > 0) {
+      dataHTTP = true;
+      DEBUG_SERIAL.println("Enabling generic HTTP data input");
+    } else {
+      DEBUG_SERIAL.println("HTTP server not configured - disabling HTTP data input");
+    }
   } else if (config.inputType == "SUNSPEC") {
-    dataSUNSPEC = true;
-    DEBUG_SERIAL.println("Enabling SUNSPEC data input");
+    if (config.mqttServer != "" && config.mqttServer.length() > 0) {
+      dataSUNSPEC = true;
+      DEBUG_SERIAL.println("Enabling SUNSPEC data input");
+    } else {
+      DEBUG_SERIAL.println("SUNSPEC server not configured - disabling SUNSPEC data input");
+    }
   }
   else {
-    dataMQTT = true;
-    DEBUG_SERIAL.println("Enabling MQTT data input");
+    if (config.mqttServer != "" && config.mqttServer.length() > 0) {
+      dataMQTT = true;
+      DEBUG_SERIAL.println("Enabling MQTT data input");
+    } else {
+      DEBUG_SERIAL.println("MQTT server not configured - disabling MQTT data input");
+    }
   }
 
   led_i = config.ledInverted;
@@ -1012,7 +1075,7 @@ void WifiManagerSetup() {
     preferences.putString("energy_in_path", config.energyInPath);
     preferences.putString("energy_out_path", config.energyOutPath);
     preferences.putString("shelly_port", config.shellyPort);
-    preferences.putString("force_pwr_decimals", config.forcePwrDecimals ? "true" : "false");
+    preferences.putBool("force_pwr_decimals", config.forcePwrDecimals);
     preferences.putString("sma_id", config.smaId);
     wifiManager.reboot();
   }
@@ -1022,7 +1085,10 @@ void WifiManagerSetup() {
 
 void setup(void) {
   DEBUG_SERIAL.begin(115200);
+  DEBUG_SERIAL.println("\n\n=== SETUP START ===");
+  DEBUG_SERIAL.println("About to call WifiManagerSetup()");
   WifiManagerSetup();
+  DEBUG_SERIAL.println("WifiManagerSetup() completed");
 
   led = config.ledGpioInt;
 
@@ -1101,17 +1167,27 @@ void setup(void) {
 
   // Set up MQTT
   if (dataMQTT) {
-    mqtt_client.setBufferSize(2048);
-    // Parse IP address to avoid DNS lookups
-    IPAddress mqttIP;
-    if (mqttIP.fromString(config.mqttServer)) {
-      // It's an IP address, use it directly
-      mqtt_client.setServer(mqttIP, config.mqttPortInt);
+    String server = config.mqttServer;
+    server.trim();
+    // Only setup MQTT if server is configured
+    if (server.length() > 0) {
+      mqtt_client.setBufferSize(2048);
+      // Parse IP address to avoid DNS lookups
+      IPAddress mqttIP;
+      if (mqttIP.fromString(server)) {
+        // It's an IP address, use it directly
+        mqtt_client.setServer(mqttIP, config.mqttPortInt);
+      } else {
+        // It's a hostname, pass as string (will do DNS lookup)
+        mqtt_client.setServer(server.c_str(), config.mqttPortInt);
+      }
+      mqtt_client.setCallback(mqtt_callback);
+      mqtt_configured = true;  // Mark MQTT as properly configured
     } else {
-      // It's a hostname, pass as string (will do DNS lookup)
-      mqtt_client.setServer(config.mqttServer.c_str(), config.mqttPortInt);
+      DEBUG_SERIAL.println("MQTT server not configured - skipping MQTT setup");
+      dataMQTT = false;
+      mqtt_configured = false;
     }
-    mqtt_client.setCallback(mqtt_callback);
   }
 
   // Set Up Multicast for SMA Energy Meter
@@ -1131,11 +1207,16 @@ void setup(void) {
 
   // Set Up Modbus TCP for SUNSPEC register query
   if (dataSUNSPEC) {
-    modbus1.client();
-    modbus_ip.fromString(config.mqttServer.c_str());
-    if (!modbus1.isConnected(modbus_ip)) {  // reuse mqtt server address for modbus address
-      modbus1.connect(modbus_ip, config.mqttPortInt);
-      Serial.println("Trying to connect SUNSPEC powermeter data");
+    if (config.mqttServer == "" || config.mqttServer.length() == 0) {
+      DEBUG_SERIAL.println("SUNSPEC server not configured - skipping SUNSPEC setup");
+      dataSUNSPEC = false;
+    } else {
+      modbus1.client();
+      modbus_ip.fromString(config.mqttServer.c_str());
+      if (!modbus1.isConnected(modbus_ip)) {  // reuse mqtt server address for modbus address
+        modbus1.connect(modbus_ip, config.mqttPortInt);
+        Serial.println("Trying to connect SUNSPEC powermeter data");
+      }
     }
   }
 
@@ -1200,7 +1281,7 @@ void loop() {
     delay(1000);
     ESP.restart();
   }
-  if (dataMQTT) {
+  if (mqtt_configured) {  // Only use mqtt_client if it was properly configured
     if (!mqtt_client.connected()) {
       mqtt_reconnect();
     }
