@@ -127,6 +127,11 @@ WiFiUDP UdpRPC;
 #define UDPPRINT write
 #endif
 
+bool isValidIPAddress(const char* ipString) {
+  IPAddress ip;
+  return ip.fromString(ipString);
+}
+
 double round2(double value) {
   int ivalue = (int)(value * 100.0 + (value > 0.0 ? 0.5 : -0.5));
 
@@ -1203,9 +1208,3 @@ void loop() {
   }
   handleblinkled();
 }
-
-bool isValidIPAddress(const char* ipString) {
-  IPAddress ip;
-  return ip.fromString(ipString);
-}
-
