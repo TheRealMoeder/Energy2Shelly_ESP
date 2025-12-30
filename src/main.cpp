@@ -1320,7 +1320,35 @@ void setup(void) {
   }
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "This is the Energy2Shelly for ESP converter!\r\nDevice and Energy status is available under /status\r\nTo reset configuration, goto /reset\r\n");
+    String html = R"=====(
+<!DOCTYPE html>
+<html>
+<head>
+<title>Energy2Shelly ESP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: Arial, sans-serif; text-align: center; padding: 40px; background-color: #f4f4f4; color: #333; }
+  h1 { color: #0056b3; }
+  p { font-size: 1.1em; }
+  .nav { margin-top: 30px; }
+  .nav a { display: inline-block; padding: 12px 24px; margin: 8px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; transition: background-color 0.3s; }
+  .nav a:hover { background-color: #0056b3; }
+  .nav a.reset { background-color: #d9534f; }
+  .nav a.reset:hover { background-color: #c9302c; }
+</style>
+</head>
+<body>
+  <h1>Energy2Shelly ESP</h1>
+  <p>This device emulates a Shelly Pro 3EM to integrate various energy meters.</p>
+  <div class="nav">
+    <a href="/status">View Status</a>
+    <a href="/config">Change Configuration</a>
+    <a href="/reset" class="reset">Reset Device</a>
+  </div>
+</body>
+</html>
+)=====";
+    request->send(200, "text/html", html);
   });
 
   server.on("/config", HTTP_GET, handleConfig);
