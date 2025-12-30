@@ -37,7 +37,7 @@ struct Config {
   String mqttTopic = "tele/meter/SENSOR";
   String mqttUser;
   String mqttPasswd;
-  String powerPath;
+  String powerPath = "triphase";
   String pwrExportPath;
   String powerL1Path;
   String powerL2Path;
