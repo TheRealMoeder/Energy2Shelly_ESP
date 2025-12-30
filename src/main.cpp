@@ -48,7 +48,7 @@ struct Config {
   String shellyFwId = "20241011-114455/1.4.4-g6d2a586";
   String shellyMac;
   String shellyName = "shellypro3em-";
-  String queryPeriod = "1100";
+  String queryPeriod = "1000";
   String modbusDevice = "71";
   String shellyPort = "2220";
   bool forcePwrDecimals = true;
@@ -58,7 +58,7 @@ struct Config {
   int mqttPortInt = 1883;
   int shellyPortInt = 2220;
   int ledGpioInt = 0;
-  int queryPeriodMs = 1300;
+  int queryPeriodMs = 1000;
   int modbusDeviceId = 71;
   bool ledInverted = false;
 } config;
