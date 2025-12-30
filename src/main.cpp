@@ -818,7 +818,10 @@ void queryHTTP() {
     DEBUG_SERIAL.println("HTTP server not configured or invalid - skipping HTTP query");
     return;
   }
-  DEBUG_SERIAL.println("Querying HTTP source");
+  if (!serverAddr.startsWith("http://") && !serverAddr.startsWith("https://")) {
+    serverAddr = "http://" + serverAddr;
+  }
+
   http.begin(wifi_client, serverAddr.c_str());
   http.GET();
   deserializeJson(globalJsonDoc, http.getStream());
