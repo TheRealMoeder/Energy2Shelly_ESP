@@ -263,11 +263,9 @@ void setJsonPathPower(JsonDocument json) {
     return;
   }
   if (config.powerPath == "TRIPHASE") {
-    DEBUG_SERIAL.println("resolving triphase");
     double power1 = resolveJsonPath(json, config.powerL1Path.c_str());
     double power2 = resolveJsonPath(json, config.powerL2Path.c_str());
     double power3 = resolveJsonPath(json, config.powerL3Path.c_str());
-    DEBUG_SERIAL.println(power1);
     setPowerData(power1, power2, power3);
   } else {
     // Check if BOTH paths (Import = powerPath, Export = pwrExportPath) are defined
