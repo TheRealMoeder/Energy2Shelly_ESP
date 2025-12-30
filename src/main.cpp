@@ -92,6 +92,7 @@ IPAddress multicastIP(239, 12, 255, 254);
 // flags for saving/resetting WifiManager data
 bool shouldSaveConfig = false;
 bool shouldResetConfig = false;
+bool shouldReboot = false;
 
 Preferences preferences;
 
@@ -832,6 +833,223 @@ void queryHTTP() {
   globalJsonDoc.clear();
 }
 
+
+const char CONFIG_page[] PROGMEM = R"=====(
+<!DOCTYPE html>
+<html>
+<head>
+<title>E2S Configuration</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+h2 { text-align: center; color: #333; }
+form { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
+label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+input[type=text], input[type=password], select { width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+.btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; display: block; width: 100%; }
+.btn-save { background-color: #4CAF50; color: white; }
+.note { font-size: 0.9em; color: #777; text-align: center; margin-top: 20px; }
+fieldset { border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin-bottom: 20px; }
+legend { font-weight: bold; color: #333; padding: 0 5px; }
+</style>
+</head>
+<body>
+<h2>Energy2Shelly Configuration</h2>
+<form method='POST' action='/save'>
+  <fieldset>
+    <legend>General Settings</legend>
+    <label for="inputType">Data Source Type</label>
+    <select id="inputType" name="inputType">
+      <option value="MQTT" %s_MQTT%>MQTT</option>
+      <option value="HTTP" %s_HTTP%>Generic HTTP</option>
+      <option value="SMA" %s_SMA%>SMA Multicast</option>
+      <option value="SHRDZM" %s_SHRDZM%>SHRDZM UDP</option>
+      <option value="SUNSPEC" %s_SUNSPEC%>Modbus TCP (SUNSPEC)</option>
+    </select>
+    <label for="mqttServer">Server / URL</label>
+    <input type='text' id='mqttServer' name='mqttServer' value='%v_mqttServer%'>
+    <label for="queryPeriod">Query Period (ms)</label>
+    <input type='text' id='queryPeriod' name='queryPeriod' value='%v_queryPeriod%'>
+    <label for="ledGpio">LED GPIO</label>
+    <input type='text' id='ledGpio' name='ledGpio' value='%v_ledGpio%'>
+    <label for="ledInverted">Invert LED GPIO</label>
+    <select id="ledInverted" name="ledInverted">
+      <option value="false" %s_ledInverted_false%>No</option>
+      <option value="true" %s_ledInverted_true%>Yes</option>
+    </select>
+    <label for="shellyMac">Shelly ID (MAC)</label>
+    <input type='text' id='shellyMac' name='shellyMac' value='%v_shellyMac%'>
+    <label for="shellyPort">Shelly UDP Port</label>
+    <input type='text' id='shellyPort' name='shellyPort' value='%v_shellyPort%'>
+    <label for="forcePwrDecimals">Force Power Decimals</label>
+    <select id="forcePwrDecimals" name="forcePwrDecimals">
+      <option value="true" %s_forcePwrDecimals_true%>Yes</option>
+      <option value="false" %s_forcePwrDecimals_false%>No</option>
+    </select>
+    <label for="smaId">SMA Serial Number</label>
+    <input type='text' id='smaId' name='smaId' value='%v_smaId%'>
+  </fieldset>
+  
+  <fieldset>
+    <legend>MQTT Options</legend>
+    <label for="mqttPort">MQTT Port</label>
+    <input type='text' id='mqttPort' name='mqttPort' value='%v_mqttPort%'>
+    <label for="mqttTopic">MQTT Topic</label>
+    <input type='text' id='mqttTopic' name='mqttTopic' value='%v_mqttTopic%'>
+    <label for="mqttUser">MQTT User</label>
+    <input type='text' id='mqttUser' name='mqttUser' value='%v_mqttUser%'>
+    <label for="mqttPasswd">MQTT Password</label>
+    <input type='password' id='mqttPasswd' name='mqttPasswd' value='%v_mqttPasswd%'>
+  </fieldset>
+  
+  <fieldset>
+    <legend>Modbus TCP Options</legend>
+    <label for="modbusDevice">Modbus Device ID</label>
+    <input type='text' id='modbusDevice' name='modbusDevice' value='%v_modbusDevice%'>
+  </fieldset>
+
+  <fieldset>
+    <legend>JSON Paths</legend>
+    <label for="powerPath">Total Power Path</label>
+    <input type='text' id='powerPath' name='powerPath' value='%v_powerPath%'>
+    <label for="pwrExportPath">Export Power Path</label>
+    <input type='text' id='pwrExportPath' name='pwrExportPath' value='%v_pwrExportPath%'>
+    <label for="powerL1Path">Phase 1 Power Path</label>
+    <input type='text' id='powerL1Path' name='powerL1Path' value='%v_powerL1Path%'>
+    <label for="powerL2Path">Phase 2 Power Path</label>
+    <input type='text' id='powerL2Path' name='powerL2Path' value='%v_powerL2Path%'>
+    <label for="powerL3Path">Phase 3 Power Path</label>
+    <input type='text' id='powerL3Path' name='powerL3Path' value='%v_powerL3Path%'>
+    <label for="energyInPath">Energy In Path</label>
+    <input type='text' id='energyInPath' name='energyInPath' value='%v_energyInPath%'>
+    <label for="energyOutPath">Energy Out Path</label>
+    <input type='text' id='energyOutPath' name='energyOutPath' value='%v_energyOutPath%'>
+  </fieldset>
+
+  <button type='submit' class='btn btn-save'>Save Configuration</button>
+</form>
+<p class="note">Device will restart after saving.</p>
+</body>
+</html>
+)=====";
+
+String processor(const String& var) {
+  // General
+  if (var == "v_mqttServer") return config.mqttServer;
+  if (var == "v_queryPeriod") return config.queryPeriod;
+  if (var == "v_ledGpio") return String(config.ledGpioInt);
+  if (var == "v_shellyMac") return config.shellyMac;
+  if (var == "v_shellyPort") return config.shellyPort;
+  if (var == "v_smaId") return config.smaId;
+
+  // Booleans for selects
+  if (var == "s_ledInverted_true") return config.ledInverted ? "selected" : "";
+  if (var == "s_ledInverted_false") return !config.ledInverted ? "selected" : "";
+  if (var == "s_forcePwrDecimals_true") return config.forcePwrDecimals ? "selected" : "";
+  if (var == "s_forcePwrDecimals_false") return !config.forcePwrDecimals ? "selected" : "";
+
+  // Data Source Type select
+  if (var == "s_MQTT") return (config.inputType == "MQTT") ? "selected" : "";
+  if (var == "s_HTTP") return (config.inputType == "HTTP") ? "selected" : "";
+  if (var == "s_SMA") return (config.inputType == "SMA") ? "selected" : "";
+  if (var == "s_SHRDZM") return (config.inputType == "SHRDZM") ? "selected" : "";
+  if (var == "s_SUNSPEC") return (config.inputType == "SUNSPEC") ? "selected" : "";
+
+  // MQTT
+  if (var == "v_mqttPort") return config.mqttPort;
+  if (var == "v_mqttTopic") return config.mqttTopic;
+  if (var == "v_mqttUser") return config.mqttUser;
+  if (var == "v_mqttPasswd") return config.mqttPasswd;
+
+  // Modbus
+  if (var == "v_modbusDevice") return config.modbusDevice;
+  
+  // JSON Paths
+  if (var == "v_powerPath") return config.powerPath;
+  if (var == "v_pwrExportPath") return config.pwrExportPath;
+  if (var == "v_powerL1Path") return config.powerL1Path;
+  if (var == "v_powerL2Path") return config.powerL2Path;
+  if (var == "v_powerL3Path") return config.powerL3Path;
+  if (var == "v_energyInPath") return config.energyInPath;
+  if (var == "v_energyOutPath") return config.energyOutPath;
+  
+  return String();
+}
+
+void handleConfig(AsyncWebServerRequest *request) {
+  request->send(200, "text/html", CONFIG_page, processor);
+}
+
+void handleSave(AsyncWebServerRequest *request) {
+  // Helper lambda to get a parameter value
+  auto getParam = [&](const char* name) {
+    if (request->hasParam(name, true)) {
+      return request->getParam(name, true)->value();
+    }
+    return String();
+  };
+
+  // Update config struct from form parameters
+  config.inputType = getParam("inputType");
+  config.mqttServer = getParam("mqttServer");
+  config.queryPeriod = getParam("queryPeriod");
+  String ledGpioStr = getParam("ledGpio");
+  config.ledGpioInt = ledGpioStr.toInt();
+  String ledInvertedStr = getParam("ledInverted");
+  config.ledInverted = (ledInvertedStr == "true");
+  config.shellyMac = getParam("shellyMac");
+  config.shellyPort = getParam("shellyPort");
+  String forcePwrDecimalsStr = getParam("forcePwrDecimals");
+  config.forcePwrDecimals = (forcePwrDecimalsStr == "true");
+  config.smaId = getParam("smaId");
+  config.mqttPort = getParam("mqttPort");
+  config.mqttTopic = getParam("mqttTopic");
+  config.mqttUser = getParam("mqttUser");
+  config.mqttPasswd = getParam("mqttPasswd");
+  config.modbusDevice = getParam("modbusDevice");
+  config.powerPath = getParam("powerPath");
+  config.pwrExportPath = getParam("pwrExportPath");
+  config.powerL1Path = getParam("powerL1Path");
+  config.powerL2Path = getParam("powerL2Path");
+  config.powerL3Path = getParam("powerL3Path");
+  config.energyInPath = getParam("energyInPath");
+  config.energyOutPath = getParam("energyOutPath");
+
+  // Save all settings to Preferences
+  preferences.begin("e2s_config", false);
+  preferences.putString("input_type", config.inputType);
+  preferences.putString("mqtt_server", config.mqttServer);
+  preferences.putString("query_period", config.queryPeriod);
+  preferences.putString("led_gpio", ledGpioStr);
+  preferences.putString("led_gpio_i", ledInvertedStr);
+  preferences.putString("shelly_mac", config.shellyMac);
+  preferences.putString("shelly_port", config.shellyPort);
+  preferences.putBool("force_pwr_decimals", config.forcePwrDecimals);
+  preferences.putString("sma_id", config.smaId);
+  preferences.putString("mqtt_port", config.mqttPort);
+  preferences.putString("mqtt_topic", config.mqttTopic);
+  preferences.putString("mqtt_user", config.mqttUser);
+  preferences.putString("mqtt_passwd", config.mqttPasswd);
+  preferences.putString("modbus_dev", config.modbusDevice);
+  preferences.putString("power_path", config.powerPath);
+  preferences.putString("pwr_export_path", config.pwrExportPath);
+  preferences.putString("power_l1_path", config.powerL1Path);
+  preferences.putString("power_l2_path", config.powerL2Path);
+  preferences.putString("power_l3_path", config.powerL3Path);
+  preferences.putString("energy_in_path", config.energyInPath);
+  preferences.putString("energy_out_path", config.energyOutPath);
+  preferences.end();
+
+  String response = "<html><head><title>Settings Saved</title><meta http-equiv='refresh' content='5;url=/'></head><body>";
+  response += "<h1>Settings Saved</h1>";
+  response += "<p>The device will now restart to apply the changes.</p>";
+  response += "<p>You will be redirected to the home page in 5 seconds. If not, please <a href='/'>click here</a>.</p>";
+  response += "</body></html>";
+  request->send(200, "text/html", response);
+  
+  shouldReboot = true;
+}
+
 void WifiManagerSetup() {
   DEBUG_SERIAL.println("DEBUG: WifiManagerSetup() START");
   
@@ -1105,6 +1323,9 @@ void setup(void) {
     request->send(200, "text/plain", "This is the Energy2Shelly for ESP converter!\r\nDevice and Energy status is available under /status\r\nTo reset configuration, goto /reset\r\n");
   });
 
+  server.on("/config", HTTP_GET, handleConfig);
+  server.on("/save", HTTP_POST, handleSave);
+
   server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetStatus();
     request->send(200, "application/json", serJsonResponse);
@@ -1268,6 +1489,10 @@ void setup(void) {
 }
 
 void loop() {
+  if (shouldReboot) {
+    delay(1000); // Give a moment for the response to be sent
+    ESP.restart();
+  }
 #ifndef ESP32
   MDNS.update();
 #endif
