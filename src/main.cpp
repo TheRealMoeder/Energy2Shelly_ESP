@@ -870,13 +870,13 @@ legend { font-weight: bold; color: #333; padding: 0 5px; }
     <label for="mqttServer">Server / URL</label>
     <input type='text' id='mqttServer' name='mqttServer' value='%v_mqttServer%'>
     <label for="queryPeriod">Query Period (ms)</label>
-    <input type='text' id='queryPeriod' name='queryPeriod' value='%v_queryPeriod%'>
+    <input type='text' id='queryPeriod' name='queryPeriod' value='%v_qPeriod%'>
     <label for="ledGpio">LED GPIO</label>
     <input type='text' id='ledGpio' name='ledGpio' value='%v_ledGpio%'>
     <label for="ledInverted">Invert LED GPIO</label>
     <select id="ledInverted" name="ledInverted">
-      <option value="false" %s_ledInverted_false%>No</option>
-      <option value="true" %s_ledInverted_true%>Yes</option>
+      <option value="false" %s_ledInv_f%>No</option>
+      <option value="true" %s_ledInv_t%>Yes</option>
     </select>
     <label for="shellyMac">Shelly ID (MAC)</label>
     <input type='text' id='shellyMac' name='shellyMac' value='%v_shellyMac%'>
@@ -884,8 +884,8 @@ legend { font-weight: bold; color: #333; padding: 0 5px; }
     <input type='text' id='shellyPort' name='shellyPort' value='%v_shellyPort%'>
     <label for="forcePwrDecimals">Force Power Decimals</label>
     <select id="forcePwrDecimals" name="forcePwrDecimals">
-      <option value="true" %s_forcePwrDecimals_true%>Yes</option>
-      <option value="false" %s_forcePwrDecimals_false%>No</option>
+      <option value="true" %s_fPwrDec_t%>Yes</option>
+      <option value="false" %s_fPwrDec_f%>No</option>
     </select>
     <label for="smaId">SMA Serial Number</label>
     <input type='text' id='smaId' name='smaId' value='%v_smaId%'>
@@ -906,7 +906,7 @@ legend { font-weight: bold; color: #333; padding: 0 5px; }
   <fieldset>
     <legend>Modbus TCP Options</legend>
     <label for="modbusDevice">Modbus Device ID</label>
-    <input type='text' id='modbusDevice' name='modbusDevice' value='%v_modbusDevice%'>
+    <input type='text' id='modbusDevice' name='modbusDevice' value='%v_mbDevice%'>
   </fieldset>
 
   <fieldset>
@@ -914,7 +914,7 @@ legend { font-weight: bold; color: #333; padding: 0 5px; }
     <label for="powerPath">Total Power Path</label>
     <input type='text' id='powerPath' name='powerPath' value='%v_powerPath%'>
     <label for="pwrExportPath">Export Power Path</label>
-    <input type='text' id='pwrExportPath' name='pwrExportPath' value='%v_pwrExportPath%'>
+    <input type='text' id='pwrExportPath' name='pwrExportPath' value='%v_pwrExpPath%'>
     <label for="powerL1Path">Phase 1 Power Path</label>
     <input type='text' id='powerL1Path' name='powerL1Path' value='%v_powerL1Path%'>
     <label for="powerL2Path">Phase 2 Power Path</label>
@@ -937,17 +937,17 @@ legend { font-weight: bold; color: #333; padding: 0 5px; }
 String processor(const String& var) {
   // General
   if (var == "v_mqttServer") return config.mqttServer;
-  if (var == "v_queryPeriod") return config.queryPeriod;
+  if (var == "v_qPeriod") return config.queryPeriod;
   if (var == "v_ledGpio") return String(config.ledGpioInt);
   if (var == "v_shellyMac") return config.shellyMac;
   if (var == "v_shellyPort") return config.shellyPort;
   if (var == "v_smaId") return config.smaId;
 
   // Booleans for selects
-  if (var == "s_ledInverted_true") return config.ledInverted ? "selected" : "";
-  if (var == "s_ledInverted_false") return !config.ledInverted ? "selected" : "";
-  if (var == "s_forcePwrDecimals_true") return config.forcePwrDecimals ? "selected" : "";
-  if (var == "s_forcePwrDecimals_false") return !config.forcePwrDecimals ? "selected" : "";
+  if (var == "s_ledInv_t") return config.ledInverted ? "selected" : "";
+  if (var == "s_ledInv_f") return !config.ledInverted ? "selected" : "";
+  if (var == "s_fPwrDec_t") return config.forcePwrDecimals ? "selected" : "";
+  if (var == "s_fPwrDec_f") return !config.forcePwrDecimals ? "selected" : "";
 
   // Data Source Type select
   if (var == "s_MQTT") return (config.inputType == "MQTT") ? "selected" : "";
@@ -963,11 +963,11 @@ String processor(const String& var) {
   if (var == "v_mqttPasswd") return config.mqttPasswd;
 
   // Modbus
-  if (var == "v_modbusDevice") return config.modbusDevice;
+  if (var == "v_mbDevice") return config.modbusDevice;
   
   // JSON Paths
   if (var == "v_powerPath") return config.powerPath;
-  if (var == "v_pwrExportPath") return config.pwrExportPath;
+  if (var == "v_pwrExpPath") return config.pwrExportPath;
   if (var == "v_powerL1Path") return config.powerL1Path;
   if (var == "v_powerL2Path") return config.powerL2Path;
   if (var == "v_powerL3Path") return config.powerL3Path;
