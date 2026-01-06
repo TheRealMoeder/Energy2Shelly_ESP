@@ -1,4 +1,4 @@
-// Energy2Shelly_ESP v0.5.2
+// Energy2Shelly_ESP v0.5.3
 #include <Arduino.h>
 #include <Preferences.h>
 #ifndef ESP32
@@ -31,7 +31,7 @@ unsigned long currentMillis;
 
 // define your default values here, if there are different values in config.json, they are overwritten.
 char input_type[40];
-char mqtt_server[80];
+char mqtt_server[160];
 char mqtt_port[6] = "1883";
 char mqtt_topic[90] = "tele/meter/SENSOR";
 char mqtt_user[40] = "";
