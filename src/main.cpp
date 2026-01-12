@@ -2,66 +2,68 @@
 #include <Arduino.h>
 #include <Preferences.h>
 #ifndef ESP32
-  #define WEBSERVER_H "fix WifiManager conflict"
+#define WEBSERVER_H "fix WifiManager conflict"
 #endif
 #ifdef ESP32
-  #include <HTTPClient.h>
-  #include <AsyncTCP.h>
-  #include <ESPmDNS.h>
-  #include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPmDNS.h>
+#include <HTTPClient.h>
+#include <WiFi.h>
+
 #else
-  #include <ESP8266HTTPClient.h>
-  #include <ESPAsyncTCP.h>
-  #include <ESP8266mDNS.h>
+#include <ESP8266HTTPClient.h>
+#include <ESP8266mDNS.h>
+#include <ESPAsyncTCP.h>
+
 #endif
 #include <ArduinoJson.h>
-#include <WiFiManager.h>
+#include <ESPAsyncWebServer.h>
+#include <ModbusIP_ESP8266.h>
 #include <PubSubClient.h>
 #include <WiFiClient.h>
-#include <ESPAsyncWebServer.h>
+#include <WiFiManager.h>
 #include <WiFiUdp.h>
-#include <ModbusIP_ESP8266.h>
 
 #define DEBUG true // set to false for no DEBUG output
-#define DEBUG_SERIAL if(DEBUG)Serial
+#define DEBUG_SERIAL                                                           \
+  if (DEBUG)                                                                   \
+  Serial
 
 unsigned long startMillis = 0;
 unsigned long startMillis_sunspec = 0;
 unsigned long currentMillis;
 
-// Configuration struct - replaces 20+ char arrays
-struct Config {
-  String inputType;
-  String mqttServer;
-  String mqttPort = "1883";
-  String mqttTopic = "tele/meter/SENSOR";
-  String mqttUser;
-  String mqttPasswd;
-  String powerPath = "triphase";
-  String pwrExportPath;
-  String powerL1Path;
-  String powerL2Path;
-  String powerL3Path;
-  String energyInPath;
-  String energyOutPath;
-  String shellyGen = "2";
-  String shellyFwId = "20241011-114455/1.4.4-g6d2a586";
-  String shellyMac;
-  String shellyName = "shellypro3em-";
-  String queryPeriod = "1000";
-  String modbusDevice = "71";
-  String shellyPort = "2220";
-  bool forcePwrDecimals = true;
-  String smaId;
-  
-  // Cached numeric conversions
-  int mqttPortInt = 1883;
-  int shellyPortInt = 2220;
-  int ledGpioInt = 0;
-  int queryPeriodMs = 1000;
-  int modbusDeviceId = 71;
-  bool ledInverted = false;
-} config;
+char input_type[40];
+char mqtt_server[80];
+char mqtt_port[6] = "1883";
+char mqtt_topic[90] = "tele/meter/SENSOR";
+char mqtt_user[40] = "";
+char mqtt_passwd[40] = "";
+char power_path[60] = "";
+char pwr_export_path[60] = "";
+char power_l1_path[60] = "";
+char power_l2_path[60] = "";
+char power_l3_path[60] = "";
+char energy_in_path[60] = "";
+char energy_out_path[60] = "";
+char shelly_gen[2] = "2";
+char shelly_fw_id[32] = "20241011-114455/1.4.4-g6d2a586";
+char shelly_mac[13];
+char shelly_name[26] = "shellypro3em-";
+char query_period[10] = "1000";
+char modbus_dev[10] = "71";          // default for KSEM
+char shelly_port[6] = "2220";        // old: 1010; new (FW>=226): 2220
+char force_pwr_decimals[6] = "true"; // to fix Marstek bug
+bool forcePwrDecimals = true;        // to fix Marstek bug
+char sma_id[17] = "";
+
+// Cached numeric conversions
+int mqttPortInt = 1883;
+int shellyPortInt = 2220;
+int ledGpioInt = 0;
+int queryPeriodMs = 1000;
+int modbusDeviceId = 71;
+bool ledInverted = false;
 
 // Global buffers - moved from stack to avoid fragmentation
 static uint8_t networkBuffer[1024];
@@ -80,13 +82,15 @@ unsigned long ledOffTime = 0;
 uint8_t led = 0;
 bool led_i = false;
 const uint8_t ledblinkduration = 50;
+char led_gpio[3] = "";
+char led_gpio_i[6];
 
-unsigned long period = 1430;
+unsigned long period = 1000;
 int rpcId = 1;
-String rpcUser = "user_1";
+char rpcUser[20] = "user_1";
 
 // SMA Multicast IP and Port
-unsigned int multicastPort = 9522;  // local port to listen on
+unsigned int multicastPort = 9522; // local port to listen on
 IPAddress multicastIP(239, 12, 255, 254);
 
 // flags for saving/resetting WifiManager data
@@ -102,7 +106,8 @@ bool dataSMA = false;
 bool dataSHRDZM = false;
 bool dataHTTP = false;
 bool dataSUNSPEC = false;
-bool mqtt_configured = false;  // Flag to indicate MQTT is fully configured and safe to use
+bool mqtt_configured =
+    false; // Flag to indicate MQTT is fully configured and safe to use
 
 struct PowerData {
   double current;
@@ -123,8 +128,10 @@ EnergyData PhaseEnergy[3];
 String serJsonResponse;
 
 #ifndef ESP32
-  MDNSResponder::hMDNSService hMDNSService = 0; // handle of the http service in the MDNS responder
-  MDNSResponder::hMDNSService hMDNSService2 = 0; // handle of the shelly service in the MDNS responder
+MDNSResponder::hMDNSService hMDNSService =
+    0; // handle of the http service in the MDNS responder
+MDNSResponder::hMDNSService hMDNSService2 =
+    0; // handle of the shelly service in the MDNS responder
 #endif
 
 WiFiClient wifi_client;
@@ -140,7 +147,7 @@ WiFiUDP UdpRPC;
 #define UDPPRINT write
 #endif
 
-bool isValidIPAddress(const char* ipString) {
+bool isValidIPAddress(const char *ipString) {
   IPAddress ip;
   return ip.fromString(ipString);
 }
@@ -149,13 +156,14 @@ double round2(double value) {
   int ivalue = (int)(value * 100.0 + (value > 0.0 ? 0.5 : -0.5));
 
   // fix Marstek bug: make sure to have decimal numbers
-  if(config.forcePwrDecimals && (ivalue % 100 == 0)) ivalue++;
-  
+  if (forcePwrDecimals && (ivalue % 100 == 0))
+    ivalue++;
+
   return ivalue / 100.0;
 }
 
 // Helper function to set individual phase data
-void setPhaseData(int phaseIndex, double current, double voltage, double power, 
+void setPhaseData(int phaseIndex, double current, double voltage, double power,
                   double apparentPower, double powerFactor, int frequency) {
   PhasePower[phaseIndex].current = round2(current);
   PhasePower[phaseIndex].voltage = round2(voltage);
@@ -169,7 +177,8 @@ void setPhaseData(int phaseIndex, double current, double voltage, double power,
 void setPhaseDataSingle(int phaseIndex, double power) {
   PhasePower[phaseIndex].power = round2(power);
   PhasePower[phaseIndex].voltage = round2(defaultVoltage);
-  PhasePower[phaseIndex].current = round2(PhasePower[phaseIndex].power / PhasePower[phaseIndex].voltage);
+  PhasePower[phaseIndex].current =
+      round2(PhasePower[phaseIndex].power / PhasePower[phaseIndex].voltage);
   PhasePower[phaseIndex].apparentPower = round2(PhasePower[phaseIndex].power);
   PhasePower[phaseIndex].powerFactor = round2(defaultPowerFactor);
   PhasePower[phaseIndex].frequency = defaultFrequency;
@@ -185,7 +194,7 @@ JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
   for (size_t n = 0; path[n]; n++) {
     // Not a full array support, but works for Shelly 3EM emeters array!
     if (path[n] == '[') {
-      variant = variant[JsonString(path, n)][atoi(&path[n+1])];
+      variant = variant[JsonString(path, n)][atoi(&path[n + 1])];
       path += n + 4;
       n = 0;
     }
@@ -209,7 +218,9 @@ void setPowerData(double totalPower) {
 
 void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
   for (int i = 0; i <= 2; i++) {
-    double power = (i == 0) ? phase1Power : (i == 1) ? phase2Power : phase3Power;
+    double power = (i == 0)   ? phase1Power
+                   : (i == 1) ? phase2Power
+                              : phase3Power;
     setPhaseDataSingle(i, power);
   }
   DEBUG_SERIAL.print("Current power L1: ");
@@ -219,7 +230,6 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
   DEBUG_SERIAL.print(" - L3: ");
   DEBUG_SERIAL.println(phase3Power);
 }
-
 
 void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
   double consumptionPerPhase = totalEnergyGridSupply * 0.3333;
@@ -233,7 +243,7 @@ void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
   DEBUG_SERIAL.println(totalEnergyGridFeedIn);
 }
 
-//callback notifying us of the need to save WifiManager config
+// callback notifying us of the need to save WifiManager config
 void saveConfigCallback() {
   DEBUG_SERIAL.println("Should save config");
   shouldSaveConfig = true;
@@ -241,17 +251,21 @@ void saveConfigCallback() {
 
 void setJsonPathPower(JsonDocument json) {
   // If the incoming JSON already uses Shelly 3EM field names, parse directly
-  if (json["a_current"].is<JsonVariant>() || json["a_act_power"].is<JsonVariant>()) {
+  if (json["a_current"].is<JsonVariant>() ||
+      json["a_act_power"].is<JsonVariant>()) {
     DEBUG_SERIAL.println("Parsing direct Shelly 3EM payload");
-    setPhaseData(0, json["a_current"].as<double>(), json["a_voltage"].as<double>(), 
-                 json["a_act_power"].as<double>(), json["a_aprt_power"].as<double>(),
-                 json["a_pf"].as<double>(), json["a_freq"].as<int>());
-    setPhaseData(1, json["b_current"].as<double>(), json["b_voltage"].as<double>(),
-                 json["b_act_power"].as<double>(), json["b_aprt_power"].as<double>(),
-                 json["b_pf"].as<double>(), json["b_freq"].as<int>());
-    setPhaseData(2, json["c_current"].as<double>(), json["c_voltage"].as<double>(),
-                 json["c_act_power"].as<double>(), json["c_aprt_power"].as<double>(),
-                 json["c_pf"].as<double>(), json["c_freq"].as<int>());
+    setPhaseData(
+        0, json["a_current"].as<double>(), json["a_voltage"].as<double>(),
+        json["a_act_power"].as<double>(), json["a_aprt_power"].as<double>(),
+        json["a_pf"].as<double>(), json["a_freq"].as<int>());
+    setPhaseData(
+        1, json["b_current"].as<double>(), json["b_voltage"].as<double>(),
+        json["b_act_power"].as<double>(), json["b_aprt_power"].as<double>(),
+        json["b_pf"].as<double>(), json["b_freq"].as<int>());
+    setPhaseData(
+        2, json["c_current"].as<double>(), json["c_voltage"].as<double>(),
+        json["c_act_power"].as<double>(), json["c_aprt_power"].as<double>(),
+        json["c_pf"].as<double>(), json["c_freq"].as<int>());
 
     // Optionally use total fields if present
     if (json["total_act_power"].is<JsonVariant>()) {
@@ -262,30 +276,32 @@ void setJsonPathPower(JsonDocument json) {
     }
     return;
   }
-  if (config.powerPath == "TRIPHASE") {
-    double power1 = resolveJsonPath(json, config.powerL1Path.c_str());
-    double power2 = resolveJsonPath(json, config.powerL2Path.c_str());
-    double power3 = resolveJsonPath(json, config.powerL3Path.c_str());
+  if (strcmp(power_path, "TRIPHASE") == 0) {
+    double power1 = resolveJsonPath(json, power_l1_path).as<double>();
+    double power2 = resolveJsonPath(json, power_l2_path).as<double>();
+    double power3 = resolveJsonPath(json, power_l3_path).as<double>();
     setPowerData(power1, power2, power3);
   } else {
-    // Check if BOTH paths (Import = powerPath, Export = pwrExportPath) are defined
-    if ((config.powerPath != "") && (config.pwrExportPath != "")) {
+    // Check if BOTH paths (Import = powerPath, Export = pwrExportPath) are
+    // defined
+    if ((power_path[0] != '\0') && (pwr_export_path[0] != '\0')) {
       DEBUG_SERIAL.println("Resolving net power (import - export)");
-      double importPower = resolveJsonPath(json, config.powerPath.c_str()).as<double>();
-      double exportPower = resolveJsonPath(json, config.pwrExportPath.c_str()).as<double>();
+      double importPower = resolveJsonPath(json, power_path).as<double>();
+      double exportPower = resolveJsonPath(json, pwr_export_path).as<double>();
       double netPower = importPower - exportPower;
       setPowerData(netPower);
     }
-    // (FALLBACK): Only the normal powerPath (import path) is defined (old logic)
-    else if (config.powerPath != "") {
+    // (FALLBACK): Only the normal powerPath (import path) is defined (old
+    // logic)
+    else if (power_path[0] != '\0') {
       DEBUG_SERIAL.println("Resolving monophase (single path only)");
-      double power = resolveJsonPath(json, config.powerPath.c_str()).as<double>();
+      double power = resolveJsonPath(json, power_path).as<double>();
       setPowerData(power);
     }
   }
-  if ((config.energyInPath != "") && (config.energyOutPath != "")) {
-    double energyIn = resolveJsonPath(json, config.energyInPath.c_str());
-    double energyOut = resolveJsonPath(json, config.energyOutPath.c_str());
+  if ((energy_in_path[0] != '\0') && (energy_out_path[0] != '\0')) {
+    double energyIn = resolveJsonPath(json, energy_in_path).as<double>();
+    double energyOut = resolveJsonPath(json, energy_out_path).as<double>();
     setEnergyData(energyIn, energyOut);
   }
 }
@@ -302,17 +318,15 @@ void parseShellyString(const char *jsonStr) {
   setJsonPathPower(doc);
 }
 
-void parseShellyString(const String &s) {
-  parseShellyString(s.c_str());
-}
+void parseShellyString(const String &s) { parseShellyString(s.c_str()); }
 
 void rpcWrapper() {
   JsonDocument jsonResponse;
   JsonDocument doc;
   deserializeJson(doc, serJsonResponse);
   jsonResponse["id"] = rpcId;
-  jsonResponse["src"] = config.shellyName;
-  if (rpcUser != "EMPTY") {
+  jsonResponse["src"] = shelly_name;
+  if (strcmp(rpcUser, "EMPTY") != 0) {
     jsonResponse["dst"] = rpcUser;
   }
   jsonResponse["result"] = doc;
@@ -345,13 +359,13 @@ void handleblinkled() {
 
 void GetDeviceInfo() {
   JsonDocument jsonResponse;
-  jsonResponse["name"] = config.shellyName;
-  jsonResponse["id"] = config.shellyName;
-  jsonResponse["mac"] = config.shellyMac;
+  jsonResponse["name"] = shelly_name;
+  jsonResponse["id"] = shelly_name;
+  jsonResponse["mac"] = shelly_mac;
   jsonResponse["slot"] = 1;
   jsonResponse["model"] = "SPEM-003CEBEU";
-  jsonResponse["gen"] = config.shellyGen;
-  jsonResponse["fw_id"] = config.shellyFwId;
+  jsonResponse["gen"] = shelly_gen;
+  jsonResponse["fw_id"] = shelly_fw_id;
   jsonResponse["ver"] = "1.4.4";
   jsonResponse["app"] = "Pro3EM";
   jsonResponse["auth_en"] = false;
@@ -382,9 +396,14 @@ void EMGetStatus() {
   jsonResponse["c_aprt_power"] = PhasePower[2].apparentPower;
   jsonResponse["c_pf"] = PhasePower[2].powerFactor;
   jsonResponse["c_freq"] = PhasePower[2].frequency;
-  jsonResponse["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / ((float)defaultVoltage));
-  jsonResponse["total_act_power"] = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
-  jsonResponse["total_aprt_power"] = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
+  jsonResponse["total_current"] =
+      round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) /
+             ((float)defaultVoltage));
+  jsonResponse["total_act_power"] =
+      PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
+  jsonResponse["total_aprt_power"] = PhasePower[0].apparentPower +
+                                     PhasePower[1].apparentPower +
+                                     PhasePower[2].apparentPower;
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
@@ -399,8 +418,12 @@ void EMDataGetStatus() {
   jsonResponse["b_total_act_ret_energy"] = PhaseEnergy[1].gridfeedin;
   jsonResponse["c_total_act_energy"] = PhaseEnergy[2].consumption;
   jsonResponse["c_total_act_ret_energy"] = PhaseEnergy[2].gridfeedin;
-  jsonResponse["total_act"] = PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption;
-  jsonResponse["total_act_ret"] = PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin;
+  jsonResponse["total_act"] = PhaseEnergy[0].consumption +
+                              PhaseEnergy[1].consumption +
+                              PhaseEnergy[2].consumption;
+  jsonResponse["total_act_ret"] = PhaseEnergy[0].gridfeedin +
+                                  PhaseEnergy[1].gridfeedin +
+                                  PhaseEnergy[2].gridfeedin;
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
@@ -419,50 +442,52 @@ void EMGetConfig() {
   blinkled(ledblinkduration);
 }
 
-void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
+                    AwsEventType type, void *arg, uint8_t *data, size_t len) {
   switch (type) {
-    case WS_EVT_DISCONNECT:
-      DEBUG_SERIAL.printf("[%u] Websocket: disconnected!\n", client->id());
-      break;
-    case WS_EVT_CONNECT:
-      DEBUG_SERIAL.printf("[%u] Websocket: connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-      break;
-    case WS_EVT_DATA:
-      {
-        AwsFrameInfo *info = (AwsFrameInfo *)arg;
-        if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-          data[len] = 0;
-          deserializeJson(globalJsonDoc, data);
-          rpcId = globalJsonDoc["id"];
-          if (globalJsonDoc["method"] == "Shelly.GetDeviceInfo") {
-            rpcUser = "EMPTY";
-            GetDeviceInfo();
-            rpcWrapper();
-            webSocket.textAll(serJsonResponse);
-          } else if (globalJsonDoc["method"] == "EM.GetStatus") {
-            rpcUser = globalJsonDoc["src"].as<String>();
-            EMGetStatus();
-            rpcWrapper();
-            webSocket.textAll(serJsonResponse);
-          } else if (globalJsonDoc["method"] == "EMData.GetStatus") {
-            rpcUser = globalJsonDoc["src"].as<String>();
-            EMDataGetStatus();
-            rpcWrapper();
-            webSocket.textAll(serJsonResponse);
-          } else if (globalJsonDoc["method"] == "EM.GetConfig") {
-            EMGetConfig();
-            rpcWrapper();
-            webSocket.textAll(serJsonResponse);
-          } else {
-            DEBUG_SERIAL.printf("Websocket: unknown request: %s\n", data);
-          }
-        }
-        break;
+  case WS_EVT_DISCONNECT:
+    DEBUG_SERIAL.printf("[%u] Websocket: disconnected!\n", client->id());
+    break;
+  case WS_EVT_CONNECT:
+    DEBUG_SERIAL.printf("[%u] Websocket: connected from %s\n", client->id(),
+                        client->remoteIP().toString().c_str());
+    break;
+  case WS_EVT_DATA: {
+    AwsFrameInfo *info = (AwsFrameInfo *)arg;
+    if (info->final && info->index == 0 && info->len == len &&
+        info->opcode == WS_TEXT) {
+      data[len] = 0;
+      deserializeJson(globalJsonDoc, data);
+      rpcId = globalJsonDoc["id"];
+      if (globalJsonDoc["method"] == "Shelly.GetDeviceInfo") {
+        rpcUser = "EMPTY";
+        GetDeviceInfo();
+        rpcWrapper();
+        webSocket.textAll(serJsonResponse);
+      } else if (globalJsonDoc["method"] == "EM.GetStatus") {
+        rpcUser = globalJsonDoc["src"].as<String>();
+        EMGetStatus();
+        rpcWrapper();
+        webSocket.textAll(serJsonResponse);
+      } else if (globalJsonDoc["method"] == "EMData.GetStatus") {
+        rpcUser = globalJsonDoc["src"].as<String>();
+        EMDataGetStatus();
+        rpcWrapper();
+        webSocket.textAll(serJsonResponse);
+      } else if (globalJsonDoc["method"] == "EM.GetConfig") {
+        EMGetConfig();
+        rpcWrapper();
+        webSocket.textAll(serJsonResponse);
+      } else {
+        DEBUG_SERIAL.printf("Websocket: unknown request: %s\n", data);
       }
-    case WS_EVT_PING:
-    case WS_EVT_PONG:
-    case WS_EVT_ERROR:
-      break;
+    }
+    break;
+  }
+  case WS_EVT_PING:
+  case WS_EVT_PONG:
+  case WS_EVT_ERROR:
+    break;
   }
 }
 
@@ -473,17 +498,20 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
 }
 
 void mqtt_reconnect() {
-  DEBUG_SERIAL.println("DEBUG: mqtt_reconnect() called, server=" + config.mqttServer + ", mqtt_configured=" + String(mqtt_configured));
+  DEBUG_SERIAL.printf(
+      "DEBUG: mqtt_reconnect() called, server=%s, mqtt_configured=%d\n",
+      mqtt_server, mqtt_configured);
   // Prevent reconnection if MQTT not properly configured
-  if (!mqtt_configured || config.mqttServer == "" || config.mqttServer.length() == 0) {
-    DEBUG_SERIAL.println("DEBUG: mqtt_reconnect() aborting - MQTT not configured or empty server");
+  if (!mqtt_configured || mqtt_server[0] == '\0') {
+    DEBUG_SERIAL.println("DEBUG: mqtt_reconnect() aborting - MQTT not "
+                         "configured or empty server");
     return;
   }
-  
+
   DEBUG_SERIAL.print("Attempting MQTT connection...");
-  if (mqtt_client.connect(config.shellyName.c_str(), config.mqttUser.c_str(), config.mqttPasswd.c_str())) {
+  if (mqtt_client.connect(shelly_name, mqtt_user, mqtt_passwd)) {
     DEBUG_SERIAL.println("connected");
-    mqtt_client.subscribe(config.mqttTopic.c_str());
+    mqtt_client.subscribe(mqtt_topic);
   } else {
     DEBUG_SERIAL.print("failed, rc=");
     DEBUG_SERIAL.print(mqtt_client.state());
@@ -521,7 +549,8 @@ void parseUdpRPC() {
         rpcWrapper();
         UdpRPC.UDPPRINT(serJsonResponse.c_str());
       } else {
-        DEBUG_SERIAL.printf("RPC over UDP: unknown request: %s\n", networkBuffer);
+        DEBUG_SERIAL.printf("RPC over UDP: unknown request: %s\n",
+                            networkBuffer);
       }
       UdpRPC.endPacket();
     }
@@ -533,7 +562,8 @@ void parseSMA() {
   int packetSize = Udp.parsePacket();
   if (packetSize) {
     int rSize = Udp.read(networkBuffer, 1024);
-    if (networkBuffer[0] != 'S' || networkBuffer[1] != 'M' || networkBuffer[2] != 'A') {
+    if (networkBuffer[0] != 'S' || networkBuffer[1] != 'M' ||
+        networkBuffer[2] != 'A') {
       DEBUG_SERIAL.println("Not an SMA packet?");
       return;
     }
@@ -544,7 +574,8 @@ void parseSMA() {
       grouplen = (offset[0] << 8) + offset[1];
       grouptag = (offset[2] << 8) + offset[3];
       offset += 4;
-      if (grouplen == 0xffff) return;
+      if (grouplen == 0xffff)
+        return;
       if (grouptag == 0x02A0 && grouplen == 4) {
         offset += 4;
       } else if (grouptag == 0x0010) {
@@ -553,15 +584,17 @@ void parseSMA() {
         offset += 2;
         // uint16_t susyID = (offset[0] << 8) + offset[1];
         offset += 2;
-        uint32_t serial = (offset[0] << 24) + (offset[1] << 16) + (offset[2] << 8) + offset[3];
+        uint32_t serial = (offset[0] << 24) + (offset[1] << 16) +
+                          (offset[2] << 8) + offset[3];
         DEBUG_SERIAL.print("Received SMA multicast from ");
         DEBUG_SERIAL.println(serial);
-        if ((config.smaId != "") && (config.smaId.toInt() != serial)) {
+        if ((sma_id[0] != '\0') && (atoi(sma_id) != serial)) {
           DEBUG_SERIAL.println("SMA serial not matching - ignoring packet");
           break;
         }
         offset += 4;
-        // uint32_t timestamp = (offset[0] << 24) + (offset[1] << 16) + (offset[2] << 8) + offset[3];
+        // uint32_t timestamp = (offset[0] << 24) + (offset[1] << 16) +
+        // (offset[2] << 8) + offset[3];
         offset += 4;
         while (offset < endOfGroup) {
           uint8_t channel = offset[0];
@@ -570,106 +603,111 @@ void parseSMA() {
           // uint8_t tarif = offset[3];
           offset += 4;
           if (type == 8) {
-            uint64_t data = ((uint64_t)offset[0] << 56) + ((uint64_t)offset[1] << 48) + ((uint64_t)offset[2] << 40) + ((uint64_t)offset[3] << 32) + ((uint64_t)offset[4] << 24) + ((uint64_t)offset[5] << 16) + ((uint64_t)offset[6] << 8) + offset[7];
+            uint64_t data =
+                ((uint64_t)offset[0] << 56) + ((uint64_t)offset[1] << 48) +
+                ((uint64_t)offset[2] << 40) + ((uint64_t)offset[3] << 32) +
+                ((uint64_t)offset[4] << 24) + ((uint64_t)offset[5] << 16) +
+                ((uint64_t)offset[6] << 8) + offset[7];
             offset += 8;
             switch (index) {
-              case 21:
-                PhaseEnergy[0].consumption = data / 3600000;
-                break;
-              case 22:
-                PhaseEnergy[0].gridfeedin = data / 3600000;
-                break;
-              case 41:
-                PhaseEnergy[1].consumption = data / 3600000;
-                break;
-              case 42:
-                PhaseEnergy[1].gridfeedin = data / 3600000;
-                break;
-              case 61:
-                PhaseEnergy[2].consumption = data / 3600000;
-                break;
-              case 62:
-                PhaseEnergy[2].gridfeedin = data / 3600000;
-                break;
+            case 21:
+              PhaseEnergy[0].consumption = data / 3600000;
+              break;
+            case 22:
+              PhaseEnergy[0].gridfeedin = data / 3600000;
+              break;
+            case 41:
+              PhaseEnergy[1].consumption = data / 3600000;
+              break;
+            case 42:
+              PhaseEnergy[1].gridfeedin = data / 3600000;
+              break;
+            case 61:
+              PhaseEnergy[2].consumption = data / 3600000;
+              break;
+            case 62:
+              PhaseEnergy[2].gridfeedin = data / 3600000;
+              break;
             }
           } else if (type == 4) {
-            uint32_t data = (offset[0] << 24) + (offset[1] << 16) + (offset[2] << 8) + offset[3];
+            uint32_t data = (offset[0] << 24) + (offset[1] << 16) +
+                            (offset[2] << 8) + offset[3];
             offset += 4;
             switch (index) {
-              case 1:
-                // 1.4.0 Total grid power in dW - unused
-                break;
-              case 2:
-                // 2.4.0 Total feed-in power in dW - unused
-                break;
-              case 21:
-                PhasePower[0].power = round2(data * 0.1);
-                PhasePower[0].frequency = defaultFrequency;
-                break;
-              case 22:
-                PhasePower[0].power -= round2(data * 0.1);
-                break;
-              case 29:
-                PhasePower[0].apparentPower = round2(data * 0.1);
-                break;
-              case 30:
-                PhasePower[0].apparentPower -= round2(data * 0.1);
-                break;
-              case 31:
-                PhasePower[0].current = round2(data * 0.001);
-                break;
-              case 32:
-                PhasePower[0].voltage = round2(data * 0.001);
-                break;
-              case 33:
-                PhasePower[0].powerFactor = round2(data * 0.001);
-                break;
-              case 41:
-                PhasePower[1].power = round2(data * 0.1);
-                PhasePower[1].frequency = defaultFrequency;
-                break;
-              case 42:
-                PhasePower[1].power -= round2(data * 0.1);
-                break;
-              case 49:
-                PhasePower[1].apparentPower = round2(data * 0.1);
-                break;
-              case 50:
-                PhasePower[1].apparentPower -= round2(data * 0.1);
-                break;
-              case 51:
-                PhasePower[1].current = round2(data * 0.001);
-                break;
-              case 52:
-                PhasePower[1].voltage = round2(data * 0.001);
-                break;
-              case 53:
-                PhasePower[1].powerFactor = round2(data * 0.001);
-                break;
-              case 61:
-                PhasePower[2].power = round2(data * 0.1);
-                PhasePower[2].frequency = defaultFrequency;
-                break;
-              case 62:
-                PhasePower[2].power -= round2(data * 0.1);
-                break;
-              case 69:
-                PhasePower[2].apparentPower = round2(data * 0.1);
-                break;
-              case 70:
-                PhasePower[2].apparentPower -= round2(data * 0.1);
-                break;
-              case 71:
-                PhasePower[2].current = round2(data * 0.001);
-                break;
-              case 72:
-                PhasePower[2].voltage = round2(data * 0.001);
-                break;
-              case 73:
-                PhasePower[2].powerFactor = round2(data * 0.001);
-                break;
-              default:
-                break;
+            case 1:
+              // 1.4.0 Total grid power in dW - unused
+              break;
+            case 2:
+              // 2.4.0 Total feed-in power in dW - unused
+              break;
+            case 21:
+              PhasePower[0].power = round2(data * 0.1);
+              PhasePower[0].frequency = defaultFrequency;
+              break;
+            case 22:
+              PhasePower[0].power -= round2(data * 0.1);
+              break;
+            case 29:
+              PhasePower[0].apparentPower = round2(data * 0.1);
+              break;
+            case 30:
+              PhasePower[0].apparentPower -= round2(data * 0.1);
+              break;
+            case 31:
+              PhasePower[0].current = round2(data * 0.001);
+              break;
+            case 32:
+              PhasePower[0].voltage = round2(data * 0.001);
+              break;
+            case 33:
+              PhasePower[0].powerFactor = round2(data * 0.001);
+              break;
+            case 41:
+              PhasePower[1].power = round2(data * 0.1);
+              PhasePower[1].frequency = defaultFrequency;
+              break;
+            case 42:
+              PhasePower[1].power -= round2(data * 0.1);
+              break;
+            case 49:
+              PhasePower[1].apparentPower = round2(data * 0.1);
+              break;
+            case 50:
+              PhasePower[1].apparentPower -= round2(data * 0.1);
+              break;
+            case 51:
+              PhasePower[1].current = round2(data * 0.001);
+              break;
+            case 52:
+              PhasePower[1].voltage = round2(data * 0.001);
+              break;
+            case 53:
+              PhasePower[1].powerFactor = round2(data * 0.001);
+              break;
+            case 61:
+              PhasePower[2].power = round2(data * 0.1);
+              PhasePower[2].frequency = defaultFrequency;
+              break;
+            case 62:
+              PhasePower[2].power -= round2(data * 0.1);
+              break;
+            case 69:
+              PhasePower[2].apparentPower = round2(data * 0.1);
+              break;
+            case 70:
+              PhasePower[2].apparentPower -= round2(data * 0.1);
+              break;
+            case 71:
+              PhasePower[2].current = round2(data * 0.001);
+              break;
+            case 72:
+              PhasePower[2].voltage = round2(data * 0.001);
+              break;
+            case 73:
+              PhasePower[2].powerFactor = round2(data * 0.001);
+              break;
+            default:
+              break;
             }
           } else if (channel == 144) {
             // optional handling of version number
@@ -703,7 +741,8 @@ void parseSHRDZM() {
       double power = globalJsonDoc["data"]["16.7.0"];
       setPowerData(power);
     }
-    if (globalJsonDoc["data"]["1.8.0"].is<JsonVariant>() && globalJsonDoc["data"]["2.8.0"].is<JsonVariant>()) {
+    if (globalJsonDoc["data"]["1.8.0"].is<JsonVariant>() &&
+        globalJsonDoc["data"]["2.8.0"].is<JsonVariant>()) {
       double energyIn = 0.001 * globalJsonDoc["data"]["1.8.0"].as<double>();
       double energyOut = 0.001 * globalJsonDoc["data"]["2.8.0"].as<double>();
       setEnergyData(energyIn, energyOut);
@@ -712,46 +751,59 @@ void parseSHRDZM() {
   }
 }
 
-double SUNSPEC_scale(int n)
-{
-  double val=1.0;
+double SUNSPEC_scale(int n) {
+  double val = 1.0;
   switch (n) {
-    case -3: val=0.001; break;
-    case -2: val=0.01; break;
-    case -1: val=0.1; break;
-    case 0: val=1.0; break;
-    case 1: val=10.0; break;
-    case 2: val=100.0; break;
-    default:
-    val=1.0;
+  case -3:
+    val = 0.001;
+    break;
+  case -2:
+    val = 0.01;
+    break;
+  case -1:
+    val = 0.1;
+    break;
+  case 0:
+    val = 1.0;
+    break;
+  case 1:
+    val = 10.0;
+    break;
+  case 2:
+    val = 100.0;
+    break;
+  default:
+    val = 1.0;
   }
   return val;
 }
 
 void parseSUNSPEC() {
-  DEBUG_SERIAL.println("DEBUG: parseSUNSPEC() called, server=" + config.mqttServer);
-  #define SUNSPEC_BASE 40072
-  #define SUNSPEC_VOLTAGE 40077
-  #define SUNSPEC_VOLTAGE_SCALE 40084
-  #define SUNSPEC_REAL_POWER 40088
-  #define SUNSPEC_REAL_POWER_SCALE 40091
-  #define SUNSPEC_APPARANT_POWER 40093
-  #define SUNSPEC_APPARANT_POWER_SCALE 40096
-  #define SUNSPEC_CURRENT 40072
-  #define SUNSPEC_CURRENT_SCALE 40075
-  #define SUNSPEC_POWER_FACTOR 40103
-  #define SUNSPEC_POWER_FACTOR_SCALE 40106
-  #define SUNSPEC_FREQUENCY 40085
-  #define SUNSPEC_FREQUENCY_SCALE 40086
-  
-  if (config.mqttServer == "" || config.mqttServer.length() == 0) {
+  DEBUG_SERIAL.printf("DEBUG: parseSUNSPEC() called, server=%s\n", mqtt_server);
+#define SUNSPEC_BASE 40072
+#define SUNSPEC_VOLTAGE 40077
+#define SUNSPEC_VOLTAGE_SCALE 40084
+#define SUNSPEC_REAL_POWER 40088
+#define SUNSPEC_REAL_POWER_SCALE 40091
+#define SUNSPEC_APPARANT_POWER 40093
+#define SUNSPEC_APPARANT_POWER_SCALE 40096
+#define SUNSPEC_CURRENT 40072
+#define SUNSPEC_CURRENT_SCALE 40075
+#define SUNSPEC_POWER_FACTOR 40103
+#define SUNSPEC_POWER_FACTOR_SCALE 40106
+#define SUNSPEC_FREQUENCY 40085
+#define SUNSPEC_FREQUENCY_SCALE 40086
+
+  if (mqtt_server[0] == '\0') {
     return;
   }
-  modbus_ip.fromString(config.mqttServer.c_str());
+  modbus_ip.fromString(mqtt_server);
   if (!modbus1.isConnected(modbus_ip)) {
-    modbus1.connect(modbus_ip, config.mqttPortInt);
+    modbus1.connect(modbus_ip, mqttPortInt);
   } else {
-    uint16_t transaction = modbus1.readHreg(modbus_ip, SUNSPEC_BASE, (uint16_t*) &modbus_result[0], 64, nullptr, config.modbusDeviceId);
+    uint16_t transaction =
+        modbus1.readHreg(modbus_ip, SUNSPEC_BASE, (uint16_t *)&modbus_result[0],
+                         64, nullptr, modbusDeviceId);
     delay(10);
     modbus1.task();
     int t = 0;
@@ -761,61 +813,82 @@ void parseSUNSPEC() {
       t++;
       if (t > 50) {
         DEBUG_SERIAL.println("Timeout SUNSPEC");
-        //prolong=10;
+        // prolong=10;
         modbus1.disconnect(modbus_ip);
         break;
       }
     }
     int32_t power = 0;
-    if (t<=50) {
-      double scale_V=SUNSPEC_scale(modbus_result[SUNSPEC_VOLTAGE_SCALE-SUNSPEC_BASE]);
-      double scale_real_power=SUNSPEC_scale(modbus_result[SUNSPEC_REAL_POWER_SCALE-SUNSPEC_BASE]);
-      double scale_apparant_power=SUNSPEC_scale(modbus_result[SUNSPEC_APPARANT_POWER_SCALE-SUNSPEC_BASE]);
-      double scale_current=SUNSPEC_scale(modbus_result[SUNSPEC_CURRENT_SCALE-SUNSPEC_BASE]);
-      double scale_powerfactor=SUNSPEC_scale(modbus_result[SUNSPEC_POWER_FACTOR_SCALE-SUNSPEC_BASE]);
-      double scale_frequency=SUNSPEC_scale(modbus_result[SUNSPEC_FREQUENCY_SCALE-SUNSPEC_BASE]);
+    if (t <= 50) {
+      double scale_V =
+          SUNSPEC_scale(modbus_result[SUNSPEC_VOLTAGE_SCALE - SUNSPEC_BASE]);
+      double scale_real_power =
+          SUNSPEC_scale(modbus_result[SUNSPEC_REAL_POWER_SCALE - SUNSPEC_BASE]);
+      double scale_apparant_power = SUNSPEC_scale(
+          modbus_result[SUNSPEC_APPARANT_POWER_SCALE - SUNSPEC_BASE]);
+      double scale_current =
+          SUNSPEC_scale(modbus_result[SUNSPEC_CURRENT_SCALE - SUNSPEC_BASE]);
+      double scale_powerfactor = SUNSPEC_scale(
+          modbus_result[SUNSPEC_POWER_FACTOR_SCALE - SUNSPEC_BASE]);
+      double scale_frequency =
+          SUNSPEC_scale(modbus_result[SUNSPEC_FREQUENCY_SCALE - SUNSPEC_BASE]);
 
-      for (int n=0;n<3;n++) {
-        PhasePower[n].power=modbus_result[SUNSPEC_REAL_POWER-SUNSPEC_BASE+n]*scale_real_power;
-        PhasePower[n].apparentPower=modbus_result[SUNSPEC_APPARANT_POWER-SUNSPEC_BASE+n]*scale_apparant_power;
-        PhasePower[n].current= modbus_result[SUNSPEC_CURRENT-SUNSPEC_BASE+n]*scale_current;
-        PhasePower[n].powerFactor=modbus_result[SUNSPEC_POWER_FACTOR-SUNSPEC_BASE+n]*scale_powerfactor;
-        PhasePower[n].voltage=modbus_result[SUNSPEC_VOLTAGE-SUNSPEC_BASE+n]*scale_V;
-        PhasePower[n].frequency=modbus_result[SUNSPEC_FREQUENCY-SUNSPEC_BASE]*scale_frequency;
-        power+= PhasePower[n].power;
+      for (int n = 0; n < 3; n++) {
+        PhasePower[n].power =
+            modbus_result[SUNSPEC_REAL_POWER - SUNSPEC_BASE + n] *
+            scale_real_power;
+        PhasePower[n].apparentPower =
+            modbus_result[SUNSPEC_APPARANT_POWER - SUNSPEC_BASE + n] *
+            scale_apparant_power;
+        PhasePower[n].current =
+            modbus_result[SUNSPEC_CURRENT - SUNSPEC_BASE + n] * scale_current;
+        PhasePower[n].powerFactor =
+            modbus_result[SUNSPEC_POWER_FACTOR - SUNSPEC_BASE + n] *
+            scale_powerfactor;
+        PhasePower[n].voltage =
+            modbus_result[SUNSPEC_VOLTAGE - SUNSPEC_BASE + n] * scale_V;
+        PhasePower[n].frequency =
+            modbus_result[SUNSPEC_FREQUENCY - SUNSPEC_BASE] * scale_frequency;
+        power += PhasePower[n].power;
       }
 
-      #define SUNSPEC_REAL_ENERGY_EXPORTED 40109
-      #define SUNSPEC_REAL_IMPORTED_EXPORTED 40117
-      #define SUNSPEC_REAL_ENERGY_SCALE 40123
-      double scale_real_energy=SUNSPEC_scale(modbus_result[SUNSPEC_REAL_ENERGY_SCALE-SUNSPEC_BASE]);
-        for (int n=0;n<3;n++) {
-          uint32_t p=0;
-          uint8_t *p_u8=(uint8_t *)&modbus_result[SUNSPEC_REAL_IMPORTED_EXPORTED-SUNSPEC_BASE+2*n];
-          p|=((uint32_t)p_u8[2])<<0;
-        p|=((uint32_t)p_u8[3])<<8;
-        p|=((uint32_t)p_u8[0])<<16;
-        p|=((uint32_t)p_u8[1])<<24;
-          PhaseEnergy[n].consumption=p/1000.0*scale_real_energy;
-          p=0;
-          p_u8=(uint8_t *)&modbus_result[SUNSPEC_REAL_ENERGY_EXPORTED-SUNSPEC_BASE+2*n];
-          p|=((uint32_t)p_u8[2])<<0;
-        p|=((uint32_t)p_u8[3])<<8;
-        p|=((uint32_t)p_u8[0])<<16;
-        p|=((uint32_t)p_u8[1])<<24;
-          PhaseEnergy[n].gridfeedin = -p/1000.0*scale_real_energy;
-        }
+#define SUNSPEC_REAL_ENERGY_EXPORTED 40109
+#define SUNSPEC_REAL_IMPORTED_EXPORTED 40117
+#define SUNSPEC_REAL_ENERGY_SCALE 40123
+      double scale_real_energy = SUNSPEC_scale(
+          modbus_result[SUNSPEC_REAL_ENERGY_SCALE - SUNSPEC_BASE]);
+      for (int n = 0; n < 3; n++) {
+        uint32_t p = 0;
+        uint8_t *p_u8 =
+            (uint8_t *)&modbus_result[SUNSPEC_REAL_IMPORTED_EXPORTED -
+                                      SUNSPEC_BASE + 2 * n];
+        p |= ((uint32_t)p_u8[2]) << 0;
+        p |= ((uint32_t)p_u8[3]) << 8;
+        p |= ((uint32_t)p_u8[0]) << 16;
+        p |= ((uint32_t)p_u8[1]) << 24;
+        PhaseEnergy[n].consumption = p / 1000.0 * scale_real_energy;
+        p = 0;
+        p_u8 = (uint8_t *)&modbus_result[SUNSPEC_REAL_ENERGY_EXPORTED -
+                                         SUNSPEC_BASE + 2 * n];
+        p |= ((uint32_t)p_u8[2]) << 0;
+        p |= ((uint32_t)p_u8[3]) << 8;
+        p |= ((uint32_t)p_u8[0]) << 16;
+        p |= ((uint32_t)p_u8[1]) << 24;
+        PhaseEnergy[n].gridfeedin = -p / 1000.0 * scale_real_energy;
+      }
     }
     DEBUG_SERIAL.printf("SUNSPEC power: %d,%d\n\r", t, power);
   }
 }
 
 void queryHTTP() {
-  DEBUG_SERIAL.println("DEBUG: queryHTTP() called, server=" + config.mqttServer);
-  String serverAddr = config.mqttServer;
+  DEBUG_SERIAL.printf("DEBUG: queryHTTP() called, server=%s\n", mqtt_server);
+  String serverAddr = String(mqtt_server);
   serverAddr.trim();
-  if (serverAddr.length() == 0 || serverAddr == "http://" || serverAddr == "https://") {
-    DEBUG_SERIAL.println("HTTP server not configured or invalid - skipping HTTP query");
+  if (serverAddr.length() == 0 || serverAddr == "http://" ||
+      serverAddr == "https://") {
+    DEBUG_SERIAL.println(
+        "HTTP server not configured or invalid - skipping HTTP query");
     return;
   }
   if (!serverAddr.startsWith("http://") && !serverAddr.startsWith("https://")) {
@@ -825,7 +898,7 @@ void queryHTTP() {
   http.begin(wifi_client, serverAddr.c_str());
   http.GET();
   deserializeJson(globalJsonDoc, http.getStream());
-  if (config.powerPath == "") {
+  if (power_path[0] == '\0') {
     DEBUG_SERIAL.println("HTTP query: no JSONPath for power data provided");
   } else {
     setJsonPathPower(globalJsonDoc);
@@ -833,7 +906,6 @@ void queryHTTP() {
   http.end();
   globalJsonDoc.clear();
 }
-
 
 const char CONFIG_page[] PROGMEM = R"=====(
 <!DOCTYPE html>
@@ -934,46 +1006,73 @@ legend { font-weight: bold; color: #333; padding: 0 5px; }
 </html>
 )=====";
 
-String processor(const String& var) {
+String processor(const String &var) {
   // General
-  if (var == "v_mqttServer") return config.mqttServer;
-  if (var == "v_qPeriod") return config.queryPeriod;
-  if (var == "v_ledGpio") return String(config.ledGpioInt);
-  if (var == "v_shellyMac") return config.shellyMac;
-  if (var == "v_shellyPort") return config.shellyPort;
-  if (var == "v_smaId") return config.smaId;
+  if (var == "v_mqttServer")
+    return mqtt_server;
+  if (var == "v_qPeriod")
+    return query_period;
+  if (var == "v_ledGpio")
+    return String(ledGpioInt);
+  if (var == "v_shellyMac")
+    return shelly_mac;
+  if (var == "v_shellyPort")
+    return shelly_port;
+  if (var == "v_smaId")
+    return sma_id;
 
   // Booleans for selects
-  if (var == "s_ledInv_t") return config.ledInverted ? "selected" : "";
-  if (var == "s_ledInv_f") return !config.ledInverted ? "selected" : "";
-  if (var == "s_fPwrDec_t") return config.forcePwrDecimals ? "selected" : "";
-  if (var == "s_fPwrDec_f") return !config.forcePwrDecimals ? "selected" : "";
+  if (var == "s_ledInv_t")
+    return ledInverted ? "selected" : "";
+  if (var == "s_ledInv_f")
+    return !ledInverted ? "selected" : "";
+  if (var == "s_fPwrDec_t")
+    return forcePwrDecimals ? "selected" : "";
+  if (var == "s_fPwrDec_f")
+    return !forcePwrDecimals ? "selected" : "";
 
   // Data Source Type select
-  if (var == "s_MQTT") return (config.inputType == "MQTT") ? "selected" : "";
-  if (var == "s_HTTP") return (config.inputType == "HTTP") ? "selected" : "";
-  if (var == "s_SMA") return (config.inputType == "SMA") ? "selected" : "";
-  if (var == "s_SHRDZM") return (config.inputType == "SHRDZM") ? "selected" : "";
-  if (var == "s_SUNSPEC") return (config.inputType == "SUNSPEC") ? "selected" : "";
+  if (var == "s_MQTT")
+    return (strcmp(input_type, "MQTT") == 0) ? "selected" : "";
+  if (var == "s_HTTP")
+    return (strcmp(input_type, "HTTP") == 0) ? "selected" : "";
+  if (var == "s_SMA")
+    return (strcmp(input_type, "SMA") == 0) ? "selected" : "";
+  if (var == "s_SHRDZM")
+    return (strcmp(input_type, "SHRDZM") == 0) ? "selected" : "";
+  if (var == "s_SUNSPEC")
+    return (strcmp(input_type, "SUNSPEC") == 0) ? "selected" : "";
 
   // MQTT
-  if (var == "v_mqttPort") return config.mqttPort;
-  if (var == "v_mqttTopic") return config.mqttTopic;
-  if (var == "v_mqttUser") return config.mqttUser;
-  if (var == "v_mqttPasswd") return config.mqttPasswd;
+  if (var == "v_mqttPort")
+    return mqtt_port;
+  if (var == "v_mqttTopic")
+    return mqtt_topic;
+  if (var == "v_mqttUser")
+    return mqtt_user;
+  if (var == "v_mqttPasswd")
+    return mqtt_passwd;
 
   // Modbus
-  if (var == "v_mbDevice") return config.modbusDevice;
-  
+  if (var == "v_mbDevice")
+    return modbus_dev;
+
   // JSON Paths
-  if (var == "v_powerPath") return config.powerPath;
-  if (var == "v_pwrExpPath") return config.pwrExportPath;
-  if (var == "v_powerL1Path") return config.powerL1Path;
-  if (var == "v_powerL2Path") return config.powerL2Path;
-  if (var == "v_powerL3Path") return config.powerL3Path;
-  if (var == "v_energyInPath") return config.energyInPath;
-  if (var == "v_energyOutPath") return config.energyOutPath;
-  
+  if (var == "v_powerPath")
+    return power_path;
+  if (var == "v_pwrExpPath")
+    return pwr_export_path;
+  if (var == "v_powerL1Path")
+    return power_l1_path;
+  if (var == "v_powerL2Path")
+    return power_l2_path;
+  if (var == "v_powerL3Path")
+    return power_l3_path;
+  if (var == "v_energyInPath")
+    return energy_in_path;
+  if (var == "v_energyOutPath")
+    return energy_out_path;
+
   return String();
 }
 
@@ -983,143 +1082,214 @@ void handleConfig(AsyncWebServerRequest *request) {
 
 void handleSave(AsyncWebServerRequest *request) {
   // Helper lambda to get a parameter value
-  auto getParam = [&](const char* name) {
+  auto getParam = [&](const char *name) {
     if (request->hasParam(name, true)) {
       return request->getParam(name, true)->value();
     }
     return String();
   };
 
-  // Update config struct from form parameters
-  config.inputType = getParam("inputType");
-  config.mqttServer = getParam("mqttServer");
-  config.queryPeriod = getParam("queryPeriod");
+  // Update global variables from form parameters
+  getParam("inputType").toCharArray(input_type, sizeof(input_type));
+  getParam("mqttServer").toCharArray(mqtt_server, sizeof(mqtt_server));
+  getParam("queryPeriod").toCharArray(query_period, sizeof(query_period));
   String ledGpioStr = getParam("ledGpio");
-  config.ledGpioInt = ledGpioStr.toInt();
+  ledGpioInt = ledGpioStr.toInt();
   String ledInvertedStr = getParam("ledInverted");
-  config.ledInverted = (ledInvertedStr == "true");
-  config.shellyMac = getParam("shellyMac");
-  config.shellyPort = getParam("shellyPort");
+  ledInverted = (ledInvertedStr == "true");
+  getParam("shellyMac").toCharArray(shelly_mac, sizeof(shelly_mac));
+  getParam("shellyPort").toCharArray(shelly_port, sizeof(shelly_port));
   String forcePwrDecimalsStr = getParam("forcePwrDecimals");
-  config.forcePwrDecimals = (forcePwrDecimalsStr == "true");
-  config.smaId = getParam("smaId");
-  config.mqttPort = getParam("mqttPort");
-  config.mqttTopic = getParam("mqttTopic");
-  config.mqttUser = getParam("mqttUser");
-  config.mqttPasswd = getParam("mqttPasswd");
-  config.modbusDevice = getParam("modbusDevice");
-  config.powerPath = getParam("powerPath");
-  config.pwrExportPath = getParam("pwrExportPath");
-  config.powerL1Path = getParam("powerL1Path");
-  config.powerL2Path = getParam("powerL2Path");
-  config.powerL3Path = getParam("powerL3Path");
-  config.energyInPath = getParam("energyInPath");
-  config.energyOutPath = getParam("energyOutPath");
+  forcePwrDecimals = (forcePwrDecimalsStr == "true");
+  getParam("smaId").toCharArray(sma_id, sizeof(sma_id));
+  getParam("mqttPort").toCharArray(mqtt_port, sizeof(mqtt_port));
+  getParam("mqttTopic").toCharArray(mqtt_topic, sizeof(mqtt_topic));
+  getParam("mqttUser").toCharArray(mqtt_user, sizeof(mqtt_user));
+  getParam("mqttPasswd").toCharArray(mqtt_passwd, sizeof(mqtt_passwd));
+  getParam("modbusDevice").toCharArray(modbus_dev, sizeof(modbus_dev));
+  getParam("powerPath").toCharArray(power_path, sizeof(power_path));
+  getParam("pwrExportPath")
+      .toCharArray(pwr_export_path, sizeof(pwr_export_path));
+  getParam("powerL1Path").toCharArray(power_l1_path, sizeof(power_l1_path));
+  getParam("powerL2Path").toCharArray(power_l2_path, sizeof(power_l2_path));
+  getParam("powerL3Path").toCharArray(power_l3_path, sizeof(power_l3_path));
+  getParam("energyInPath").toCharArray(energy_in_path, sizeof(energy_in_path));
+  getParam("energyOutPath")
+      .toCharArray(energy_out_path, sizeof(energy_out_path));
 
   // Save all settings to Preferences
   preferences.begin("e2s_config", false);
-  preferences.putString("input_type", config.inputType);
-  preferences.putString("mqtt_server", config.mqttServer);
-  preferences.putString("query_period", config.queryPeriod);
+  preferences.putString("input_type", input_type);
+  preferences.putString("mqtt_server", mqtt_server);
+  preferences.putString("query_period", query_period);
   preferences.putString("led_gpio", ledGpioStr);
   preferences.putString("led_gpio_i", ledInvertedStr);
-  preferences.putString("shelly_mac", config.shellyMac);
-  preferences.putString("shelly_port", config.shellyPort);
-  preferences.putBool("force_pwr_decimals", config.forcePwrDecimals);
-  preferences.putString("sma_id", config.smaId);
-  preferences.putString("mqtt_port", config.mqttPort);
-  preferences.putString("mqtt_topic", config.mqttTopic);
-  preferences.putString("mqtt_user", config.mqttUser);
-  preferences.putString("mqtt_passwd", config.mqttPasswd);
-  preferences.putString("modbus_dev", config.modbusDevice);
-  preferences.putString("power_path", config.powerPath);
-  preferences.putString("pwr_export_path", config.pwrExportPath);
-  preferences.putString("power_l1_path", config.powerL1Path);
-  preferences.putString("power_l2_path", config.powerL2Path);
-  preferences.putString("power_l3_path", config.powerL3Path);
-  preferences.putString("energy_in_path", config.energyInPath);
-  preferences.putString("energy_out_path", config.energyOutPath);
+  preferences.putString("shelly_mac", shelly_mac);
+  preferences.putString("shelly_port", shelly_port);
+  preferences.putBool("force_pwr_decimals", forcePwrDecimals);
+  preferences.putString("sma_id", sma_id);
+  preferences.putString("mqtt_port", mqtt_port);
+  preferences.putString("mqtt_topic", mqtt_topic);
+  preferences.putString("mqtt_user", mqtt_user);
+  preferences.putString("mqtt_passwd", mqtt_passwd);
+  preferences.putString("modbus_dev", modbus_dev);
+  preferences.putString("power_path", power_path);
+  preferences.putString("pwr_export_path", pwr_export_path);
+  preferences.putString("power_l1_path", power_l1_path);
+  preferences.putString("power_l2_path", power_l2_path);
+  preferences.putString("power_l3_path", power_l3_path);
+  preferences.putString("energy_in_path", energy_in_path);
+  preferences.putString("energy_out_path", energy_out_path);
   preferences.end();
 
-  String response = "<html><head><title>Settings Saved</title><meta http-equiv='refresh' content='5;url=/'></head><body>";
+  String response = "<html><head><title>Settings Saved</title><meta "
+                    "http-equiv='refresh' content='5;url=/'></head><body>";
   response += "<h1>Settings Saved</h1>";
   response += "<p>The device will now restart to apply the changes.</p>";
-  response += "<p>You will be redirected to the home page in 5 seconds. If not, please <a href='/'>click here</a>.</p>";
+  response += "<p>You will be redirected to the home page in 5 seconds. If "
+              "not, please <a href='/'>click here</a>.</p>";
   response += "</body></html>";
   request->send(200, "text/html", response);
-  
+
   shouldReboot = true;
 }
 
 void WifiManagerSetup() {
   DEBUG_SERIAL.println("DEBUG: WifiManagerSetup() START");
-  
+
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
   WiFi.macAddress(mac);
-  char macBuffer[13];
-  sprintf(macBuffer, "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  config.shellyMac = macBuffer;
+  sprintf(shelly_mac, "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2],
+          mac[3], mac[4], mac[5]);
 
   DEBUG_SERIAL.println("DEBUG: About to call preferences.begin()");
   preferences.begin("e2s_config", false);
   DEBUG_SERIAL.println("DEBUG: preferences.begin() done, now loading values");
-  
+
   // Load all preferences first - avoid any network operations during loading
-  config.inputType = preferences.getString("input_type", config.inputType);
-  DEBUG_SERIAL.println("DEBUG: loaded inputType=" + config.inputType);
-  config.mqttServer = preferences.getString("mqtt_server", config.mqttServer);
-  DEBUG_SERIAL.println("DEBUG: loaded mqttServer=" + config.mqttServer);
-  config.queryPeriod = preferences.getString("query_period", config.queryPeriod);
-  String ledGpio = preferences.getString("led_gpio", "");
-  config.ledGpioInt = ledGpio.toInt();
-  String ledInvert = preferences.getString("led_gpio_i", "false");
-  config.ledInverted = (ledInvert == "true");
-  config.shellyMac = preferences.getString("shelly_mac", config.shellyMac);
-  config.mqttPort = preferences.getString("mqtt_port", config.mqttPort);
-  config.mqttPortInt = config.mqttPort.toInt();
-  config.mqttTopic = preferences.getString("mqtt_topic", config.mqttTopic);
-  config.mqttUser = preferences.getString("mqtt_user", config.mqttUser);
-  config.mqttPasswd = preferences.getString("mqtt_passwd", config.mqttPasswd);
-  config.modbusDevice = preferences.getString("modbus_dev", config.modbusDevice);
-  config.modbusDeviceId = config.modbusDevice.toInt();
-  config.powerPath = preferences.getString("power_path", config.powerPath);
-  config.pwrExportPath = preferences.getString("pwr_export_path", config.pwrExportPath);
-  config.powerL1Path = preferences.getString("power_l1_path", config.powerL1Path);
-  config.powerL2Path = preferences.getString("power_l2_path", config.powerL2Path);
-  config.powerL3Path = preferences.getString("power_l3_path", config.powerL3Path);
-  config.energyInPath = preferences.getString("energy_in_path", config.energyInPath);
-  config.energyOutPath = preferences.getString("energy_out_path", config.energyOutPath);
-  config.shellyPort = preferences.getString("shelly_port", config.shellyPort);
-  config.shellyPortInt = config.shellyPort.toInt();
-  config.forcePwrDecimals = preferences.getBool("force_pwr_decimals", true);
-  config.smaId = preferences.getString("sma_id", config.smaId);
-  
+  preferences.getString("input_type", input_type, sizeof(input_type));
+  DEBUG_SERIAL.print("DEBUG: loaded input_type=");
+  DEBUG_SERIAL.println(input_type);
+  preferences.getString("mqtt_server", mqtt_server, sizeof(mqtt_server));
+  DEBUG_SERIAL.print("DEBUG: loaded mqtt_server=");
+  DEBUG_SERIAL.println(mqtt_server);
+  preferences.getString("query_period", query_period, sizeof(query_period));
+  queryPeriodMs = atoi(query_period);
+
+  preferences.getString("led_gpio", led_gpio, sizeof(led_gpio));
+  ledGpioInt = atoi(led_gpio);
+  preferences.getString("led_gpio_i", led_gpio_i, sizeof(led_gpio_i));
+  ledInverted = (strcmp(led_gpio_i, "true") == 0);
+
+  preferences.getString("shelly_mac", shelly_mac, sizeof(shelly_mac));
+  preferences.getString("mqtt_port", mqtt_port, sizeof(mqtt_port));
+  mqttPortInt = atoi(mqtt_port);
+  preferences.getString("mqtt_topic", mqtt_topic, sizeof(mqtt_topic));
+  preferences.getString("mqtt_user", mqtt_user, sizeof(mqtt_user));
+  preferences.getString("mqtt_passwd", mqtt_passwd, sizeof(mqtt_passwd));
+  preferences.getString("modbus_dev", modbus_dev, sizeof(modbus_dev));
+  modbusDeviceId = atoi(modbus_dev);
+  preferences.getString("power_path", power_path, sizeof(power_path));
+  preferences.getString("pwr_export_path", pwr_export_path,
+                        sizeof(pwr_export_path));
+  preferences.getString("power_l1_path", power_l1_path, sizeof(power_l1_path));
+  preferences.getString("power_l2_path", power_l2_path, sizeof(power_l2_path));
+  preferences.getString("power_l3_path", power_l3_path, sizeof(power_l3_path));
+  preferences.getString("energy_in_path", energy_in_path,
+                        sizeof(energy_in_path));
+  preferences.getString("energy_out_path", energy_out_path,
+                        sizeof(energy_out_path));
+  preferences.getString("shelly_port", shelly_port, sizeof(shelly_port));
+  shellyPortInt = atoi(shelly_port);
+  forcePwrDecimals = preferences.getBool("force_pwr_decimals", true);
+  preferences.getString("sma_id", sma_id, sizeof(sma_id));
+
   WiFiManagerParameter custom_section1("<h3>General settings</h3>");
-  WiFiManagerParameter custom_input_type("type", "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data", config.inputType.c_str(), 40);
-  WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", config.mqttServer.c_str(), 80);
-  WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", config.mqttPort.c_str(), 6);
-  WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", config.queryPeriod.c_str(), 10);
-  WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", ledGpio.c_str(), 3);
-  WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", ledInvert.c_str(), 6);
-  WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", config.shellyMac.c_str(), 13);
-  WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> for old Marstek FW, <code>2220</code> for new Marstek FW v226+/v108+", config.shellyPort.c_str(), 6);
-  WiFiManagerParameter custom_force_pwr_decimals("force_pwr_decimals", "<b>Force decimals numbers for Power values</b><br><code>true</code> to fix Marstek bug", (config.forcePwrDecimals ? "true" : "false"), 6);
-  WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", config.smaId.c_str(), 16);
+  WiFiManagerParameter custom_input_type(
+      "type",
+      "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> "
+      "for generic HTTP<br><code>SMA</code> for SMA EM/HM "
+      "multicast<br><code>SHRDZM</code> for SHRDZM UDP "
+      "data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data",
+      input_type, 40);
+  WiFiManagerParameter custom_mqtt_server(
+      "server",
+      "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus "
+      "TCP server IP for SUNSPEC",
+      mqtt_server, 80);
+  WiFiManagerParameter custom_mqtt_port(
+      "port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
+  WiFiManagerParameter custom_query_period(
+      "query_period",
+      "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds",
+      query_period, 10);
+  WiFiManagerParameter custom_led_gpio(
+      "led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
+  WiFiManagerParameter custom_led_gpio_i(
+      "led_gpio_i",
+      "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>",
+      led_gpio_i, 6);
+  WiFiManagerParameter custom_shelly_mac(
+      "mac",
+      "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP",
+      shelly_mac, 13);
+  WiFiManagerParameter custom_shelly_port(
+      "shelly_port",
+      "<b>Shelly UDP port</b><br><code>1010</code> for old Marstek FW, "
+      "<code>2220</code> for new Marstek FW v226+/v108+",
+      shelly_port, 6);
+  WiFiManagerParameter custom_force_pwr_decimals(
+      "force_pwr_decimals",
+      "<b>Force decimals numbers for Power values</b><br><code>true</code> to "
+      "fix Marstek bug",
+      force_pwr_decimals, 6);
+  WiFiManagerParameter custom_sma_id(
+      "sma_id",
+      "<b>SMA serial number</b><br>optional serial number if you have more "
+      "than one SMA EM/HM in your network",
+      sma_id, 16);
   WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
-  WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", config.mqttTopic.c_str(), 90);
-  WiFiManagerParameter custom_mqtt_user("user", "<b>MQTT user</b><br>optional", config.mqttUser.c_str(), 40);
-  WiFiManagerParameter custom_mqtt_passwd("passwd", "<b>MQTT password</b><br>optional", config.mqttPasswd.c_str(), 40);
+  WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>",
+                                         mqtt_topic, 90);
+  WiFiManagerParameter custom_mqtt_user("user", "<b>MQTT user</b><br>optional",
+                                        mqtt_user, 40);
+  WiFiManagerParameter custom_mqtt_passwd(
+      "passwd", "<b>MQTT password</b><br>optional", mqtt_passwd, 40);
   WiFiManagerParameter custom_section3("<hr><h3>Modbus TCP options</h3>");
-  WiFiManagerParameter custom_modbus_dev("modbus_dev", "<b>Modbus device ID</b><br><code>71</code> for Kostal SEM", config.modbusDevice.c_str(), 60);
-  WiFiManagerParameter custom_section4("<hr><h3>JSON paths for MQTT and generic HTTP</h3>");
-  WiFiManagerParameter custom_power_path("power_path", "<b>Total power JSON path</b><br>e.g. <code>ENERGY.Power</code> or <code>TRIPHASE</code> for tri-phase data", config.powerPath.c_str(), 60);
-  WiFiManagerParameter custom_pwr_export_path("pwr_export_path", "<b>Export power JSON path</b><br>Optional, for net calc (e.g. \"i-e\"", config.pwrExportPath.c_str(), 60);
-  WiFiManagerParameter custom_power_l1_path("power_l1_path", "<b>Phase 1 power JSON path</b><br>optional", config.powerL1Path.c_str(), 60);
-  WiFiManagerParameter custom_power_l2_path("power_l2_path", "<b>Phase 2 power JSON path</b><br>Phase 2 power JSON path<br>optional", config.powerL2Path.c_str(), 60);
-  WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>Phase 3 power JSON path<br>optional", config.powerL3Path.c_str(), 60);
-  WiFiManagerParameter custom_energy_in_path("energy_in_path", "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>", config.energyInPath.c_str(), 60);
-  WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", config.energyOutPath.c_str(), 60);
+  WiFiManagerParameter custom_modbus_dev(
+      "modbus_dev", "<b>Modbus device ID</b><br><code>71</code> for Kostal SEM",
+      modbus_dev, 60);
+  WiFiManagerParameter custom_section4(
+      "<hr><h3>JSON paths for MQTT and generic HTTP</h3>");
+  WiFiManagerParameter custom_power_path(
+      "power_path",
+      "<b>Total power JSON path</b><br>e.g. <code>ENERGY.Power</code> or "
+      "<code>TRIPHASE</code> for tri-phase data",
+      power_path, 60);
+  WiFiManagerParameter custom_pwr_export_path(
+      "pwr_export_path",
+      "<b>Export power JSON path</b><br>Optional, for net calc (e.g. \"i-e\"",
+      pwr_export_path, 60);
+  WiFiManagerParameter custom_power_l1_path(
+      "power_l1_path", "<b>Phase 1 power JSON path</b><br>optional",
+      power_l1_path, 60);
+  WiFiManagerParameter custom_power_l2_path(
+      "power_l2_path",
+      "<b>Phase 2 power JSON path</b><br>Phase 2 power JSON path<br>optional",
+      power_l2_path, 60);
+  WiFiManagerParameter custom_power_l3_path(
+      "power_l3_path",
+      "<b>Phase 3 power JSON path</b><br>Phase 3 power JSON path<br>optional",
+      power_l3_path, 60);
+  WiFiManagerParameter custom_energy_in_path(
+      "energy_in_path",
+      "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>",
+      energy_in_path, 60);
+  WiFiManagerParameter custom_energy_out_path(
+      "energy_out_path",
+      "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>",
+      energy_out_path, 60);
 
   WiFiManager wifiManager;
   if (!DEBUG) {
@@ -1128,7 +1298,7 @@ void WifiManagerSetup() {
   wifiManager.setTitle("Energy2Shelly for ESP");
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
-  //add all your parameters here
+  // add all your parameters here
   wifiManager.addParameter(&custom_section1);
   wifiManager.addParameter(&custom_input_type);
   wifiManager.addParameter(&custom_mqtt_server);
@@ -1154,13 +1324,13 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_power_l3_path);
   wifiManager.addParameter(&custom_energy_in_path);
   wifiManager.addParameter(&custom_energy_out_path);
-  
 
   DEBUG_SERIAL.println("DEBUG: About to call wifiManager.autoConnect()");
   // Only attempt WiFiManager if configuration is invalid or incomplete
-  bool needsConfiguration = (config.inputType == "" || config.mqttServer == "");
+  bool needsConfiguration = (input_type[0] == '\0' || mqtt_server[0] == '\0');
   if (needsConfiguration) {
-    DEBUG_SERIAL.println("DEBUG: Configuration incomplete, running WiFiManager.autoConnect()");
+    DEBUG_SERIAL.println(
+        "DEBUG: Configuration incomplete, running WiFiManager.autoConnect()");
     if (!wifiManager.autoConnect("Energy2Shelly")) {
       DEBUG_SERIAL.println("failed to connect and hit timeout");
       delay(3000);
@@ -1169,7 +1339,8 @@ void WifiManagerSetup() {
     }
     DEBUG_SERIAL.println("DEBUG: wifiManager.autoConnect() completed");
   } else {
-    DEBUG_SERIAL.println("DEBUG: Configuration complete, attempting normal WiFi connection");
+    DEBUG_SERIAL.println(
+        "DEBUG: Configuration complete, attempting normal WiFi connection");
     WiFi.mode(WIFI_STA);
     WiFi.begin();
     int timeout = 20;
@@ -1188,114 +1359,157 @@ void WifiManagerSetup() {
   }
   DEBUG_SERIAL.println("connected");
 
-  //read updated parameters
-  config.inputType = custom_input_type.getValue();
-  config.mqttServer = custom_mqtt_server.getValue();
-  config.mqttServer.trim();
-  config.mqttPort = custom_mqtt_port.getValue();
-  config.mqttPortInt = config.mqttPort.toInt();
-  config.queryPeriod = custom_query_period.getValue();
-  config.queryPeriodMs = config.queryPeriod.toInt();
-  config.ledGpioInt = String(custom_led_gpio.getValue()).toInt();
-  String ledInvStr = custom_led_gpio_i.getValue();
-  config.ledInverted = (ledInvStr == "true");
-  config.shellyMac = custom_shelly_mac.getValue();
-  config.mqttTopic = custom_mqtt_topic.getValue();
-  config.mqttUser = custom_mqtt_user.getValue();
-  config.mqttPasswd = custom_mqtt_passwd.getValue();
-  config.modbusDevice = custom_modbus_dev.getValue();
-  config.modbusDeviceId = config.modbusDevice.toInt();
-  config.powerPath = custom_power_path.getValue();
-  config.pwrExportPath = custom_pwr_export_path.getValue();
-  config.powerL1Path = custom_power_l1_path.getValue();
-  config.powerL2Path = custom_power_l2_path.getValue();
-  config.powerL3Path = custom_power_l3_path.getValue();
-  config.energyInPath = custom_energy_in_path.getValue();
-  config.energyOutPath = custom_energy_out_path.getValue();
-  config.shellyPort = custom_shelly_port.getValue();
-  config.shellyPortInt = config.shellyPort.toInt();
-  String forcePwrStr(custom_force_pwr_decimals.getValue());
-  config.forcePwrDecimals = (forcePwrStr == "true");
-  config.smaId = custom_sma_id.getValue();
+  // read updated parameters
+  strncpy(input_type, custom_input_type.getValue(), sizeof(input_type) - 1);
+  input_type[sizeof(input_type) - 1] = '\0';
+  strncpy(mqtt_server, custom_mqtt_server.getValue(), sizeof(mqtt_server) - 1);
+  mqtt_server[sizeof(mqtt_server) - 1] = '\0';
+
+  // Manual trim for mqtt_server
+  char *trimmedMqtt = mqtt_server;
+  while (isspace(*trimmedMqtt))
+    trimmedMqtt++;
+  if (trimmedMqtt != mqtt_server) {
+    memmove(mqtt_server, trimmedMqtt, strlen(trimmedMqtt) + 1);
+  }
+  char *endMqtt = mqtt_server + strlen(mqtt_server) - 1;
+  while (endMqtt >= mqtt_server && isspace(*endMqtt))
+    *endMqtt-- = '\0';
+
+  strncpy(mqtt_port, custom_mqtt_port.getValue(), sizeof(mqtt_port) - 1);
+  mqtt_port[sizeof(mqtt_port) - 1] = '\0';
+  mqttPortInt = atoi(mqtt_port);
+  strncpy(query_period, custom_query_period.getValue(),
+          sizeof(query_period) - 1);
+  query_period[sizeof(query_period) - 1] = '\0';
+  queryPeriodMs = atoi(query_period);
+  strncpy(led_gpio, custom_led_gpio.getValue(), sizeof(led_gpio) - 1);
+  led_gpio[sizeof(led_gpio) - 1] = '\0';
+  ledGpioInt = atoi(led_gpio);
+  strncpy(led_gpio_i, custom_led_gpio_i.getValue(), sizeof(led_gpio_i) - 1);
+  led_gpio_i[sizeof(led_gpio_i) - 1] = '\0';
+  ledInverted = (strcmp(led_gpio_i, "true") == 0);
+  strncpy(shelly_mac, custom_shelly_mac.getValue(), sizeof(shelly_mac) - 1);
+  shelly_mac[sizeof(shelly_mac) - 1] = '\0';
+  strncpy(mqtt_topic, custom_mqtt_topic.getValue(), sizeof(mqtt_topic) - 1);
+  mqtt_topic[sizeof(mqtt_topic) - 1] = '\0';
+  strncpy(mqtt_user, custom_mqtt_user.getValue(), sizeof(mqtt_user) - 1);
+  mqtt_user[sizeof(mqtt_user) - 1] = '\0';
+  strncpy(mqtt_passwd, custom_mqtt_passwd.getValue(), sizeof(mqtt_passwd) - 1);
+  mqtt_passwd[sizeof(mqtt_passwd) - 1] = '\0';
+  strncpy(modbus_dev, custom_modbus_dev.getValue(), sizeof(modbus_dev) - 1);
+  modbus_dev[sizeof(modbus_dev) - 1] = '\0';
+  modbusDeviceId = atoi(modbus_dev);
+  strncpy(power_path, custom_power_path.getValue(), sizeof(power_path) - 1);
+  power_path[sizeof(power_path) - 1] = '\0';
+  strncpy(pwr_export_path, custom_pwr_export_path.getValue(),
+          sizeof(pwr_export_path) - 1);
+  pwr_export_path[sizeof(pwr_export_path) - 1] = '\0';
+  strncpy(power_l1_path, custom_power_l1_path.getValue(),
+          sizeof(power_l1_path) - 1);
+  power_l1_path[sizeof(power_l1_path) - 1] = '\0';
+  strncpy(power_l2_path, custom_power_l2_path.getValue(),
+          sizeof(power_l2_path) - 1);
+  power_l2_path[sizeof(power_l2_path) - 1] = '\0';
+  strncpy(power_l3_path, custom_power_l3_path.getValue(),
+          sizeof(power_l3_path) - 1);
+  power_l3_path[sizeof(power_l3_path) - 1] = '\0';
+  strncpy(energy_in_path, custom_energy_in_path.getValue(),
+          sizeof(energy_in_path) - 1);
+  energy_in_path[sizeof(energy_in_path) - 1] = '\0';
+  strncpy(energy_out_path, custom_energy_out_path.getValue(),
+          sizeof(energy_out_path) - 1);
+  energy_out_path[sizeof(energy_out_path) - 1] = '\0';
+  strncpy(shelly_port, custom_shelly_port.getValue(), sizeof(shelly_port) - 1);
+  shelly_port[sizeof(shelly_port) - 1] = '\0';
+  shellyPortInt = atoi(shelly_port);
+  strncpy(force_pwr_decimals, custom_force_pwr_decimals.getValue(),
+          sizeof(force_pwr_decimals) - 1);
+  force_pwr_decimals[sizeof(force_pwr_decimals) - 1] = '\0';
+  forcePwrDecimals = (strcmp(force_pwr_decimals, "true") == 0);
+  strncpy(sma_id, custom_sma_id.getValue(), sizeof(sma_id) - 1);
+  sma_id[sizeof(sma_id) - 1] = '\0';
 
   DEBUG_SERIAL.println("The values in the preferences are: ");
-  DEBUG_SERIAL.println("\tinput_type : " + config.inputType);
-  DEBUG_SERIAL.println("\tmqtt_server : " + config.mqttServer);
-  DEBUG_SERIAL.println("\tmqtt_port : " + config.mqttPort);
-  DEBUG_SERIAL.println("\tquery_period : " + config.queryPeriod);
-  DEBUG_SERIAL.println("\tled_gpio : " + String(config.ledGpioInt));
-  DEBUG_SERIAL.println("\tled_gpio_i : " + String(config.ledInverted));
-  DEBUG_SERIAL.println("\tshelly_mac : " + config.shellyMac);
-  DEBUG_SERIAL.println("\tmqtt_topic : " + config.mqttTopic);
-  DEBUG_SERIAL.println("\tmqtt_user : " + config.mqttUser);
-  DEBUG_SERIAL.println("\tmqtt_passwd : " + config.mqttPasswd);
-  DEBUG_SERIAL.println("\tmodbus_dev : " + config.modbusDevice);
-  DEBUG_SERIAL.println("\tpower_path : " + config.powerPath);
-  DEBUG_SERIAL.println("\tpwr_export_path : " + config.pwrExportPath);
-  DEBUG_SERIAL.println("\tpower_l1_path : " + config.powerL1Path);
-  DEBUG_SERIAL.println("\tpower_l2_path : " + config.powerL2Path);
-  DEBUG_SERIAL.println("\tpower_l3_path : " + config.powerL3Path);
-  DEBUG_SERIAL.println("\tenergy_in_path : " + config.energyInPath);
-  DEBUG_SERIAL.println("\tenergy_out_path : " + config.energyOutPath);
-  DEBUG_SERIAL.println("\tshelly_port : " + config.shellyPort);
-  DEBUG_SERIAL.println("\tforce_pwr_decimals : " + String(config.forcePwrDecimals));
-  DEBUG_SERIAL.println("\tsma_id : " + config.smaId);
+  DEBUG_SERIAL.printf("\tinput_type : %s\n", input_type);
+  DEBUG_SERIAL.printf("\tmqtt_server : %s\n", mqtt_server);
+  DEBUG_SERIAL.printf("\tmqtt_port : %s\n", mqtt_port);
+  DEBUG_SERIAL.printf("\tquery_period : %s\n", query_period);
+  DEBUG_SERIAL.printf("\tled_gpio : %s\n", led_gpio);
+  DEBUG_SERIAL.printf("\tled_gpio_i : %s\n", led_gpio_i);
+  DEBUG_SERIAL.printf("\tshelly_mac : %s\n", shelly_mac);
+  DEBUG_SERIAL.printf("\tmqtt_topic : %s\n", mqtt_topic);
+  DEBUG_SERIAL.printf("\tmqtt_user : %s\n", mqtt_user);
+  DEBUG_SERIAL.printf("\tmqtt_passwd : %s\n", mqtt_passwd);
+  DEBUG_SERIAL.printf("\tmodbus_dev : %s\n", modbus_dev);
+  DEBUG_SERIAL.printf("\tpower_path : %s\n", power_path);
+  DEBUG_SERIAL.printf("\tpwr_export_path : %s\n", pwr_export_path);
+  DEBUG_SERIAL.printf("\tpower_l1_path : %s\n", power_l1_path);
+  DEBUG_SERIAL.printf("\tpower_l2_path : %s\n", power_l2_path);
+  DEBUG_SERIAL.printf("\tpower_l3_path : %s\n", power_l3_path);
+  DEBUG_SERIAL.printf("\tenergy_in_path : %s\n", energy_in_path);
+  DEBUG_SERIAL.printf("\tenergy_out_path : %s\n", energy_out_path);
+  DEBUG_SERIAL.printf("\tshelly_port : %s\n", shelly_port);
+  DEBUG_SERIAL.printf("\tforce_pwr_decimals : %s\n", force_pwr_decimals);
+  DEBUG_SERIAL.printf("\tsma_id : %s\n", sma_id);
 
-  if (config.inputType == "SMA") {
+  if (strcmp(input_type, "SMA") == 0) {
     dataSMA = true;
     DEBUG_SERIAL.println("Enabling SMA Multicast data input");
-  } else if (config.inputType == "SHRDZM") {
+  } else if (strcmp(input_type, "SHRDZM") == 0) {
     dataSHRDZM = true;
     DEBUG_SERIAL.println("Enabling SHRDZM UDP data input");
-  } else if (config.inputType == "HTTP") {
-    if (config.mqttServer != "" && config.mqttServer.length() > 0) {
+  } else if (strcmp(input_type, "HTTP") == 0) {
+    if (mqtt_server[0] != '\0') {
       dataHTTP = true;
       DEBUG_SERIAL.println("Enabling generic HTTP data input");
     } else {
-      DEBUG_SERIAL.println("HTTP server not configured - disabling HTTP data input");
+      DEBUG_SERIAL.println(
+          "HTTP server not configured - disabling HTTP data input");
     }
-  } else if (config.inputType == "SUNSPEC") {
-    if (config.mqttServer != "" && config.mqttServer.length() > 0) {
+  } else if (strcmp(input_type, "SUNSPEC") == 0) {
+    if (mqtt_server[0] != '\0') {
       dataSUNSPEC = true;
       DEBUG_SERIAL.println("Enabling SUNSPEC data input");
     } else {
-      DEBUG_SERIAL.println("SUNSPEC server not configured - disabling SUNSPEC data input");
+      DEBUG_SERIAL.println(
+          "SUNSPEC server not configured - disabling SUNSPEC data input");
     }
-  }
-  else {
-    if (config.mqttServer != "" && config.mqttServer.length() > 0) {
+  } else {
+    if (mqtt_server[0] != '\0') {
       dataMQTT = true;
       DEBUG_SERIAL.println("Enabling MQTT data input");
     } else {
-      DEBUG_SERIAL.println("MQTT server not configured - disabling MQTT data input");
+      DEBUG_SERIAL.println(
+          "MQTT server not configured - disabling MQTT data input");
     }
   }
 
-  led_i = config.ledInverted;
+  led_i = ledInverted;
 
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println("saving config");
-    preferences.putString("input_type", config.inputType);
-    preferences.putString("mqtt_server", config.mqttServer);
-    preferences.putString("mqtt_port", config.mqttPort);
-    preferences.putString("query_period", config.queryPeriod);
-    preferences.putString("led_gpio", String(config.ledGpioInt));
-    preferences.putString("led_gpio_i", config.ledInverted ? "true" : "false");
-    preferences.putString("shelly_mac", config.shellyMac);
-    preferences.putString("mqtt_topic", config.mqttTopic);
-    preferences.putString("mqtt_user", config.mqttUser);
-    preferences.putString("mqtt_passwd", config.mqttPasswd);
-    preferences.putString("modbus_dev", config.modbusDevice);
-    preferences.putString("power_path", config.powerPath);
-    preferences.putString("pwr_export_path", config.pwrExportPath);
-    preferences.putString("power_l1_path", config.powerL1Path);
-    preferences.putString("power_l2_path", config.powerL2Path);
-    preferences.putString("power_l3_path", config.powerL3Path);
-    preferences.putString("energy_in_path", config.energyInPath);
-    preferences.putString("energy_out_path", config.energyOutPath);
-    preferences.putString("shelly_port", config.shellyPort);
-    preferences.putBool("force_pwr_decimals", config.forcePwrDecimals);
-    preferences.putString("sma_id", config.smaId);
+    preferences.putString("input_type", input_type);
+    preferences.putString("mqtt_server", mqtt_server);
+    preferences.putString("mqtt_port", mqtt_port);
+    preferences.putString("query_period", query_period);
+    preferences.putString("led_gpio", led_gpio);
+    preferences.putString("led_gpio_i", led_gpio_i);
+    preferences.putString("shelly_mac", shelly_mac);
+    preferences.putString("mqtt_topic", mqtt_topic);
+    preferences.putString("mqtt_user", mqtt_user);
+    preferences.putString("mqtt_passwd", mqtt_passwd);
+    preferences.putString("modbus_dev", modbus_dev);
+    preferences.putString("power_path", power_path);
+    preferences.putString("pwr_export_path", pwr_export_path);
+    preferences.putString("power_l1_path", power_l1_path);
+    preferences.putString("power_l2_path", power_l2_path);
+    preferences.putString("power_l3_path", power_l3_path);
+    preferences.putString("energy_in_path", energy_in_path);
+    preferences.putString("energy_out_path", energy_out_path);
+    preferences.putString("shelly_port", shelly_port);
+    preferences.putBool("force_pwr_decimals", forcePwrDecimals);
+    preferences.putString("sma_id", sma_id);
     wifiManager.reboot();
   }
   DEBUG_SERIAL.println("local ip");
@@ -1309,7 +1523,7 @@ void setup(void) {
   WifiManagerSetup();
   DEBUG_SERIAL.println("WifiManagerSetup() completed");
 
-  led = config.ledGpioInt;
+  led = ledGpioInt;
 
   if (led > 0) {
     pinMode(led, OUTPUT);
@@ -1361,14 +1575,21 @@ void setup(void) {
   });
 
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = "<!DOCTYPE html><html><head><title>Reset Confirmation</title>";
-    html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
-    html += "<style>body{font-family:Arial,sans-serif;text-align:center;padding:20px;}";
-    html += ".btn{padding:10px 20px;margin:10px;cursor:pointer;text-decoration:none;display:inline-block;border-radius:5px;font-size:16px;}";
+    String html =
+        "<!DOCTYPE html><html><head><title>Reset Confirmation</title>";
+    html +=
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+    html += "<style>body{font-family:Arial,sans-serif;text-align:center;"
+            "padding:20px;}";
+    html += ".btn{padding:10px "
+            "20px;margin:10px;cursor:pointer;text-decoration:none;display:"
+            "inline-block;border-radius:5px;font-size:16px;}";
     html += ".btn-yes{background-color:#d9534f;color:white;border:none;}";
-    html += ".btn-no{background-color:#5bc0de;color:white;border:none;}</style></head><body>";
+    html += ".btn-no{background-color:#5bc0de;color:white;border:none;}</"
+            "style></head><body>";
     html += "<h2>Reset Configuration?</h2>";
-    html += "<p>Are you sure you want to reset the WiFi configuration? This will clear all settings and restart the device.</p>";
+    html += "<p>Are you sure you want to reset the WiFi configuration? This "
+            "will clear all settings and restart the device.</p>";
     html += "<form method='POST' action='/reset' style='display:inline;'>";
     html += "<button type='submit' class='btn btn-yes'>Yes, Reset</button>";
     html += "</form>";
@@ -1379,7 +1600,9 @@ void setup(void) {
 
   server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
     shouldResetConfig = true;
-    request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
+    request->send(200, "text/plain",
+                  "Resetting WiFi configuration, please log back into the "
+                  "hotspot to reconfigure...\r\n");
   });
 
   server.on("/rpc/EM.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -1387,20 +1610,22 @@ void setup(void) {
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/rpc/EMData.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
-    EMDataGetStatus();
-    request->send(200, "application/json", serJsonResponse);
-  });
+  server.on("/rpc/EMData.GetStatus", HTTP_GET,
+            [](AsyncWebServerRequest *request) {
+              EMDataGetStatus();
+              request->send(200, "application/json", serJsonResponse);
+            });
 
   server.on("/rpc/EM.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetConfig();
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/rpc/Shelly.GetDeviceInfo", HTTP_GET, [](AsyncWebServerRequest *request) {
-    GetDeviceInfo();
-    request->send(200, "application/json", serJsonResponse);
-  });
+  server.on("/rpc/Shelly.GetDeviceInfo", HTTP_GET,
+            [](AsyncWebServerRequest *request) {
+              GetDeviceInfo();
+              request->send(200, "application/json", serJsonResponse);
+            });
 
   server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {
     GetDeviceInfo();
@@ -1413,26 +1638,24 @@ void setup(void) {
   server.begin();
 
   // Set up RPC over UDP for Marstek users
-  UdpRPC.begin(config.shellyPortInt); 
+  UdpRPC.begin(shellyPortInt);
 
   // Set up MQTT
   if (dataMQTT) {
-    String server = config.mqttServer;
-    server.trim();
     // Only setup MQTT if server is configured
-    if (server.length() > 0) {
+    if (mqtt_server[0] != '\0') {
       mqtt_client.setBufferSize(2048);
       // Parse IP address to avoid DNS lookups
       IPAddress mqttIP;
-      if (mqttIP.fromString(server)) {
+      if (mqttIP.fromString(mqtt_server)) {
         // It's an IP address, use it directly
-        mqtt_client.setServer(mqttIP, config.mqttPortInt);
+        mqtt_client.setServer(mqttIP, mqttPortInt);
       } else {
         // It's a hostname, pass as string (will do DNS lookup)
-        mqtt_client.setServer(server.c_str(), config.mqttPortInt);
+        mqtt_client.setServer(mqtt_server, mqttPortInt);
       }
       mqtt_client.setCallback(mqtt_callback);
-      mqtt_configured = true;  // Mark MQTT as properly configured
+      mqtt_configured = true; // Mark MQTT as properly configured
     } else {
       DEBUG_SERIAL.println("MQTT server not configured - skipping MQTT setup");
       dataMQTT = false;
@@ -1457,14 +1680,16 @@ void setup(void) {
 
   // Set Up Modbus TCP for SUNSPEC register query
   if (dataSUNSPEC) {
-    if (config.mqttServer == "" || config.mqttServer.length() == 0) {
-      DEBUG_SERIAL.println("SUNSPEC server not configured - skipping SUNSPEC setup");
+    if (mqtt_server[0] == '\0') {
+      DEBUG_SERIAL.println(
+          "SUNSPEC server not configured - skipping SUNSPEC setup");
       dataSUNSPEC = false;
     } else {
       modbus1.client();
-      modbus_ip.fromString(config.mqttServer.c_str());
-      if (!modbus1.isConnected(modbus_ip)) {  // reuse mqtt server address for modbus address
-        modbus1.connect(modbus_ip, config.mqttPortInt);
+      modbus_ip.fromString(mqtt_server);
+      if (!modbus1.isConnected(
+              modbus_ip)) { // reuse mqtt server address for modbus address
+        modbus1.connect(modbus_ip, mqttPortInt);
         Serial.println("Trying to connect SUNSPEC powermeter data");
       }
     }
@@ -1472,46 +1697,45 @@ void setup(void) {
 
   // Set Up HTTP query
   if (dataHTTP) {
-    period = config.queryPeriodMs;
+    period = queryPeriodMs;
     startMillis = millis();
     http.useHTTP10(true);
   }
 
   // Set up mDNS responder
-  config.shellyName += config.shellyMac;
-  if (!MDNS.begin(config.shellyName.c_str())) {
+  strncat(shelly_name, shelly_mac,
+          sizeof(shelly_name) - strlen(shelly_name) - 1);
+  if (!MDNS.begin(shelly_name)) {
     DEBUG_SERIAL.println("Error setting up MDNS responder!");
   }
 
 #ifdef ESP32
   MDNS.addService("http", "tcp", 80);
   MDNS.addService("shelly", "tcp", 80);
-  mdns_txt_item_t serviceTxtData[4] = {
-    { "fw_id", config.shellyFwId.c_str() },
-    { "arch", "esp8266" },
-    { "id", config.shellyName.c_str() },
-    { "gen", config.shellyGen.c_str() }
-  };
-  mdns_service_instance_name_set("_http", "_tcp", config.shellyName.c_str());
+  mdns_txt_item_t serviceTxtData[4] = {{"fw_id", shelly_fw_id},
+                                       {"arch", "esp8266"},
+                                       {"id", shelly_name},
+                                       {"gen", shelly_gen}};
+  mdns_service_instance_name_set("_http", "_tcp", shelly_name);
   mdns_service_txt_set("_http", "_tcp", serviceTxtData, 4);
-  mdns_service_instance_name_set("_shelly", "_tcp", config.shellyName.c_str());
+  mdns_service_instance_name_set("_shelly", "_tcp", shelly_name);
   mdns_service_txt_set("_shelly", "_tcp", serviceTxtData, 4);
 #else
   hMDNSService = MDNS.addService(0, "http", "tcp", 80);
   hMDNSService2 = MDNS.addService(0, "shelly", "tcp", 80);
   if (hMDNSService) {
-    MDNS.setServiceName(hMDNSService, config.shellyName.c_str());
-    MDNS.addServiceTxt(hMDNSService, "fw_id", config.shellyFwId.c_str());
+    MDNS.setServiceName(hMDNSService, shelly_name);
+    MDNS.addServiceTxt(hMDNSService, "fw_id", shelly_fw_id);
     MDNS.addServiceTxt(hMDNSService, "arch", "esp8266");
-    MDNS.addServiceTxt(hMDNSService, "id", config.shellyName.c_str());
-    MDNS.addServiceTxt(hMDNSService, "gen", config.shellyGen.c_str());
+    MDNS.addServiceTxt(hMDNSService, "id", shelly_name);
+    MDNS.addServiceTxt(hMDNSService, "gen", shelly_gen);
   }
   if (hMDNSService2) {
-    MDNS.setServiceName(hMDNSService2, config.shellyName.c_str());
-    MDNS.addServiceTxt(hMDNSService2, "fw_id", config.shellyFwId.c_str());
+    MDNS.setServiceName(hMDNSService2, shelly_name);
+    MDNS.addServiceTxt(hMDNSService2, "fw_id", shelly_fw_id);
     MDNS.addServiceTxt(hMDNSService2, "arch", "esp8266");
-    MDNS.addServiceTxt(hMDNSService2, "id", config.shellyName.c_str());
-    MDNS.addServiceTxt(hMDNSService2, "gen", config.shellyGen.c_str());
+    MDNS.addServiceTxt(hMDNSService2, "id", shelly_name);
+    MDNS.addServiceTxt(hMDNSService2, "gen", shelly_gen);
   }
 #endif
   DEBUG_SERIAL.println("mDNS responder started");
@@ -1535,7 +1759,7 @@ void loop() {
     delay(1000);
     ESP.restart();
   }
-  if (mqtt_configured) {  // Only use mqtt_client if it was properly configured
+  if (mqtt_configured) { // Only use mqtt_client if it was properly configured
     if (!mqtt_client.connected()) {
       mqtt_reconnect();
     }
@@ -1548,12 +1772,11 @@ void loop() {
     parseSHRDZM();
   }
   if (dataSUNSPEC) {
-     currentMillis = millis();
+    currentMillis = millis();
     if (currentMillis - startMillis_sunspec >= period) {
-       parseSUNSPEC();
+      parseSUNSPEC();
       startMillis_sunspec = currentMillis;
     }
-   
   }
   if (dataHTTP) {
     currentMillis = millis();
