@@ -50,8 +50,6 @@ char shelly_name[26] = "shellypro3em-";
 char query_period[10] = "1000";
 char modbus_dev[10] = "71"; // default for KSEM
 char shelly_port[6] = "2220"; // old: 1010; new (FW>=226): 2220
-char force_pwr_decimals[6] = "true"; // to fix Marstek bug
-bool forcePwrDecimals = true; // to fix Marstek bug
 char sma_id[17] = "";
 
 IPAddress modbus_ip;
@@ -127,13 +125,9 @@ WiFiUDP UdpRPC;
 #define UDPPRINT write
 #endif
 
+// use for values in JsonDocument to force 2 decimals in double/float
 double round2(double value) {
-  int ivalue = (int)(value * 100.0 + (value > 0.0 ? 0.5 : -0.5));
-
-  // fix Marstek bug: make sure to have decimal numbers
-  if(forcePwrDecimals && (ivalue % 100 == 0)) ivalue++;
-  
-  return ivalue / 100.0;
+  return (int)(value * 100 + (value > 0.0 ? 0.5 : -0.5)) / 100.0;
 }
 
 JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
@@ -290,27 +284,27 @@ void GetDeviceInfo() {
 void EMGetStatus() {
   JsonDocument jsonResponse;
   jsonResponse["id"] = 0;
-  jsonResponse["a_current"] = PhasePower[0].current;
-  jsonResponse["a_voltage"] = PhasePower[0].voltage;
-  jsonResponse["a_act_power"] = PhasePower[0].power;
-  jsonResponse["a_aprt_power"] = PhasePower[0].apparentPower;
-  jsonResponse["a_pf"] = PhasePower[0].powerFactor;
-  jsonResponse["a_freq"] = PhasePower[0].frequency;
-  jsonResponse["b_current"] = PhasePower[1].current;
-  jsonResponse["b_voltage"] = PhasePower[1].voltage;
-  jsonResponse["b_act_power"] = PhasePower[1].power;
-  jsonResponse["b_aprt_power"] = PhasePower[1].apparentPower;
-  jsonResponse["b_pf"] = PhasePower[1].powerFactor;
-  jsonResponse["b_freq"] = PhasePower[1].frequency;
-  jsonResponse["c_current"] = PhasePower[2].current;
-  jsonResponse["c_voltage"] = PhasePower[2].voltage;
-  jsonResponse["c_act_power"] = PhasePower[2].power;
-  jsonResponse["c_aprt_power"] = PhasePower[2].apparentPower;
-  jsonResponse["c_pf"] = PhasePower[2].powerFactor;
-  jsonResponse["c_freq"] = PhasePower[2].frequency;
-  jsonResponse["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / ((float)defaultVoltage));
-  jsonResponse["total_act_power"] = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
-  jsonResponse["total_aprt_power"] = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
+  jsonResponse["a_current"] = serialized(String(PhasePower[0].current, 2));
+  jsonResponse["a_voltage"] = serialized(String(PhasePower[0].voltage, 2));
+  jsonResponse["a_act_power"] = serialized(String(PhasePower[0].power, 2));
+  jsonResponse["a_aprt_power"] = serialized(String(PhasePower[0].apparentPower, 2));
+  jsonResponse["a_pf"] = serialized(String(PhasePower[0].powerFactor, 2));
+  jsonResponse["a_freq"] = serialized(String(PhasePower[0].frequency, 2));
+  jsonResponse["b_current"] = serialized(String(PhasePower[1].current, 2));
+  jsonResponse["b_voltage"] = serialized(String(PhasePower[1].voltage, 2));
+  jsonResponse["b_act_power"] = serialized(String(PhasePower[1].power, 2));
+  jsonResponse["b_aprt_power"] = serialized(String(PhasePower[1].apparentPower, 2));
+  jsonResponse["b_pf"] = serialized(String(PhasePower[1].powerFactor, 2));
+  jsonResponse["b_freq"] = serialized(String(PhasePower[1].frequency, 2));
+  jsonResponse["c_current"] = serialized(String(PhasePower[2].current, 2));
+  jsonResponse["c_voltage"] = serialized(String(PhasePower[2].voltage, 2));
+  jsonResponse["c_act_power"] = serialized(String(PhasePower[2].power, 2));
+  jsonResponse["c_aprt_power"] = serialized(String(PhasePower[2].apparentPower, 2));
+  jsonResponse["c_pf"] = serialized(String(PhasePower[2].powerFactor, 2));
+  jsonResponse["c_freq"] = serialized(String(PhasePower[2].frequency, 2));
+  jsonResponse["total_current"] = serialized(String((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / defaultVoltage, 2));
+  jsonResponse["total_act_power"] = serialized(String(PhasePower[0].power + PhasePower[1].power + PhasePower[2].power, 2));
+  jsonResponse["total_aprt_power"] = serialized(String(PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower, 2));
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
@@ -319,14 +313,14 @@ void EMGetStatus() {
 void EMDataGetStatus() {
   JsonDocument jsonResponse;
   jsonResponse["id"] = 0;
-  jsonResponse["a_total_act_energy"] = PhaseEnergy[0].consumption;
-  jsonResponse["a_total_act_ret_energy"] = PhaseEnergy[0].gridfeedin;
-  jsonResponse["b_total_act_energy"] = PhaseEnergy[1].consumption;
-  jsonResponse["b_total_act_ret_energy"] = PhaseEnergy[1].gridfeedin;
-  jsonResponse["c_total_act_energy"] = PhaseEnergy[2].consumption;
-  jsonResponse["c_total_act_ret_energy"] = PhaseEnergy[2].gridfeedin;
-  jsonResponse["total_act"] = PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption;
-  jsonResponse["total_act_ret"] = PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin;
+  jsonResponse["a_total_act_energy"] = serialized(String(PhaseEnergy[0].consumption, 2));
+  jsonResponse["a_total_act_ret_energy"] = serialized(String(PhaseEnergy[0].gridfeedin, 2));
+  jsonResponse["b_total_act_energy"] = serialized(String(PhaseEnergy[1].consumption, 2));
+  jsonResponse["b_total_act_ret_energy"] = serialized(String(PhaseEnergy[1].gridfeedin, 2));
+  jsonResponse["c_total_act_energy"] = serialized(String(PhaseEnergy[2].consumption, 2));
+  jsonResponse["c_total_act_ret_energy"] = serialized(String(PhaseEnergy[2].gridfeedin, 2));
+  jsonResponse["total_act"] = serialized(String(PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption, 2));
+  jsonResponse["total_act_ret"] = serialized(String(PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin, 2));
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
@@ -769,7 +763,6 @@ void WifiManagerSetup() {
   strcpy(energy_in_path, preferences.getString("energy_in_path", energy_in_path).c_str());
   strcpy(energy_out_path, preferences.getString("energy_out_path", energy_out_path).c_str());
   strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
-  strcpy(force_pwr_decimals, preferences.getString("force_pwr_decimals", force_pwr_decimals).c_str());
   strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
   
   WiFiManagerParameter custom_section1("<h3>General settings</h3>");
@@ -781,7 +774,6 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
   WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
   WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> for old Marstek FW, <code>2220</code> for new Marstek FW v226+/v108+", shelly_port, 6);
-  WiFiManagerParameter custom_force_pwr_decimals("force_pwr_decimals", "<b>Force decimals numbers for Power values</b><br><code>true</code> to fix Marstek bug", force_pwr_decimals, 6);
   WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
   WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
   WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", mqtt_topic, 90);
@@ -814,7 +806,6 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_led_gpio_i);
   wifiManager.addParameter(&custom_shelly_mac);
   wifiManager.addParameter(&custom_shelly_port);
-  wifiManager.addParameter(&custom_force_pwr_decimals);
   wifiManager.addParameter(&custom_sma_id);
   wifiManager.addParameter(&custom_section2);
   wifiManager.addParameter(&custom_mqtt_port);
@@ -861,7 +852,6 @@ void WifiManagerSetup() {
   strcpy(energy_in_path, custom_energy_in_path.getValue());
   strcpy(energy_out_path, custom_energy_out_path.getValue());
   strcpy(shelly_port, custom_shelly_port.getValue());
-  strcpy(force_pwr_decimals, custom_force_pwr_decimals.getValue());
   strcpy(sma_id, custom_sma_id.getValue());
 
   DEBUG_SERIAL.println("The values in the preferences are: ");
@@ -884,7 +874,6 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tenergy_in_path : " + String(energy_in_path));
   DEBUG_SERIAL.println("\tenergy_out_path : " + String(energy_out_path));
   DEBUG_SERIAL.println("\tshelly_port : " + String(shelly_port));
-  DEBUG_SERIAL.println("\tforce_pwr_decimals : " + String(force_pwr_decimals));
   DEBUG_SERIAL.println("\tsma_id : " + String(sma_id));
 
   if (strcmp(input_type, "SMA") == 0) {
@@ -899,8 +888,7 @@ void WifiManagerSetup() {
   } else if (strcmp(input_type, "SUNSPEC") == 0) {
     dataSUNSPEC = true;
     DEBUG_SERIAL.println("Enabling SUNSPEC data input");
-  }
-  else {
+  } else {
     dataMQTT = true;
     DEBUG_SERIAL.println("Enabling MQTT data input");
   }
@@ -909,12 +897,6 @@ void WifiManagerSetup() {
     led_i = true;
   } else {
     led_i = false;
-  }
-
-  if (strcmp(force_pwr_decimals, "true") == 0) {
-    forcePwrDecimals = true;
-  } else {
-    forcePwrDecimals = false;
   }
 
   if (shouldSaveConfig) {
@@ -938,7 +920,6 @@ void WifiManagerSetup() {
     preferences.putString("energy_in_path", energy_in_path);
     preferences.putString("energy_out_path", energy_out_path);
     preferences.putString("shelly_port", shelly_port);
-    preferences.putString("force_pwr_decimals", force_pwr_decimals);
     preferences.putString("sma_id", sma_id);
     wifiManager.reboot();
   }
