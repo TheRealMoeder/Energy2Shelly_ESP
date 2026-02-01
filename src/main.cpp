@@ -1224,11 +1224,6 @@ void setup(void) {
   strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
   DEBUG_SERIAL.println(time_buffer);
 
-  // fix MAC address to uppercase
-  String mac = String(shelly_mac);
-  mac.toUpperCase();
-  strcpy(shelly_mac, mac.c_str());
-
   if (String(led_gpio).toInt() > 0) {
     led = String(led_gpio).toInt();
   }
@@ -1396,6 +1391,11 @@ void setup(void) {
   }
 #endif
   DEBUG_SERIAL.println("mDNS responder started");
+
+  // fix MAC address to uppercase
+  String mac = String(shelly_mac);
+  mac.toUpperCase();
+  strcpy(shelly_mac, mac.c_str());
 }
 
 void loop() {
