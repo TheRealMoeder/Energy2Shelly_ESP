@@ -1075,10 +1075,10 @@ void setup(void) {
   MDNS.addService("http", "tcp", 80);
   MDNS.addService("shelly", "tcp", 80);
   mdns_txt_item_t serviceTxtData[4] = {
-    { "fw_id", shelly_fw_id },
-    { "arch", "esp8266" },
-    { "id", shelly_name },
-    { "gen", shelly_gen }
+      {"id", shelly_name},
+      {"fw_id", shelly_fw_id},
+      {"gen", shelly_gen},
+      {"arch", "esp8266"}
   };
   mdns_service_instance_name_set("_http", "_tcp", shelly_name);
   mdns_service_txt_set("_http", "_tcp", serviceTxtData, 4);
@@ -1089,17 +1089,17 @@ void setup(void) {
   hMDNSService2 = MDNS.addService(0, "shelly", "tcp", 80);
   if (hMDNSService) {
     MDNS.setServiceName(hMDNSService, shelly_name);
-    MDNS.addServiceTxt(hMDNSService, "fw_id", shelly_fw_id);
     MDNS.addServiceTxt(hMDNSService, "arch", "esp8266");
-    MDNS.addServiceTxt(hMDNSService, "id", shelly_name);
     MDNS.addServiceTxt(hMDNSService, "gen", shelly_gen);
+    MDNS.addServiceTxt(hMDNSService, "fw_id", shelly_fw_id);
+    MDNS.addServiceTxt(hMDNSService, "id", shelly_name);
   }
   if (hMDNSService2) {
     MDNS.setServiceName(hMDNSService2, shelly_name);
-    MDNS.addServiceTxt(hMDNSService2, "fw_id", shelly_fw_id);
     MDNS.addServiceTxt(hMDNSService2, "arch", "esp8266");
-    MDNS.addServiceTxt(hMDNSService2, "id", shelly_name);
     MDNS.addServiceTxt(hMDNSService2, "gen", shelly_gen);
+    MDNS.addServiceTxt(hMDNSService2, "fw_id", shelly_fw_id);
+    MDNS.addServiceTxt(hMDNSService2, "id", shelly_name);
   }
 #endif
   DEBUG_SERIAL.println("mDNS responder started");
