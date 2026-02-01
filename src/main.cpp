@@ -298,24 +298,95 @@ void handleblinkled() {
   }
 }
 
-void GetDeviceInfo() {
+// aligned with Shelly API docs
+// https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Shelly#shellygetdeviceinfo-example
+void shellyGetDeviceInfo() {
   JsonDocument jsonResponse;
-  jsonResponse["name"] = shelly_name;
   jsonResponse["id"] = shelly_name;
   jsonResponse["mac"] = shelly_mac;
   jsonResponse["slot"] = 1;
   jsonResponse["model"] = "SPEM-003CEBEU";
-  jsonResponse["gen"] = shelly_gen;
+  jsonResponse["gen"] = atoi(shelly_gen);
   jsonResponse["fw_id"] = shelly_fw_id;
   jsonResponse["ver"] = "1.4.4";
   jsonResponse["app"] = "Pro3EM";
   jsonResponse["auth_en"] = false;
+  jsonResponse["auth_domain"] = nullptr;
   jsonResponse["profile"] = "triphase";
   serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("shellyGetDeviceInfo: ");
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
 
+// aligned with Shelly API docs
+// https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Sys#sysgetconfig-example
+void sysGetConfig() {
+  JsonDocument jsonResponse;
+  jsonResponse["device"]["name"] = shelly_name;
+  jsonResponse["device"]["mac"] = shelly_mac;
+  jsonResponse["device"]["fw_id"] = shelly_fw_id;
+  jsonResponse["device"]["eco_mode"] = false;
+  jsonResponse["device"]["profile"] = "triphase";
+  jsonResponse["device"]["discoverable"] = false;
+  jsonResponse["location"]["tz"] = "Europe/Berlin";
+  jsonResponse["location"]["lat"] = 54.306;
+  jsonResponse["location"]["lon"] = 9.663;
+  jsonResponse["debug"]["mqtt"]["enable"] = false;
+  jsonResponse["debug"]["websocket"]["enable"] = false;
+  jsonResponse["debug"]["udp"]["addr"] = nullptr;
+  jsonResponse["ui_data"].to<JsonObject>();
+  jsonResponse["rpc_udp"]["dst_addr"] = WiFi.localIP().toString();
+  jsonResponse["rpc_udp"]["listen_port"] = shelly_port;
+  jsonResponse["sntp"]["server"] = ntp_server;
+  jsonResponse["cfg_rev"] = 10;
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("sysGetConfig: ");
+  DEBUG_SERIAL.println(serJsonResponse);
+}
+
+// aligned with Shelly API docs
+// https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Sys#sysgetstatus-example
+void sysGetStatus() {
+  JsonDocument jsonResponse;
+
+  time_t now = time(nullptr);
+  localtime_r(&now, &timeinfo);
+  char time_buffer[6];
+  strftime(time_buffer, sizeof(time_buffer), "%H:%M", &timeinfo);
+
+  uint32_t ram_total;
+
+#ifdef ESP32
+  ram_total = ESP.getHeapSize();
+#else
+  ram_total = 0; // what makes sense here?
+#endif
+
+  jsonResponse["mac"] = shelly_mac;
+  jsonResponse["restart_required"] = false;
+  jsonResponse["time"] = time_buffer;
+  jsonResponse["unixtime"] = now;
+  jsonResponse["last_sync_ts"] = nullptr;
+  jsonResponse["uptime"] = millis() / 1000;
+  jsonResponse["ram_size"] = ram_total;
+  jsonResponse["ram_free"] = ESP.getFreeHeap();
+  jsonResponse["fs_size"] = ESP.getFlashChipSize();
+  jsonResponse["fs_free"] = ESP.getFreeSketchSpace();
+  jsonResponse["cfg_rev"] = 10;
+  jsonResponse["kvs_rev"] = 2725;
+  jsonResponse["schedule_rev"] = 0;
+  jsonResponse["webhook_rev"] = 0;
+  jsonResponse["btrelay_rev"] = 0;
+  jsonResponse["avail_updates"].to<JsonObject>();
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("sysGetStatus: ");
+  DEBUG_SERIAL.println(serJsonResponse);
+  blinkled(ledblinkduration);
+}
+
+// aligned with Shelly API docs
+// https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EM#emgetstatus-example
 void EMGetStatus() {
   JsonDocument jsonResponse;
   jsonResponse["id"] = 0;
@@ -341,10 +412,13 @@ void EMGetStatus() {
   jsonResponse["total_act_power"] = serialized(String(PhasePower[0].power + PhasePower[1].power + PhasePower[2].power, 2));
   jsonResponse["total_aprt_power"] = serialized(String(PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower, 2));
   serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("EMGetStatus: ");
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
 
+// aligned with Shelly API docs
+// https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EMData#emdatagetstatus-example
 void EMDataGetStatus() {
   JsonDocument jsonResponse;
   jsonResponse["id"] = 0;
@@ -357,10 +431,13 @@ void EMDataGetStatus() {
   jsonResponse["total_act"] = serialized(String(PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption, 2));
   jsonResponse["total_act_ret"] = serialized(String(PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin, 2));
   serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("EMDataGetStatus: ");
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
 
+// aligned with Shelly API docs
+// https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EM#emgetconfig-example
 void EMGetConfig() {
   JsonDocument jsonResponse;
   jsonResponse["id"] = 0;
@@ -368,8 +445,129 @@ void EMGetConfig() {
   jsonResponse["blink_mode_selector"] = "active_energy";
   jsonResponse["phase_selector"] = "a";
   jsonResponse["monitor_phase_sequence"] = true;
+  jsonResponse["reverse"].to<JsonObject>();
   jsonResponse["ct_type"] = "120A";
   serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("EMGetConfig: ");
+  DEBUG_SERIAL.println(serJsonResponse);
+  blinkled(ledblinkduration);
+}
+
+// aligned with Shelly API docs
+// https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Shelly#shellygetconfig-example
+void shellyGetConfig() {
+  JsonDocument jsonResponse, tempDoc;
+  jsonResponse["ble"]["enable"] = false;
+  jsonResponse["cloud"]["enable"] = false;
+  jsonResponse["cloud"]["server"] = nullptr;
+  EMGetConfig();
+  jsonResponse["em:0"] = serialized(serJsonResponse);
+  sysGetConfig();
+  jsonResponse["sys"] = serialized(serJsonResponse);
+  jsonResponse["wifi"]["sta"]["ssid"] = WiFi.SSID();
+  jsonResponse["wifi"]["sta"]["is_open"] = false;
+  jsonResponse["wifi"]["sta"]["enable"] = true;
+  jsonResponse["wifi"]["sta"]["ipv4mode"] = "dhcp";
+  jsonResponse["wifi"]["sta"]["ip"] = WiFi.localIP().toString();
+  jsonResponse["wifi"]["sta"]["netmask"] = WiFi.subnetMask().toString();
+  jsonResponse["wifi"]["sta"]["gw"] = WiFi.gatewayIP().toString();
+  jsonResponse["wifi"]["sta"]["nameserver"] = WiFi.dnsIP().toString();
+  jsonResponse["wifi"]["ws"]["enable"] = false;
+  jsonResponse["wifi"]["ws"]["server"] = nullptr;
+  jsonResponse["wifi"]["ws"]["ssl_ca"] = "ca.pem";
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("shellyGetConfig: ");
+  DEBUG_SERIAL.println(serJsonResponse);
+  blinkled(ledblinkduration);
+}
+
+// aligned with Shelly API docs
+// https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Shelly#shellygetcomponents-example
+void shellyGetComponents() {
+  JsonDocument jsonResponse, comp1, comp2, tempDoc;
+  JsonArray components = jsonResponse["components"].to<JsonArray>();
+  comp1["key"] = "em:0";
+  EMGetStatus();
+  comp1["status"] = serialized(serJsonResponse);
+  EMGetConfig();
+  comp1["config"] = serialized(serJsonResponse);
+  components.add(comp1);
+  comp2["key"] = "emdata:0";
+  EMDataGetStatus();
+  comp2["status"] = serialized(serJsonResponse);
+  comp2["config"].to<JsonObject>(); // no config for emdata
+  components.add(comp2);
+  jsonResponse["cfg_rev"] = 1;
+  jsonResponse["offset"] = 0;
+  jsonResponse["total"] = 2;
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("shellyGetComponents: ");
+  DEBUG_SERIAL.println(serJsonResponse);
+  blinkled(ledblinkduration);
+}
+
+// aligned with Shelly API docs
+// https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Shelly#shellygetstatus-example
+void shellyGetStatus() {
+  JsonDocument jsonResponse;
+  double temperature;
+#ifdef ESP32
+  temperature = temperatureRead();
+#else
+  temperature = 26.55;
+#endif
+
+  jsonResponse["ble"].to<JsonObject>();
+
+  jsonResponse["cloud"]["connected"] = false;
+  jsonResponse["mqtt"]["connected"] = false;
+
+  EMGetStatus();
+  jsonResponse["em:0"] = serialized(serJsonResponse);
+  EMDataGetStatus();
+  jsonResponse["emdata:0"] = serialized(serJsonResponse);
+
+  // temperature is not really in the examples, but makes sense to include it
+  JsonObject temp = jsonResponse["tmp"].to<JsonObject>();
+  temp["tC"] = serialized(String(temperature, 2));
+  temp["tF"] = serialized(String((temperature * 9.0 / 5.0) + 32.0, 2));
+
+  sysGetStatus();
+  jsonResponse["sys"] = serialized(serJsonResponse);
+
+  jsonResponse["wifi"]["sta_ip"] = WiFi.localIP().toString();
+  jsonResponse["wifi"]["status"] = (WiFi.status() == WL_CONNECTED);
+  jsonResponse["wifi"]["ssid"] = WiFi.SSID();
+  jsonResponse["wifi"]["rssi"] = WiFi.RSSI();
+
+  // these were in the uni-meter output, but not in the Shelly examples
+  // will keep them commented out for possible future use
+  //
+  // jsonResponse["sys"]["mac"] = mac.c_str();
+  // jsonResponse["sys"]["restart_required"] = false;
+  // jsonResponse["sys"]["time"] = time_buffer;
+  // jsonResponse["sys"]["unixtime"] = now;
+  // jsonResponse["sys"]["last_sync_ts"] = nullptr;
+  // jsonResponse["sys"]["uptime"] = millis() / 1000;
+  // jsonResponse["sys"]["ram_size"] = ram_total;
+  // jsonResponse["sys"]["ram_free"] = ESP.getFreeHeap();
+  // jsonResponse["sys"]["fs_size"] = ESP.getFlashChipSize();
+  // jsonResponse["sys"]["fs_free"] = ESP.getFreeSketchSpace();
+  // jsonResponse["sys"]["cfg_rev"] = 10;
+  // jsonResponse["sys"]["kvs_rev"] = 2725;
+  //
+  // jsonResponse["serial"] = 1;
+  // jsonResponse["has_update"] = false;
+  //
+  // jsonResponse["temperature"] = serialized(String(temperature, 2));
+  // jsonResponse["overtemperature"] = false;
+  // temp["is_valid"] = true;
+  // JsonObject modbus = jsonResponse["modbus"].to<JsonObject>();
+  // modbus["enabled"] = false;
+  // jsonResponse["total_power"] = serialized(String(PhasePower[0].power + PhasePower[1].power + PhasePower[2].power, 2));
+  // jsonResponse["fs_mounted"] = true;
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("shellyGetStatus: ");
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
@@ -392,7 +590,22 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
           rpcId = json["id"];
           if (json["method"] == "Shelly.GetDeviceInfo") {
             strcpy(rpcUser, "EMPTY");
-            GetDeviceInfo();
+            shellyGetDeviceInfo();
+            rpcWrapper();
+            webSocket.textAll(serJsonResponse);
+          } else if (json["method"] == "Shelly.GetComponents") {
+            strcpy(rpcUser, "EMPTY");
+            shellyGetComponents();
+            rpcWrapper();
+            webSocket.textAll(serJsonResponse);
+          } else if (json["method"] == "Shelly.GetConfig") {
+            strcpy(rpcUser, "EMPTY");
+            shellyGetConfig();
+            rpcWrapper();
+            webSocket.textAll(serJsonResponse);
+          } else if (json["method"] == "Shelly.GetStatus") {
+            strcpy(rpcUser, "EMPTY");
+            shellyGetStatus();
             rpcWrapper();
             webSocket.textAll(serJsonResponse);
           } else if (json["method"] == "EM.GetStatus") {
@@ -456,7 +669,19 @@ void parseUdpRPC() {
       strcpy(rpcUser, "EMPTY");
       UdpRPC.beginPacket(UdpRPC.remoteIP(), UdpRPC.remotePort());
       if (json["method"] == "Shelly.GetDeviceInfo") {
-        GetDeviceInfo();
+        shellyGetDeviceInfo();
+        rpcWrapper();
+        UdpRPC.UDPPRINT(serJsonResponse.c_str());
+      } else if (json["method"] == "Shelly.GetComponents") {
+        shellyGetComponents();
+        rpcWrapper();
+        UdpRPC.UDPPRINT(serJsonResponse.c_str());
+      } else if (json["method"] == "Shelly.GetConfig") {
+        shellyGetConfig();
+        rpcWrapper();
+        UdpRPC.UDPPRINT(serJsonResponse.c_str());
+      } else if (json["method"] == "Shelly.GetStatus") {
+        shellyGetStatus();
         rpcWrapper();
         UdpRPC.UDPPRINT(serJsonResponse.c_str());
       } else if (json["method"] == "EM.GetStatus") {
@@ -976,7 +1201,7 @@ void WifiManagerSetup() {
     preferences.putString("sma_id", sma_id);
     wifiManager.reboot();
   }
-  DEBUG_SERIAL.println("local ip");
+  DEBUG_SERIAL.print("local ip: ");
   DEBUG_SERIAL.println(WiFi.localIP());
 }
 
@@ -999,6 +1224,11 @@ void setup(void) {
   strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
   DEBUG_SERIAL.println(time_buffer);
 
+  // fix MAC address to uppercase
+  String mac = String(shelly_mac);
+  mac.toUpperCase();
+  strcpy(shelly_mac, mac.c_str());
+
   if (String(led_gpio).toInt() > 0) {
     led = String(led_gpio).toInt();
   }
@@ -1016,14 +1246,24 @@ void setup(void) {
     request->send(200, "text/plain", "This is the Energy2Shelly for ESP converter!\r\nDevice and Energy status is available under /status\r\nTo reset configuration, goto /reset\r\n");
   });
 
+  server.on("/shelly", HTTP_GET, [](AsyncWebServerRequest *request) {
+    shellyGetDeviceInfo();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
   server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
-    EMGetStatus();
+    shellyGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
     shouldResetConfig = true;
     request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
+  });
+
+  server.on("/rpc/EM.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+    EMGetConfig();
+    request->send(200, "application/json", serJsonResponse);
   });
 
   server.on("/rpc/EM.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -1036,21 +1276,41 @@ void setup(void) {
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/rpc/EM.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
-    EMGetConfig();
+  server.on("/rpc/Shelly.GetComponents", HTTP_GET, [](AsyncWebServerRequest *request) {
+    shellyGetComponents();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
+  server.on("/rpc/Shelly.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+    shellyGetConfig();
     request->send(200, "application/json", serJsonResponse);
   });
 
   server.on("/rpc/Shelly.GetDeviceInfo", HTTP_GET, [](AsyncWebServerRequest *request) {
-    GetDeviceInfo();
+    shellyGetDeviceInfo();
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {
-    GetDeviceInfo();
-    rpcWrapper();
+  server.on("/rpc/Shelly.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+    shellyGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
+
+  server.on("/rpc/Sys.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+    sysGetConfig();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
+  server.on("/rpc/Sys.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+    sysGetStatus();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
+  // server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {
+  //   shellyGetDeviceInfo();
+  //   rpcWrapper();
+  //   request->send(200, "application/json", serJsonResponse);
+  // });
 
   webSocket.onEvent(webSocketEvent);
   server.addHandler(&webSocket);
