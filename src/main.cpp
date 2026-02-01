@@ -29,8 +29,14 @@ unsigned long startMillis = 0;
 unsigned long startMillis_sunspec = 0;
 unsigned long currentMillis;
 
+// for getting time
+time_t now;
+tm timeinfo;
+
 // define your default values here, if there are different values in config.json, they are overwritten.
 char input_type[40];
+char ntp_server[40] = "de.pool.ntp.org";
+char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
 char mqtt_server[160];
 char mqtt_port[6] = "1883";
 char mqtt_topic[90] = "tele/meter/SENSOR";
@@ -774,6 +780,8 @@ void WifiManagerSetup() {
 
   preferences.begin("e2s_config", false);
   strcpy(input_type, preferences.getString("input_type", input_type).c_str());
+  strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
+  strcpy(timezone, preferences.getString("timezone", timezone).c_str());
   strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
   strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
@@ -797,6 +805,8 @@ void WifiManagerSetup() {
   
   WiFiManagerParameter custom_section1("<h3>General settings</h3>");
   WiFiManagerParameter custom_input_type("type", "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data", input_type, 40);
+  WiFiManagerParameter custom_ntp_server("ntp_server", "<b>NTP server</b><br>for time synchronization", ntp_server, 40);
+  WiFiManagerParameter custom_timezone("timezone", "<b>Timezone</b><br>e.g. <code>UTC0</code>, <code>UTC+1</code>, <code>UTC-3</code>, <code>UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00</code>", timezone, 64);
   WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 160);
   WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
   WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
@@ -831,6 +841,8 @@ void WifiManagerSetup() {
   //add all your parameters here
   wifiManager.addParameter(&custom_section1);
   wifiManager.addParameter(&custom_input_type);
+  wifiManager.addParameter(&custom_ntp_server);
+  wifiManager.addParameter(&custom_timezone);
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&custom_query_period);
   wifiManager.addParameter(&custom_led_gpio);
@@ -866,6 +878,8 @@ void WifiManagerSetup() {
 
   //read updated parameters
   strcpy(input_type, custom_input_type.getValue());
+  strcpy(ntp_server, custom_ntp_server.getValue());
+  strcpy(timezone, custom_timezone.getValue());
   strcpy(mqtt_server, custom_mqtt_server.getValue());
   strcpy(mqtt_port, custom_mqtt_port.getValue());
   strcpy(query_period, custom_query_period.getValue());
@@ -889,6 +903,8 @@ void WifiManagerSetup() {
 
   DEBUG_SERIAL.println("The values in the preferences are: ");
   DEBUG_SERIAL.println("\tinput_type : " + String(input_type));
+  DEBUG_SERIAL.println("\tntp_server : " + String(ntp_server));
+  DEBUG_SERIAL.println("\ttimezone : " + String(timezone));
   DEBUG_SERIAL.println("\tmqtt_server : " + String(mqtt_server));
   DEBUG_SERIAL.println("\tmqtt_port : " + String(mqtt_port));
   DEBUG_SERIAL.println("\tquery_period : " + String(query_period));
@@ -936,6 +952,8 @@ void WifiManagerSetup() {
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println("saving config");
     preferences.putString("input_type", input_type);
+    preferences.putString("ntp_server", ntp_server);
+    preferences.putString("timezone", timezone);
     preferences.putString("mqtt_server", mqtt_server);
     preferences.putString("mqtt_port", mqtt_port);
     preferences.putString("query_period", query_period);
@@ -965,6 +983,21 @@ void WifiManagerSetup() {
 void setup(void) {
   DEBUG_SERIAL.begin(115200);
   WifiManagerSetup();
+
+  // Initialize time via NTP
+#ifdef ESP32
+  configTime(0, 0, ntp_server);
+  setenv("TZ", timezone, 1);
+  tzset();
+#else
+  //ESP8266
+  configTime(timezone, ntp_server);
+#endif
+  getLocalTime(&timeinfo);
+  DEBUG_SERIAL.print("Current time: ");
+  char time_buffer[20];
+  strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+  DEBUG_SERIAL.println(time_buffer);
 
   if (String(led_gpio).toInt() > 0) {
     led = String(led_gpio).toInt();
@@ -1106,6 +1139,7 @@ void setup(void) {
 }
 
 void loop() {
+  currentMillis = millis();
 #ifndef ESP32
   MDNS.update();
 #endif
@@ -1132,14 +1166,12 @@ void loop() {
     parseSHRDZM();
   }
   if (dataSUNSPEC) {
-     currentMillis = millis();
     if (currentMillis - startMillis_sunspec >= period) {
        parseSUNSPEC();
       startMillis_sunspec = currentMillis;
     }
   }
   if (dataHTTP) {
-    currentMillis = millis();
     if (currentMillis - startMillis >= period) {
       queryHTTP();
       startMillis = currentMillis;
