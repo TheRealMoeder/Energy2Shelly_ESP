@@ -101,9 +101,76 @@ legend { font-weight: bold; color: #333; padding: 0 5px; }
   <button type='submit' class='btn btn-save'>Save Configuration</button>
 </form>
 <p class="note">Device will restart after saving.</p>
+
+<div style="max-width: 600px; margin: 20px auto; text-align: center;">
+  <button onclick="exportConfig()" class='btn' style="background-color: #007bff; color: white; margin-bottom: 10px;">Export Configuration</button>
+  <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importConfig(event)">
+  <button onclick="document.getElementById('importFile').click()" class='btn' style="background-color: #6c757d; color: white;">Import Configuration</button>
+</div>
+
+<script>
+function exportConfig() {
+  fetch('/config/export')
+    .then(response => response.json())
+    .then(data => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'energy2shelly_config.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    })
+    .catch(error => alert('Error exporting configuration: ' + error));
+}
+
+function importConfig(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const config = JSON.parse(e.target.result);
+
+      // Populate form fields
+      if (config.inputType) document.getElementById('inputType').value = config.inputType;
+      if (config.mqttServer) document.getElementById('mqttServer').value = config.mqttServer;
+      if (config.mqttPort) document.getElementById('mqttPort').value = config.mqttPort;
+      if (config.mqttTopic) document.getElementById('mqttTopic').value = config.mqttTopic;
+      if (config.mqttUser) document.getElementById('mqttUser').value = config.mqttUser;
+      if (config.mqttPasswd) document.getElementById('mqttPasswd').value = config.mqttPasswd;
+      if (config.queryPeriod) document.getElementById('queryPeriod').value = config.queryPeriod;
+      if (config.ledGpio !== undefined) document.getElementById('ledGpio').value = config.ledGpio;
+      if (config.ledInverted !== undefined) document.getElementById('ledInverted').value = config.ledInverted ? 'true' : 'false';
+      if (config.shellyMac) document.getElementById('shellyMac').value = config.shellyMac;
+      if (config.shellyPort) document.getElementById('shellyPort').value = config.shellyPort;
+      if (config.forcePwrDecimals !== undefined) document.getElementById('forcePwrDecimals').value = config.forcePwrDecimals ? 'true' : 'false';
+      if (config.smaId) document.getElementById('smaId').value = config.smaId;
+      if (config.modbusDevice) document.getElementById('modbusDevice').value = config.modbusDevice;
+      if (config.powerPath) document.getElementById('powerPath').value = config.powerPath;
+      if (config.pwrExportPath) document.getElementById('pwrExportPath').value = config.pwrExportPath;
+      if (config.powerL1Path) document.getElementById('powerL1Path').value = config.powerL1Path;
+      if (config.powerL2Path) document.getElementById('powerL2Path').value = config.powerL2Path;
+      if (config.powerL3Path) document.getElementById('powerL3Path').value = config.powerL3Path;
+      if (config.energyInPath) document.getElementById('energyInPath').value = config.energyInPath;
+      if (config.energyOutPath) document.getElementById('energyOutPath').value = config.energyOutPath;
+
+      alert('Configuration imported successfully! Please review and click Save to apply.');
+    } catch (error) {
+      alert('Error parsing configuration file: ' + error.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // Reset file input
+}
+</script>
 </body>
 </html>
 )=====";
+
 
 // ============================================================================
 // TEMPLATE PROCESSOR - Substitutes variables in HTML template
@@ -239,4 +306,42 @@ void handleSave(AsyncWebServerRequest *request) {
   request->send(200, "text/html", response);
 
   shouldReboot = true;
+}
+
+void handleExportConfig(AsyncWebServerRequest *request) {
+  JsonDocument jsonConfig;
+
+  // General Settings
+  jsonConfig["inputType"] = input_type;
+  jsonConfig["mqttServer"] = mqtt_server;
+  jsonConfig["queryPeriod"] = query_period;
+  jsonConfig["ledGpio"] = ledGpioInt;
+  jsonConfig["ledInverted"] = ledInverted;
+  jsonConfig["shellyMac"] = shelly_mac;
+  jsonConfig["shellyPort"] = shelly_port;
+  jsonConfig["forcePwrDecimals"] = forcePwrDecimals;
+  jsonConfig["smaId"] = sma_id;
+
+  // MQTT Options
+  jsonConfig["mqttPort"] = mqtt_port;
+  jsonConfig["mqttTopic"] = mqtt_topic;
+  jsonConfig["mqttUser"] = mqtt_user;
+  jsonConfig["mqttPasswd"] = mqtt_passwd;
+
+  // Modbus Options
+  jsonConfig["modbusDevice"] = modbus_dev;
+
+  // JSON Paths
+  jsonConfig["powerPath"] = power_path;
+  jsonConfig["pwrExportPath"] = pwr_export_path;
+  jsonConfig["powerL1Path"] = power_l1_path;
+  jsonConfig["powerL2Path"] = power_l2_path;
+  jsonConfig["powerL3Path"] = power_l3_path;
+  jsonConfig["energyInPath"] = energy_in_path;
+  jsonConfig["energyOutPath"] = energy_out_path;
+
+  String jsonString;
+  serializeJson(jsonConfig, jsonString);
+
+  request->send(200, "application/json", jsonString);
 }

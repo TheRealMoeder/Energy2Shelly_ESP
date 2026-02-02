@@ -12,5 +12,6 @@ String processor(const String &var);
 // HTTP request handlers
 void handleConfig(AsyncWebServerRequest *request);
 void handleSave(AsyncWebServerRequest *request);
+void handleExportConfig(AsyncWebServerRequest *request);
 
 #endif // WEB_CONFIG_H

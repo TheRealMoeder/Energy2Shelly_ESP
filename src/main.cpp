@@ -221,7 +221,8 @@ setInterval(refreshData, 5000);
     request->send(200, "text/html", html);
   });
 
-  // Configuration page
+  // Configuration page - more specific routes first
+  server.on("/config/export", HTTP_GET, handleExportConfig);
   server.on("/config", HTTP_GET, handleConfig);
   server.on("/save", HTTP_POST, handleSave);
 
