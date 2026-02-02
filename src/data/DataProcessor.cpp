@@ -111,12 +111,12 @@ void setJsonPathPower(JsonDocument json) {
         json["c_pf"].as<double>(), json["c_freq"].as<int>());
 
     // Optionally use total fields if present
-    if (json["total_act_power"].is<JsonVariant>()) {
-      double total = json["total_act_power"].as<double>();
+    //if (json["total_act_power"].is<JsonVariant>()) {
+    //  double total = json["total_act_power"].as<double>();
       // distribute if individual phases missing or for logging
       // DEBUG_SERIAL.print("Total power from payload: ");
       // DEBUG_SERIAL.println(total);
-    }
+    //}
     return;
   }
   if (strcmp(power_path, "TRIPHASE") == 0) {
