@@ -12,6 +12,7 @@ const char CONFIG_page[] PROGMEM = R"=====(
 <head>
 <title>E2S Configuration</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
 body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
 h2 { text-align: center; color: #333; }
@@ -296,8 +297,12 @@ void handleSave(AsyncWebServerRequest *request) {
   // Save all settings to Preferences
   saveConfiguration();
 
-  String response = "<html><head><title>Settings Saved</title><meta "
-                    "http-equiv='refresh' content='5;url=/'></head><body>";
+  String response = "<!DOCTYPE html><html><head><title>Settings Saved</title>";
+  response += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+  response += "<link rel='icon' href='/favicon.svg' type='image/svg+xml'>";
+  response += "<meta http-equiv='refresh' content='5;url=/'>";
+  response += "<style>body{font-family:Arial,sans-serif;text-align:center;padding:20px;background-color:#f4f4f4;}";
+  response += "h1{color:#0056b3;}</style></head><body>";
   response += "<h1>Settings Saved</h1>";
   response += "<p>The device will now restart to apply the changes.</p>";
   response += "<p>You will be redirected to the home page in 5 seconds. If "

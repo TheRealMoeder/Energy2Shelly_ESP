@@ -71,6 +71,7 @@ void setup(void) {
 <head>
 <title>Energy2Shelly ESP</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
   body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; color: #333; }
   h1 { color: #0056b3; margin-bottom: 10px; }
@@ -238,6 +239,7 @@ setInterval(refreshData, 5000);
         "<!DOCTYPE html><html><head><title>Reset Confirmation</title>";
     html +=
         "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+    html += "<link rel='icon' href='/favicon.svg' type='image/svg+xml'>";
     html += "<style>body{font-family:Arial,sans-serif;text-align:center;"
             "padding:20px;}";
     html += ".btn{padding:10px "
@@ -294,6 +296,20 @@ setInterval(refreshData, 5000);
     GetDeviceInfo();
     rpcWrapper();
     request->send(200, "application/json", serJsonResponse);
+  });
+
+  // Favicon endpoint
+  server.on("/favicon.svg", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>";
+    svg += "<circle cx='50' cy='50' r='48' fill='#f4f4f4'/>";
+    svg += "<circle cx='50' cy='50' r='42' fill='none' stroke='#0056b3' stroke-width='6'/>";
+    svg += "<path d='M50 50 L50 18' stroke='#dc3545' stroke-width='6' stroke-linecap='round' transform='rotate(45 50 50)'/>";
+    svg += "<circle cx='50' cy='50' r='8' fill='#0056b3'/>";
+    svg += "<path d='M15 65 Q50 50 85 65' fill='none' stroke='#333' stroke-width='4'/>";
+    svg += "<path d='M20 70 L15 65 L20 60' fill='#dc3545' stroke='#dc3545' stroke-width='3'/>";
+    svg += "<path d='M80 70 L85 65 L80 60' fill='#28a745' stroke='#28a745' stroke-width='3'/>";
+    svg += "</svg>";
+    request->send(200, "image/svg+xml", svg);
   });
 
   // WebSocket handler for RPC
