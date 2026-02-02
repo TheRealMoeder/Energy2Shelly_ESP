@@ -207,91 +207,19 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.print("DEBUG: loaded mqtt_server=");
   DEBUG_SERIAL.println(mqtt_server);
 
+  // WiFi-only initial setup - all other configuration is done via web interface
+  WiFiManagerParameter custom_info(
+      "<p style='margin-top:20px;'><b>WiFi Configuration Only</b></p>"
+      "<p>After connecting to WiFi, visit the device's IP address in your browser to configure all other settings at <b>/config</b></p>");
+
+  /*
+  // All configuration parameters removed from initial WiFi setup
+  // These are now configured via the web interface at /config
   WiFiManagerParameter custom_section1("<h3>General settings</h3>");
-  WiFiManagerParameter custom_input_type(
-      "type",
-      "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> "
-      "for generic HTTP<br><code>SMA</code> for SMA EM/HM "
-      "multicast<br><code>SHRDZM</code> for SHRDZM UDP "
-      "data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data",
-      input_type, 40);
-  WiFiManagerParameter custom_mqtt_server(
-      "server",
-      "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus "
-      "TCP server IP for SUNSPEC",
-      mqtt_server, 80);
-  WiFiManagerParameter custom_mqtt_port(
-      "port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
-  WiFiManagerParameter custom_query_period(
-      "query_period",
-      "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds",
-      query_period, 10);
-  WiFiManagerParameter custom_led_gpio(
-      "led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
-  WiFiManagerParameter custom_led_gpio_i(
-      "led_gpio_i",
-      "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>",
-      led_gpio_i, 6);
-  WiFiManagerParameter custom_shelly_mac(
-      "mac",
-      "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP",
-      shelly_mac, 13);
-  WiFiManagerParameter custom_shelly_port(
-      "shelly_port",
-      "<b>Shelly UDP port</b><br><code>1010</code> for old Marstek FW, "
-      "<code>2220</code> for new Marstek FW v226+/v108+",
-      shelly_port, 6);
-  WiFiManagerParameter custom_force_pwr_decimals(
-      "force_pwr_decimals",
-      "<b>Force decimals numbers for Power values</b><br><code>true</code> to "
-      "fix Marstek bug",
-      force_pwr_decimals, 6);
-  WiFiManagerParameter custom_sma_id(
-      "sma_id",
-      "<b>SMA serial number</b><br>optional serial number if you have more "
-      "than one SMA EM/HM in your network",
-      sma_id, 16);
-  WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
-  WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>",
-                                         mqtt_topic, 90);
-  WiFiManagerParameter custom_mqtt_user("user", "<b>MQTT user</b><br>optional",
-                                        mqtt_user, 40);
-  WiFiManagerParameter custom_mqtt_passwd(
-      "passwd", "<b>MQTT password</b><br>optional", mqtt_passwd, 40);
-  WiFiManagerParameter custom_section3("<hr><h3>Modbus TCP options</h3>");
-  WiFiManagerParameter custom_modbus_dev(
-      "modbus_dev", "<b>Modbus device ID</b><br><code>71</code> for Kostal SEM",
-      modbus_dev, 60);
-  WiFiManagerParameter custom_section4(
-      "<hr><h3>JSON paths for MQTT and generic HTTP</h3>");
-  WiFiManagerParameter custom_power_path(
-      "power_path",
-      "<b>Total power JSON path</b><br>e.g. <code>ENERGY.Power</code> or "
-      "<code>TRIPHASE</code> for tri-phase data",
-      power_path, 60);
-  WiFiManagerParameter custom_pwr_export_path(
-      "pwr_export_path",
-      "<b>Export power JSON path</b><br>Optional, for net calc (e.g. \"i-e\"",
-      pwr_export_path, 60);
-  WiFiManagerParameter custom_power_l1_path(
-      "power_l1_path", "<b>Phase 1 power JSON path</b><br>optional",
-      power_l1_path, 60);
-  WiFiManagerParameter custom_power_l2_path(
-      "power_l2_path",
-      "<b>Phase 2 power JSON path</b><br>Phase 2 power JSON path<br>optional",
-      power_l2_path, 60);
-  WiFiManagerParameter custom_power_l3_path(
-      "power_l3_path",
-      "<b>Phase 3 power JSON path</b><br>Phase 3 power JSON path<br>optional",
-      power_l3_path, 60);
-  WiFiManagerParameter custom_energy_in_path(
-      "energy_in_path",
-      "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>",
-      energy_in_path, 60);
-  WiFiManagerParameter custom_energy_out_path(
-      "energy_out_path",
-      "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>",
-      energy_out_path, 60);
+  WiFiManagerParameter custom_input_type(...);
+  WiFiManagerParameter custom_mqtt_server(...);
+  ... etc ...
+  */
 
   WiFiManager wifiManager;
   if (!DEBUG) {
@@ -300,32 +228,10 @@ void WifiManagerSetup() {
   wifiManager.setTitle("Energy2Shelly for ESP");
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
-  // add all your parameters here
-  wifiManager.addParameter(&custom_section1);
-  wifiManager.addParameter(&custom_input_type);
-  wifiManager.addParameter(&custom_mqtt_server);
-  wifiManager.addParameter(&custom_query_period);
-  wifiManager.addParameter(&custom_led_gpio);
-  wifiManager.addParameter(&custom_led_gpio_i);
-  wifiManager.addParameter(&custom_shelly_mac);
-  wifiManager.addParameter(&custom_shelly_port);
-  wifiManager.addParameter(&custom_force_pwr_decimals);
-  wifiManager.addParameter(&custom_sma_id);
-  wifiManager.addParameter(&custom_section2);
-  wifiManager.addParameter(&custom_mqtt_port);
-  wifiManager.addParameter(&custom_mqtt_topic);
-  wifiManager.addParameter(&custom_mqtt_user);
-  wifiManager.addParameter(&custom_mqtt_passwd);
-  wifiManager.addParameter(&custom_section3);
-  wifiManager.addParameter(&custom_modbus_dev);
-  wifiManager.addParameter(&custom_section4);
-  wifiManager.addParameter(&custom_power_path);
-  wifiManager.addParameter(&custom_pwr_export_path);
-  wifiManager.addParameter(&custom_power_l1_path);
-  wifiManager.addParameter(&custom_power_l2_path);
-  wifiManager.addParameter(&custom_power_l3_path);
-  wifiManager.addParameter(&custom_energy_in_path);
-  wifiManager.addParameter(&custom_energy_out_path);
+  // Add info message to WiFi setup portal
+  wifiManager.addParameter(&custom_info);
+
+  // All other parameters removed - configure via web interface at /config
 
   DEBUG_SERIAL.println("DEBUG: About to call wifiManager.autoConnect()");
   // Only attempt WiFiManager if configuration is invalid or incomplete
@@ -361,76 +267,8 @@ void WifiManagerSetup() {
   }
   DEBUG_SERIAL.println("connected");
 
-  // read updated parameters
-  strncpy(input_type, custom_input_type.getValue(), sizeof(input_type) - 1);
-  input_type[sizeof(input_type) - 1] = '\0';
-  strncpy(mqtt_server, custom_mqtt_server.getValue(), sizeof(mqtt_server) - 1);
-  mqtt_server[sizeof(mqtt_server) - 1] = '\0';
-
-  // Manual trim for mqtt_server
-  char *trimmedMqtt = mqtt_server;
-  while (isspace(*trimmedMqtt))
-    trimmedMqtt++;
-  if (trimmedMqtt != mqtt_server) {
-    memmove(mqtt_server, trimmedMqtt, strlen(trimmedMqtt) + 1);
-  }
-  char *endMqtt = mqtt_server + strlen(mqtt_server) - 1;
-  while (endMqtt >= mqtt_server && isspace(*endMqtt))
-    *endMqtt-- = '\0';
-
-  strncpy(mqtt_port, custom_mqtt_port.getValue(), sizeof(mqtt_port) - 1);
-  mqtt_port[sizeof(mqtt_port) - 1] = '\0';
-  mqttPortInt = atoi(mqtt_port);
-  strncpy(query_period, custom_query_period.getValue(),
-          sizeof(query_period) - 1);
-  query_period[sizeof(query_period) - 1] = '\0';
-  queryPeriodMs = atoi(query_period);
-  strncpy(led_gpio, custom_led_gpio.getValue(), sizeof(led_gpio) - 1);
-  led_gpio[sizeof(led_gpio) - 1] = '\0';
-  ledGpioInt = atoi(led_gpio);
-  strncpy(led_gpio_i, custom_led_gpio_i.getValue(), sizeof(led_gpio_i) - 1);
-  led_gpio_i[sizeof(led_gpio_i) - 1] = '\0';
-  ledInverted = (strcmp(led_gpio_i, "true") == 0);
-  strncpy(shelly_mac, custom_shelly_mac.getValue(), sizeof(shelly_mac) - 1);
-  shelly_mac[sizeof(shelly_mac) - 1] = '\0';
-  strncpy(mqtt_topic, custom_mqtt_topic.getValue(), sizeof(mqtt_topic) - 1);
-  mqtt_topic[sizeof(mqtt_topic) - 1] = '\0';
-  strncpy(mqtt_user, custom_mqtt_user.getValue(), sizeof(mqtt_user) - 1);
-  mqtt_user[sizeof(mqtt_user) - 1] = '\0';
-  strncpy(mqtt_passwd, custom_mqtt_passwd.getValue(), sizeof(mqtt_passwd) - 1);
-  mqtt_passwd[sizeof(mqtt_passwd) - 1] = '\0';
-  strncpy(modbus_dev, custom_modbus_dev.getValue(), sizeof(modbus_dev) - 1);
-  modbus_dev[sizeof(modbus_dev) - 1] = '\0';
-  modbusDeviceId = atoi(modbus_dev);
-  strncpy(power_path, custom_power_path.getValue(), sizeof(power_path) - 1);
-  power_path[sizeof(power_path) - 1] = '\0';
-  strncpy(pwr_export_path, custom_pwr_export_path.getValue(),
-          sizeof(pwr_export_path) - 1);
-  pwr_export_path[sizeof(pwr_export_path) - 1] = '\0';
-  strncpy(power_l1_path, custom_power_l1_path.getValue(),
-          sizeof(power_l1_path) - 1);
-  power_l1_path[sizeof(power_l1_path) - 1] = '\0';
-  strncpy(power_l2_path, custom_power_l2_path.getValue(),
-          sizeof(power_l2_path) - 1);
-  power_l2_path[sizeof(power_l2_path) - 1] = '\0';
-  strncpy(power_l3_path, custom_power_l3_path.getValue(),
-          sizeof(power_l3_path) - 1);
-  power_l3_path[sizeof(power_l3_path) - 1] = '\0';
-  strncpy(energy_in_path, custom_energy_in_path.getValue(),
-          sizeof(energy_in_path) - 1);
-  energy_in_path[sizeof(energy_in_path) - 1] = '\0';
-  strncpy(energy_out_path, custom_energy_out_path.getValue(),
-          sizeof(energy_out_path) - 1);
-  energy_out_path[sizeof(energy_out_path) - 1] = '\0';
-  strncpy(shelly_port, custom_shelly_port.getValue(), sizeof(shelly_port) - 1);
-  shelly_port[sizeof(shelly_port) - 1] = '\0';
-  shellyPortInt = atoi(shelly_port);
-  strncpy(force_pwr_decimals, custom_force_pwr_decimals.getValue(),
-          sizeof(force_pwr_decimals) - 1);
-  force_pwr_decimals[sizeof(force_pwr_decimals) - 1] = '\0';
-  forcePwrDecimals = (strcmp(force_pwr_decimals, "true") == 0);
-  strncpy(sma_id, custom_sma_id.getValue(), sizeof(sma_id) - 1);
-  sma_id[sizeof(sma_id) - 1] = '\0';
+  // Configuration is loaded from Preferences only (not from WiFiManager)
+  // All configuration is done via web interface at /config after initial WiFi setup
 
   DEBUG_SERIAL.println("The values in the preferences are: ");
   DEBUG_SERIAL.printf("\tinput_type : %s\n", input_type);
