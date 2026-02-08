@@ -1,5 +1,6 @@
 #include "WebConfig.h"
 #include "Configuration.h"
+#include "../security/CsrfProtection.h"
 #include <ESPAsyncWebServer.h>
 
 // ============================================================================
@@ -258,6 +259,13 @@ void handleConfig(AsyncWebServerRequest *request) {
 }
 
 void handleSave(AsyncWebServerRequest *request) {
+  // CSRF protection: verify request came from this device
+  if (!validateCsrfToken(request)) {
+    DEBUG_SERIAL.println("CSRF attempt blocked on /save endpoint");
+    request->send(403, "text/plain", "Forbidden: Invalid request origin");
+    return;
+  }
+
   // Helper lambda to get a parameter value
   auto getParam = [&](const char *name) {
     if (request->hasParam(name, true)) {

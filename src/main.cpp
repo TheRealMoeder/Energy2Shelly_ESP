@@ -30,6 +30,9 @@
 #include "web/html_reset.h"
 #include "web/svg_favicon.h"
 
+// Security
+#include "security/CsrfProtection.h"
+
 // Forward declarations for parser functions
 extern void parseSMA();
 extern void parseSHRDZM();
@@ -91,6 +94,13 @@ void setup(void) {
 
   // Reset WiFi configuration (POST - perform reset)
   server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
+    // CSRF protection: verify request came from this device
+    if (!validateCsrfToken(request)) {
+      DEBUG_SERIAL.println("CSRF attempt blocked on /reset endpoint");
+      request->send(403, "text/plain", "Forbidden: Invalid request origin");
+      return;
+    }
+
     shouldResetConfig = true;
     request->send(200, "text/plain",
                   "Resetting WiFi configuration, please log back into the "
