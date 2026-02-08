@@ -80,7 +80,7 @@ function updatePowerData() {
 
       let html = '<div class="phase-grid">';
       phases.forEach(phase => {
-        html += `<div class="phase-card ${phase.class}>
+        html += `<div class="phase-card ${phase.class}">
           <h3>${phase.name}</h3>
           <div class="data-row"><span class="data-label">Voltage:</span><span class="data-value">${formatValue(data[phase.prefix + '_voltage'], 'V')}</span></div>
           <div class="data-row"><span class="data-label">Current:</span><span class="data-value">${formatValue(data[phase.prefix + '_current'], 'A')}</span></div>
@@ -117,7 +117,7 @@ function updateEnergyData() {
 
       let html = '<div class="phase-grid">';
       phases.forEach(phase => {
-        html += `<div class="phase-card ${phase.class}>
+        html += `<div class="phase-card ${phase.class}">
           <h3>${phase.name}</h3>
           <div class="data-row"><span class="data-label">Consumption:</span><span class="data-value">${formatValue(data[phase.prefix + '_total_act_energy'], 'Wh')}</span></div>
           <div class="data-row"><span class="data-label">Grid Feed-in:</span><span class="data-value">${formatValue(data[phase.prefix + '_total_act_ret_energy'], 'Wh')}</span></div>

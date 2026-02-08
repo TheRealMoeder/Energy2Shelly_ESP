@@ -80,6 +80,13 @@ void setup(void) {
   server.on("/config/export", HTTP_GET, handleExportConfig);
   server.on("/config", HTTP_GET, handleConfig);
   server.on("/save", HTTP_POST, handleSave);
+  DEBUG_SERIAL.println("Config routes registered");
+
+  // Test endpoint to verify server is working
+  server.on("/test", HTTP_GET, [](AsyncWebServerRequest *request) {
+    DEBUG_SERIAL.println("Test endpoint hit");
+    request->send(200, "text/plain", "Server is working!");
+  });
 
   // Status endpoint
   server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -147,6 +154,10 @@ void setup(void) {
   webSocket.onEvent(webSocketEvent);
   server.addHandler(&webSocket);
   server.begin();
+
+  DEBUG_SERIAL.println("Web server started successfully");
+  DEBUG_SERIAL.print("Access at: http://");
+  DEBUG_SERIAL.println(WiFi.localIP());
 
   // ========================================================================
   // COMMUNICATIONS SETUP

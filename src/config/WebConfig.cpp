@@ -1,6 +1,8 @@
 #include "WebConfig.h"
 #include "Configuration.h"
 #include "../security/CsrfProtection.h"
+#include "../web/html_config_template.h"
+#include "../web/html_save_success.h"
 #include <ESPAsyncWebServer.h>
 
 // ============================================================================
@@ -253,9 +255,47 @@ String processor(const String &var) {
 // ============================================================================
 
 void handleConfig(AsyncWebServerRequest *request) {
-  // Send config page with template processing
-  // Note: CONFIG_page is in PROGMEM to save RAM
-  request->send_P(200, "text/html", CONFIG_page, processor);
+  DEBUG_SERIAL.println("Config page requested");
+  DEBUG_SERIAL.print("Free heap before: ");
+  DEBUG_SERIAL.println(ESP.getFreeHeap());
+
+  // Build HTML with dynamic values
+  String html = "";
+  html.reserve(2048); // Pre-allocate to avoid fragmentation
+
+  // Add header from template
+  html = FPSTR(CONFIG_HEADER);
+
+  // Data source selector
+  html += F("<label>Data Source</label><select name='inputType'>");
+  html += F("<option value='MQTT'"); if (strcmp(input_type, "MQTT") == 0) html += F(" selected"); html += F(">MQTT</option>");
+  html += F("<option value='HTTP'"); if (strcmp(input_type, "HTTP") == 0) html += F(" selected"); html += F(">HTTP</option>");
+  html += F("<option value='SMA'"); if (strcmp(input_type, "SMA") == 0) html += F(" selected"); html += F(">SMA</option>");
+  html += F("<option value='SHRDZM'"); if (strcmp(input_type, "SHRDZM") == 0) html += F(" selected"); html += F(">SHRDZM</option>");
+  html += F("<option value='SUNSPEC'"); if (strcmp(input_type, "SUNSPEC") == 0) html += F(" selected"); html += F(">SUNSPEC</option>");
+  html += F("</select>");
+
+  html += F("<label>Server/URL</label><input name='mqttServer' value='"); html += mqtt_server; html += F("'>");
+  html += F("<label>Query Period (ms)</label><input name='queryPeriod' value='"); html += query_period; html += F("'>");
+  html += F("<label>Shelly MAC</label><input name='shellyMac' value='"); html += shelly_mac; html += F("'>");
+  html += F("<label>Shelly Port</label><input name='shellyPort' value='"); html += shelly_port; html += F("'>");
+  html += F("</fieldset>");
+
+  html += F("<fieldset><legend>MQTT</legend>");
+  html += F("<label>Port</label><input name='mqttPort' value='"); html += mqtt_port; html += F("'>");
+  html += F("<label>Topic</label><input name='mqttTopic' value='"); html += mqtt_topic; html += F("'>");
+  html += F("<label>User</label><input name='mqttUser' value='"); html += mqtt_user; html += F("'>");
+  html += F("<label>Password</label><input type='password' name='mqttPasswd' value='"); html += mqtt_passwd; html += F("'>");
+  html += F("</fieldset>");
+
+  // Add footer with export/import functionality from template
+  html += FPSTR(CONFIG_FOOTER);
+
+  request->send(200, "text/html", html);
+
+  DEBUG_SERIAL.println("Config page sent");
+  DEBUG_SERIAL.print("Free heap after: ");
+  DEBUG_SERIAL.println(ESP.getFreeHeap());
 }
 
 void handleSave(AsyncWebServerRequest *request) {
@@ -305,18 +345,10 @@ void handleSave(AsyncWebServerRequest *request) {
   // Save all settings to Preferences
   saveConfiguration();
 
-  String response = "<!DOCTYPE html><html><head><title>Settings Saved</title>";
-  response += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
-  response += "<link rel='icon' href='/favicon.svg' type='image/svg+xml'>";
-  response += "<meta http-equiv='refresh' content='5;url=/'>";
-  response += "<style>body{font-family:Arial,sans-serif;text-align:center;padding:20px;background-color:#f4f4f4;}";
-  response += "h1{color:#0056b3;}</style></head><body>";
-  response += "<h1>Settings Saved</h1>";
-  response += "<p>The device will now restart to apply the changes.</p>";
-  response += "<p>You will be redirected to the home page in 5 seconds. If "
-              "not, please <a href='/'>click here</a>.</p>";
-  response += "</body></html>";
-  request->send(200, "text/html", response);
+  DEBUG_SERIAL.println("Configuration saved, device will reboot");
+
+  // Send success page from template
+  request->send(200, "text/html", FPSTR(HTML_SAVE_SUCCESS));
 
   shouldReboot = true;
 }

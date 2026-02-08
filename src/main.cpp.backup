@@ -212,8 +212,8 @@ void setPowerData(double totalPower) {
   for (int i = 0; i <= 2; i++) {
     setPhaseDataSingle(i, powerPerPhase);
   }
-  DEBUG_SERIAL.print("Current total power: ");
-  DEBUG_SERIAL.println(totalPower);
+ // DEBUG_SERIAL.print("Current total power: ");
+ // DEBUG_SERIAL.println(totalPower);
 }
 
 void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
@@ -223,12 +223,12 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
                               : phase3Power;
     setPhaseDataSingle(i, power);
   }
-  DEBUG_SERIAL.print("Current power L1: ");
-  DEBUG_SERIAL.print(phase1Power);
-  DEBUG_SERIAL.print(" - L2: ");
-  DEBUG_SERIAL.print(phase2Power);
-  DEBUG_SERIAL.print(" - L3: ");
-  DEBUG_SERIAL.println(phase3Power);
+ // DEBUG_SERIAL.print("Current power L1: ");
+ // DEBUG_SERIAL.print(phase1Power);
+ // DEBUG_SERIAL.print(" - L2: ");
+ // DEBUG_SERIAL.print(phase2Power);
+ // DEBUG_SERIAL.print(" - L3: ");
+ // DEBUG_SERIAL.println(phase3Power);
 }
 
 void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
@@ -237,10 +237,10 @@ void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
   for (int i = 0; i <= 2; i++) {
     setPhaseEnergyData(i, consumptionPerPhase, gridFeedinPerPhase);
   }
-  DEBUG_SERIAL.print("Total consumption: ");
-  DEBUG_SERIAL.print(totalEnergyGridSupply);
-  DEBUG_SERIAL.print(" - Total Grid Feed-In: ");
-  DEBUG_SERIAL.println(totalEnergyGridFeedIn);
+//  DEBUG_SERIAL.print("Total consumption: ");
+//  DEBUG_SERIAL.print(totalEnergyGridSupply);
+//  DEBUG_SERIAL.print(" - Total Grid Feed-In: ");
+//  DEBUG_SERIAL.println(totalEnergyGridFeedIn);
 }
 
 // callback notifying us of the need to save WifiManager config
