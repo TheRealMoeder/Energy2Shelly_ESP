@@ -259,6 +259,14 @@ void handleConfig(AsyncWebServerRequest *request) {
   DEBUG_SERIAL.print("Free heap before: ");
   DEBUG_SERIAL.println(ESP.getFreeHeap());
 
+  // Debug: print current configuration values
+  DEBUG_SERIAL.println("Current config values:");
+  DEBUG_SERIAL.print("  input_type: "); DEBUG_SERIAL.println(input_type);
+  DEBUG_SERIAL.print("  mqtt_server: "); DEBUG_SERIAL.println(mqtt_server);
+  DEBUG_SERIAL.print("  power_path: "); DEBUG_SERIAL.println(power_path);
+  DEBUG_SERIAL.print("  power_l1_path: "); DEBUG_SERIAL.println(power_l1_path);
+  DEBUG_SERIAL.print("  energy_in_path: "); DEBUG_SERIAL.println(energy_in_path);
+
   // Build HTML with dynamic values
   String html = "";
   html.reserve(2048); // Pre-allocate to avoid fragmentation
@@ -286,6 +294,20 @@ void handleConfig(AsyncWebServerRequest *request) {
   html += F("<label>Topic</label><input name='mqttTopic' value='"); html += mqtt_topic; html += F("'>");
   html += F("<label>User</label><input name='mqttUser' value='"); html += mqtt_user; html += F("'>");
   html += F("<label>Password</label><input type='password' name='mqttPasswd' value='"); html += mqtt_passwd; html += F("'>");
+  html += F("</fieldset>");
+
+  html += F("<fieldset><legend>Modbus TCP</legend>");
+  html += F("<label>Modbus Device ID</label><input name='modbusDevice' value='"); html += modbus_dev; html += F("'>");
+  html += F("</fieldset>");
+
+  html += F("<fieldset><legend>JSON Paths</legend>");
+  html += F("<label>Total Power Path</label><input name='powerPath' value='"); html += power_path; html += F("'>");
+  html += F("<label>Export Power Path</label><input name='pwrExportPath' value='"); html += pwr_export_path; html += F("'>");
+  html += F("<label>Phase 1 Power Path</label><input name='powerL1Path' value='"); html += power_l1_path; html += F("'>");
+  html += F("<label>Phase 2 Power Path</label><input name='powerL2Path' value='"); html += power_l2_path; html += F("'>");
+  html += F("<label>Phase 3 Power Path</label><input name='powerL3Path' value='"); html += power_l3_path; html += F("'>");
+  html += F("<label>Energy In Path</label><input name='energyInPath' value='"); html += energy_in_path; html += F("'>");
+  html += F("<label>Energy Out Path</label><input name='energyOutPath' value='"); html += energy_out_path; html += F("'>");
   html += F("</fieldset>");
 
   // Add footer with export/import functionality from template

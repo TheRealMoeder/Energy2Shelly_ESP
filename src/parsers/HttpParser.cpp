@@ -18,11 +18,25 @@ void queryHTTP() {
 
   // Query power data endpoint
   http.begin(wifi_client, serverAddr.c_str());
-  http.GET();
+  int httpCode = http.GET();
+  DEBUG_SERIAL.print("HTTP GET status code: ");
+  DEBUG_SERIAL.println(httpCode);
+
   deserializeJson(globalJsonDoc, http.getStream());
+
+  // Debug: print the received JSON
+  String debugJson;
+  serializeJson(globalJsonDoc, debugJson);
+  DEBUG_SERIAL.print("Received JSON from ");
+  DEBUG_SERIAL.print(serverAddr);
+  DEBUG_SERIAL.print(": ");
+  DEBUG_SERIAL.println(debugJson);
+
   if (power_path[0] == '\0') {
     DEBUG_SERIAL.println("HTTP query: no JSONPath for power data provided");
   } else {
+    DEBUG_SERIAL.print("Calling setJsonPathPower() with power_path: ");
+    DEBUG_SERIAL.println(power_path);
     setJsonPathPower(globalJsonDoc);
   }
   http.end();
@@ -38,8 +52,17 @@ void queryHTTP() {
 
     http.begin(wifi_client, energyUrl.c_str());
     int httpCode = http.GET();
+    DEBUG_SERIAL.print("Energy endpoint HTTP status: ");
+    DEBUG_SERIAL.println(httpCode);
+
     if (httpCode == 200) {
       deserializeJson(globalJsonDoc, http.getStream());
+
+      // Debug: print the received energy JSON
+      String debugEnergyJson;
+      serializeJson(globalJsonDoc, debugEnergyJson);
+      DEBUG_SERIAL.print("Received energy JSON: ");
+      DEBUG_SERIAL.println(debugEnergyJson);
 
       // Extract energy data if present in Shelly format
       if (globalJsonDoc["a_total_act_energy"].is<JsonVariant>()) {
