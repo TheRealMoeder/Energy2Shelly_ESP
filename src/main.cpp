@@ -37,11 +37,17 @@ tm timeinfo;
 char input_type[40];
 char ntp_server[40] = "de.pool.ntp.org";
 char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
+char phase_number[2] = "3"; // number of phases: 1 or 3
+char query_period[10] = "1000";
+// MQTT related
 char mqtt_server[160];
 char mqtt_port[6] = "1883";
 char mqtt_topic[90] = "tele/meter/SENSOR";
 char mqtt_user[40] = "";
 char mqtt_passwd[40] = "";
+// HTTP related
+char http_url[160];
+// JSON PATHs for power and energy values in the source data
 char power_path[60] = "";
 char pwr_export_path[60] = "";
 char power_l1_path[60] = "";
@@ -49,14 +55,17 @@ char power_l2_path[60] = "";
 char power_l3_path[60] = "";
 char energy_in_path[60] = "";
 char energy_out_path[60] = "";
+// Shelly API related
 char shelly_gen[2] = "2";
-char shelly_fw_id[32] = "20241011-114455/1.4.4-g6d2a586";
+char shelly_fw_id[32] = "20250924-062729/1.7.1-gd336f31";
 char shelly_mac[13];
-char shelly_name[26] = "shellypro3em-";
-char query_period[10] = "1000";
+char shelly_name[26] = "ShellyPro3EM-";
+char shelly_udp_port[6] = "2220"; // old: 1010; new (FW>=226): 2220
+// Modbus related
+char modbus_server_ip[16];
+char modbus_port[6] = "502";
 char modbus_dev[10] = "71"; // default for KSEM
-char shelly_port[6] = "2220"; // old: 1010; new (FW>=226): 2220
-char phase_number[2] = "3"; // number of phases: 1 or 3
+// SMA related
 char sma_id[17] = "";
 
 IPAddress modbus_ip;
@@ -337,7 +346,7 @@ void sysGetConfig() {
   jsonResponse["debug"]["udp"]["addr"] = nullptr;
   jsonResponse["ui_data"].to<JsonObject>();
   jsonResponse["rpc_udp"]["dst_addr"] = WiFi.localIP().toString();
-  jsonResponse["rpc_udp"]["listen_port"] = shelly_port;
+  jsonResponse["rpc_udp"]["listen_port"] = shelly_udp_port;
   jsonResponse["sntp"]["server"] = ntp_server;
   jsonResponse["cfg_rev"] = 10;
   serializeJson(jsonResponse, serJsonResponse);
@@ -572,6 +581,25 @@ void shellyGetStatus() {
   blinkled(ledblinkduration);
 }
 
+void scriptGetCode() {
+  JsonDocument jsonResponse;
+  jsonResponse["data"] = "";
+  jsonResponse["left"] = "0";
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("scriptGetCode: ");
+  DEBUG_SERIAL.println(serJsonResponse);
+  blinkled(ledblinkduration);
+}
+
+void scriptList() {
+  JsonDocument jsonResponse;
+  jsonResponse["scripts"].to<JsonArray>();
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("scriptList: ");
+  DEBUG_SERIAL.println(serJsonResponse);
+  blinkled(ledblinkduration);
+}
+
 void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
   JsonDocument json;
   switch (type) {
@@ -620,6 +648,14 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
             webSocket.textAll(serJsonResponse);
           } else if (json["method"] == "EM.GetConfig") {
             EMGetConfig();
+            rpcWrapper();
+            webSocket.textAll(serJsonResponse);
+          } else if (json["method"] == "Script.GetCode") {
+            scriptGetCode();
+            rpcWrapper();
+            webSocket.textAll(serJsonResponse);
+          } else if (json["method"] == "Script.List") {
+            scriptList();
             rpcWrapper();
             webSocket.textAll(serJsonResponse);
           } else {
@@ -1001,24 +1037,33 @@ void WifiManagerSetup() {
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
   WiFi.macAddress(mac);
-  sprintf(shelly_mac, "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  sprintf(shelly_mac, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
   preferences.begin("e2s_config", false);
-  strcpy(input_type, preferences.getString("input_type", input_type).c_str());
   strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
   strcpy(timezone, preferences.getString("timezone", timezone).c_str());
-  strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
   strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
   strcpy(led_gpio_i, preferences.getString("led_gpio_i", led_gpio_i).c_str());
   strcpy(shelly_mac, preferences.getString("shelly_mac", shelly_mac).c_str());
-  strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
+  strcpy(shelly_udp_port, preferences.getString("shelly_udp_port", shelly_udp_port).c_str());
   strcpy(phase_number, preferences.getString("phase_number", phase_number).c_str());
+
+  strcpy(input_type, preferences.getString("input_type", input_type).c_str());
+  // MQTT settings
+  strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
   strcpy(mqtt_port, preferences.getString("mqtt_port", mqtt_port).c_str());
   strcpy(mqtt_topic, preferences.getString("mqtt_topic", mqtt_topic).c_str());
   strcpy(mqtt_user, preferences.getString("mqtt_user", mqtt_user).c_str());
   strcpy(mqtt_passwd, preferences.getString("mqtt_passwd", mqtt_passwd).c_str());
+  // SMA settings
+  strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
+  // SUNSPEC settings
+  strcpy(modbus_server_ip, preferences.getString("modbus_server", modbus_server_ip).c_str());
+  strcpy(modbus_port, preferences.getString("modbus_port", modbus_port).c_str());
   strcpy(modbus_dev, preferences.getString("modbus_dev", modbus_dev).c_str());
+  // HTTP settings
+  strcpy(http_url, preferences.getString("http_url", http_url).c_str());
   strcpy(power_path, preferences.getString("power_path", power_path).c_str());
   strcpy(pwr_export_path, preferences.getString("pwr_export_path", pwr_export_path).c_str());
   strcpy(power_l1_path, preferences.getString("power_l1_path", power_l1_path).c_str());
@@ -1026,35 +1071,90 @@ void WifiManagerSetup() {
   strcpy(power_l3_path, preferences.getString("power_l3_path", power_l3_path).c_str());
   strcpy(energy_in_path, preferences.getString("energy_in_path", energy_in_path).c_str());
   strcpy(energy_out_path, preferences.getString("energy_out_path", energy_out_path).c_str());
-  strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
-  
-  WiFiManagerParameter custom_section1("<h3>General settings</h3>");
-  WiFiManagerParameter custom_input_type("type", "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data", input_type, 40);
+
+  const char *ds_select_str = R"(
+  <br/>
+  <label for='datasource'><b>Datasource</b></label>
+  <select name="datasource" id="datasource">
+    <option value=""></option>
+    <option value="MQTT">MQTT topic</option>
+    <option value="SMA">SMA EM/HM UDP multicast</option>
+    <option value="SHRDZM">SHRDZM UDP</option>
+    <option value="HTTP">generic HTTP input</option>
+    <option value="SUNSPEC">SUNSPEC via Modbus TCP</option>
+  </select>
+  <script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const myvalue = "%s";
+    if (myvalue.length > 0) {
+      console.log("Setting datasource to " + myvalue);
+      document.getElementById('datasource').value = myvalue;
+      document.getElementById(myvalue).style.display = "block";
+    }
+    document.querySelector("[for='input_type']").hidden = true;
+    document.getElementById('input_type').hidden = true;
+    document.getElementById('datasource').addEventListener('change', function() {
+      document.getElementById('input_type').value = this.value;
+      document.getElementById('JSONPATH').style.display = (this.value === "MQTT" || this.value === "HTTP") ? "block" : "none";
+      for (const option of this.options) {
+        var element = document.getElementById(option.value);
+        if (element) {
+          element.style.display = (this.value === option.value) ? "block" : "none";
+        }
+      }
+    });
+  });
+  </script>
+  )";
+
+  char bufferStr[1500];
+  // The sprintf is so we can input the value of the current selected day
+  // If you dont need to do that, then just pass the const char* straight in.
+  sprintf(bufferStr, ds_select_str, input_type);
+  //DEBUG_SERIAL.print(bufferStr);
+
+  WiFiManagerParameter custom_section_general("<h3>General settings</h3>");
   WiFiManagerParameter custom_ntp_server("ntp_server", "<b>NTP server</b><br>for time synchronization", ntp_server, 40);
   WiFiManagerParameter custom_timezone("timezone", "<b>Timezone</b><br>e.g. <code>UTC0</code>, <code>UTC+1</code>, <code>UTC-3</code>, <code>UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00</code>", timezone, 64);
-  WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 160);
-  WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
-  WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
+  WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP, SUNSPEC and TIBBERPULSE, in milliseconds", query_period, 10);
   WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
-  WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
-  WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> for old Marstek FW, <code>2220</code> for new Marstek FW v226+/v108+", shelly_port, 6);
-  WiFiManagerParameter custom_phase_number("phase_number", "<b>Phase number</b><br>Number of phases (e.g. 1, 2, 3)", phase_number, 1);
+  WiFiManagerParameter custom_shelly_mac("shelly_mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
+  WiFiManagerParameter custom_shelly_udp_port("shelly_udp_port", "<b>Shelly UDP port</b><br><code>1010</code> for old Marstek FW, <code>2220</code> for new Marstek FW v226+/v108+", shelly_udp_port, 6);
+  WiFiManagerParameter custom_phase_number("phase_number", "<b>Phase number</b><br>Number of phases (e.g. 1 or 3)", phase_number, 1);
+
+  WiFiManagerParameter custom_hidden("input_type", "Will be hidden", input_type, 40);
+  WiFiManagerParameter custom_field(bufferStr);
+
+  // MQTT section
+  WiFiManagerParameter custom_section_mqtt("<div id=\"MQTT\" style=\"display:none\"><h3>MQTT Broker options</h3>");
+  WiFiManagerParameter custom_mqtt_server("mqtt_server", "<b>Host (IP / FQDN)</b>", mqtt_server, 160);
+  WiFiManagerParameter custom_mqtt_port("mqtt_port", "<b>Port</b>", mqtt_port, 6);
+  WiFiManagerParameter custom_mqtt_topic("mqtt_topic", "<b>Topic</b>", mqtt_topic, 90);
+  WiFiManagerParameter custom_mqtt_user("mqtt_user", "<b>User</b> (optional)", mqtt_user, 40);
+  WiFiManagerParameter custom_mqtt_passwd("mqtt_passwd", "<b>Password</b> (optional)", mqtt_passwd, 40, "type='password'");
+  // SMA section
+  WiFiManagerParameter custom_section_sma("<div id=\"SMA\" style=\"display:none\"><h3>SMA</h3>");
   WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
-  WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
-  WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", mqtt_topic, 90);
-  WiFiManagerParameter custom_mqtt_user("user", "<b>MQTT user</b><br>optional", mqtt_user, 40);
-  WiFiManagerParameter custom_mqtt_passwd("passwd", "<b>MQTT password</b><br>optional", mqtt_passwd, 40);
-  WiFiManagerParameter custom_section3("<hr><h3>Modbus TCP options</h3>");
+  // HTTP section
+  WiFiManagerParameter custom_section_http("<div id=\"HTTP\" style=\"display:none\"><h3>generic HTTP options</h3>");
+  WiFiManagerParameter custom_http_url("http_url", "<b>HTTP URL</b><br>e.g. <code>/status</code>", http_url, 160);
+  // SUNSPEC section
+  WiFiManagerParameter custom_section_modbus("<div id=\"SUNSPEC\" style=\"display:none\"><h3>SUNSPEC Modbus options</h3>");
+  WiFiManagerParameter custom_modbus_server("modbus_server", "<b>Host IP</b>", modbus_server_ip, 16);
+  WiFiManagerParameter custom_modbus_port("modbus_port", "<b>Port</b>", modbus_port, 6);
   WiFiManagerParameter custom_modbus_dev("modbus_dev", "<b>Modbus device ID</b><br><code>71</code> for Kostal SEM", modbus_dev, 60);
-  WiFiManagerParameter custom_section4("<hr><h3>JSON paths for MQTT and generic HTTP</h3>");
+  // JSON paths for MQTT and HTTP
+  WiFiManagerParameter custom_section_jsonpath("<div id=\"JSONPATH\" style=\"display:none\"><h4>JSON paths for MQTT and HTTP input</h4>");
   WiFiManagerParameter custom_power_path("power_path", "<b>Total power JSON path</b><br>e.g. <code>ENERGY.Power</code> or <code>TRIPHASE</code> for tri-phase data", power_path, 60);
   WiFiManagerParameter custom_pwr_export_path("pwr_export_path", "<b>Export power JSON path</b><br>Optional, for net calc (e.g. \"i-e\"", pwr_export_path, 60);
   WiFiManagerParameter custom_power_l1_path("power_l1_path", "<b>Phase 1 power JSON path</b><br>optional", power_l1_path, 60);
-  WiFiManagerParameter custom_power_l2_path("power_l2_path", "<b>Phase 2 power JSON path</b><br>Phase 2 power JSON path<br>optional", power_l2_path, 60);
-  WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>Phase 3 power JSON path<br>optional", power_l3_path, 60);
+  WiFiManagerParameter custom_power_l2_path("power_l2_path", "<b>Phase 2 power JSON path</b><br>optional", power_l2_path, 60);
+  WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>optional", power_l3_path, 60);
   WiFiManagerParameter custom_energy_in_path("energy_in_path", "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>", energy_in_path, 60);
   WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
+
+  WiFiManagerParameter custom_sectionx_end("</div>");
 
   WiFiManager wifiManager;
   if (!DEBUG) {
@@ -1064,26 +1164,42 @@ void WifiManagerSetup() {
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
   //add all your parameters here
-  wifiManager.addParameter(&custom_section1);
-  wifiManager.addParameter(&custom_input_type);
+  wifiManager.addParameter(&custom_section_general);
   wifiManager.addParameter(&custom_ntp_server);
   wifiManager.addParameter(&custom_timezone);
-  wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&custom_query_period);
   wifiManager.addParameter(&custom_led_gpio);
   wifiManager.addParameter(&custom_led_gpio_i);
   wifiManager.addParameter(&custom_shelly_mac);
-  wifiManager.addParameter(&custom_shelly_port);
+  wifiManager.addParameter(&custom_shelly_udp_port);
   wifiManager.addParameter(&custom_phase_number);
-  wifiManager.addParameter(&custom_sma_id);
-  wifiManager.addParameter(&custom_section2);
+
+  wifiManager.addParameter(&custom_hidden);
+  wifiManager.addParameter(&custom_field);
+  // MQTT section
+  wifiManager.addParameter(&custom_section_mqtt);
+  wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&custom_mqtt_port);
   wifiManager.addParameter(&custom_mqtt_topic);
   wifiManager.addParameter(&custom_mqtt_user);
   wifiManager.addParameter(&custom_mqtt_passwd);
-  wifiManager.addParameter(&custom_section3);
+  wifiManager.addParameter(&custom_sectionx_end);
+  // SMA section
+  wifiManager.addParameter(&custom_section_sma);
+  wifiManager.addParameter(&custom_sma_id);
+  wifiManager.addParameter(&custom_sectionx_end);
+  // HTTP section
+  wifiManager.addParameter(&custom_section_http);
+  wifiManager.addParameter(&custom_http_url);
+  wifiManager.addParameter(&custom_sectionx_end);
+  // SUNSPEC section
+  wifiManager.addParameter(&custom_section_modbus);
+  wifiManager.addParameter(&custom_modbus_server);
+  wifiManager.addParameter(&custom_modbus_port);
   wifiManager.addParameter(&custom_modbus_dev);
-  wifiManager.addParameter(&custom_section4);
+  wifiManager.addParameter(&custom_sectionx_end);
+  // JSON path section for MQTT and HTTP
+  wifiManager.addParameter(&custom_section_jsonpath);
   wifiManager.addParameter(&custom_power_path);
   wifiManager.addParameter(&custom_pwr_export_path);
   wifiManager.addParameter(&custom_power_l1_path);
@@ -1091,7 +1207,7 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_power_l3_path);
   wifiManager.addParameter(&custom_energy_in_path);
   wifiManager.addParameter(&custom_energy_out_path);
-  
+  wifiManager.addParameter(&custom_sectionx_end);
 
   if (!wifiManager.autoConnect("Energy2Shelly")) {
     DEBUG_SERIAL.println("failed to connect and hit timeout");
@@ -1102,21 +1218,32 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("connected");
 
   //read updated parameters
-  strcpy(input_type, custom_input_type.getValue());
+  // general options
   strcpy(ntp_server, custom_ntp_server.getValue());
   strcpy(timezone, custom_timezone.getValue());
-  strcpy(mqtt_server, custom_mqtt_server.getValue());
-  strcpy(mqtt_port, custom_mqtt_port.getValue());
   strcpy(query_period, custom_query_period.getValue());
   strcpy(led_gpio, custom_led_gpio.getValue());
   strcpy(led_gpio_i, custom_led_gpio_i.getValue());
   strcpy(shelly_mac, custom_shelly_mac.getValue());
-  strcpy(shelly_port, custom_shelly_port.getValue());
+  strcpy(shelly_udp_port, custom_shelly_udp_port.getValue());
   strcpy(phase_number, custom_phase_number.getValue());
+  // strcpy(input_type, custom_input_type.getValue());
+  strcpy(input_type, custom_hidden.getValue());
+  // MQTT
+  strcpy(mqtt_server, custom_mqtt_server.getValue());
+  strcpy(mqtt_port, custom_mqtt_port.getValue());
   strcpy(mqtt_topic, custom_mqtt_topic.getValue());
   strcpy(mqtt_user, custom_mqtt_user.getValue());
   strcpy(mqtt_passwd, custom_mqtt_passwd.getValue());
+  // SMA
+  strcpy(sma_id, custom_sma_id.getValue());
+  // HTTP
+  strcpy(http_url, custom_http_url.getValue());
+  // SUNSPEC
+  strcpy(modbus_server_ip, custom_modbus_server.getValue());
+  strcpy(modbus_port, custom_modbus_port.getValue());
   strcpy(modbus_dev, custom_modbus_dev.getValue());
+  // JSON paths for MQTT and HTTP
   strcpy(power_path, custom_power_path.getValue());
   strcpy(pwr_export_path, custom_pwr_export_path.getValue());
   strcpy(power_l1_path, custom_power_l1_path.getValue());
@@ -1124,34 +1251,45 @@ void WifiManagerSetup() {
   strcpy(power_l3_path, custom_power_l3_path.getValue());
   strcpy(energy_in_path, custom_energy_in_path.getValue());
   strcpy(energy_out_path, custom_energy_out_path.getValue());
-  strcpy(sma_id, custom_sma_id.getValue());
 
   DEBUG_SERIAL.println("The values in the preferences are: ");
-  DEBUG_SERIAL.println("\tinput_type : " + String(input_type));
-  DEBUG_SERIAL.println("\tntp_server : " + String(ntp_server));
-  DEBUG_SERIAL.println("\ttimezone : " + String(timezone));
-  DEBUG_SERIAL.println("\tmqtt_server : " + String(mqtt_server));
-  DEBUG_SERIAL.println("\tmqtt_port : " + String(mqtt_port));
-  DEBUG_SERIAL.println("\tquery_period : " + String(query_period));
-  DEBUG_SERIAL.println("\tled_gpio : " + String(led_gpio));
-  DEBUG_SERIAL.println("\tled_gpio_i : " + String(led_gpio_i));
-  DEBUG_SERIAL.println("\tshelly_mac : " + String(shelly_mac));
-  DEBUG_SERIAL.println("\tshelly_port : " + String(shelly_port));
-  DEBUG_SERIAL.println("\tphase_number : " + String(phase_number));
-  DEBUG_SERIAL.println("\tmqtt_topic : " + String(mqtt_topic));
-  DEBUG_SERIAL.println("\tmqtt_user : " + String(mqtt_user));
-  DEBUG_SERIAL.println("\tmqtt_passwd : " + String(mqtt_passwd));
-  DEBUG_SERIAL.println("\tmodbus_dev : " + String(modbus_dev));
-  DEBUG_SERIAL.println("\tpower_path : " + String(power_path));
-  DEBUG_SERIAL.println("\tpwr_export_path : " + String(pwr_export_path));
-  DEBUG_SERIAL.println("\tpower_l1_path : " + String(power_l1_path));
-  DEBUG_SERIAL.println("\tpower_l2_path : " + String(power_l2_path));
-  DEBUG_SERIAL.println("\tpower_l3_path : " + String(power_l3_path));
-  DEBUG_SERIAL.println("\tenergy_in_path : " + String(energy_in_path));
-  DEBUG_SERIAL.println("\tenergy_out_path : " + String(energy_out_path));
-  DEBUG_SERIAL.println("\tsma_id : " + String(sma_id));
+  DEBUG_SERIAL.println("  ntp_server: " + String(ntp_server));
+  DEBUG_SERIAL.println("  timezone: " + String(timezone));
+  DEBUG_SERIAL.println("  query_period: " + String(query_period));
+  DEBUG_SERIAL.println("  led_gpio: " + String(led_gpio));
+  DEBUG_SERIAL.println("  led_gpio_i: " + String(led_gpio_i));
+  DEBUG_SERIAL.println("  shelly_mac: " + String(shelly_mac));
+  DEBUG_SERIAL.println("  shelly_udp_port: " + String(shelly_udp_port));
+  DEBUG_SERIAL.println("  phase_number: " + String(phase_number));
+  DEBUG_SERIAL.println("  input_type: " + String(input_type));
+  DEBUG_SERIAL.println("  MQTT options:");
+  DEBUG_SERIAL.println("    - mqtt_server: " + String(mqtt_server));
+  DEBUG_SERIAL.println("    - mqtt_port: " + String(mqtt_port));
+  DEBUG_SERIAL.println("    - mqtt_topic: " + String(mqtt_topic));
+  DEBUG_SERIAL.println("    - mqtt_user: " + String(mqtt_user));
+  DEBUG_SERIAL.println("    - mqtt_passwd: " + String(mqtt_passwd));
+  DEBUG_SERIAL.println("  SMA options:");
+  DEBUG_SERIAL.println("    - sma_id: " + String(sma_id));
+  DEBUG_SERIAL.println("  HTTP options:");
+  DEBUG_SERIAL.println("    - http_url: " + String(http_url));
+  DEBUG_SERIAL.println("  SUNSPEC options:");
+  DEBUG_SERIAL.println("    - modbus_server" + String(modbus_server_ip));
+  DEBUG_SERIAL.println("    - modbus_port: " + String(modbus_port));
+  DEBUG_SERIAL.println("    - modbus_dev: " + String(modbus_dev));
+  DEBUG_SERIAL.println("  JSON paths for MQTT and HTTP:");
+  DEBUG_SERIAL.println("    - power_path: " + String(power_path));
+  DEBUG_SERIAL.println("    - pwr_export_path: " + String(pwr_export_path));
+  DEBUG_SERIAL.println("    - power_l1_path: " + String(power_l1_path));
+  DEBUG_SERIAL.println("    - power_l2_path: " + String(power_l2_path));
+  DEBUG_SERIAL.println("    - power_l3_path: " + String(power_l3_path));
+  DEBUG_SERIAL.println("    - energy_in_path: " + String(energy_in_path));
+  DEBUG_SERIAL.println("    - energy_out_path: " + String(energy_out_path));
+  DEBUG_SERIAL.println("------------------------------");
 
-  if (strcmp(input_type, "SMA") == 0) {
+  if (strcmp(input_type, "MQTT") == 0) {
+    dataMQTT = true;
+    DEBUG_SERIAL.println("Enabling MQTT data input");
+  } else if (strcmp(input_type, "SMA") == 0) {
     dataSMA = true;
     DEBUG_SERIAL.println("Enabling SMA Multicast data input");
   } else if (strcmp(input_type, "SHRDZM") == 0) {
@@ -1163,9 +1301,6 @@ void WifiManagerSetup() {
   } else if (strcmp(input_type, "SUNSPEC") == 0) {
     dataSUNSPEC = true;
     DEBUG_SERIAL.println("Enabling SUNSPEC data input");
-  } else {
-    dataMQTT = true;
-    DEBUG_SERIAL.println("Enabling MQTT data input");
   }
 
   if (strcmp(led_gpio_i, "true") == 0) {
@@ -1176,21 +1311,25 @@ void WifiManagerSetup() {
 
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println("saving config");
-    preferences.putString("input_type", input_type);
     preferences.putString("ntp_server", ntp_server);
     preferences.putString("timezone", timezone);
-    preferences.putString("mqtt_server", mqtt_server);
-    preferences.putString("mqtt_port", mqtt_port);
     preferences.putString("query_period", query_period);
     preferences.putString("led_gpio", led_gpio);
     preferences.putString("led_gpio_i", led_gpio_i);
     preferences.putString("shelly_mac", shelly_mac);
-    preferences.putString("shelly_port", shelly_port);
+    preferences.putString("shelly_udp_port", shelly_udp_port);
     preferences.putString("phase_number", phase_number);
+    preferences.putString("input_type", input_type);
+    preferences.putString("sma_id", sma_id);
+    preferences.putString("mqtt_server", mqtt_server);
+    preferences.putString("mqtt_port", mqtt_port);
     preferences.putString("mqtt_topic", mqtt_topic);
     preferences.putString("mqtt_user", mqtt_user);
     preferences.putString("mqtt_passwd", mqtt_passwd);
+    preferences.putString("modbus_server", modbus_server_ip);
+    preferences.putString("modbus_port", modbus_port);
     preferences.putString("modbus_dev", modbus_dev);
+    preferences.putString("http_url", http_url);
     preferences.putString("power_path", power_path);
     preferences.putString("pwr_export_path", pwr_export_path);
     preferences.putString("power_l1_path", power_l1_path);
@@ -1198,7 +1337,6 @@ void WifiManagerSetup() {
     preferences.putString("power_l3_path", power_l3_path);
     preferences.putString("energy_in_path", energy_in_path);
     preferences.putString("energy_out_path", energy_out_path);
-    preferences.putString("sma_id", sma_id);
     wifiManager.reboot();
   }
   DEBUG_SERIAL.print("local ip: ");
@@ -1301,18 +1439,12 @@ void setup(void) {
     request->send(200, "application/json", serJsonResponse);
   });
 
-  // server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {
-  //   shellyGetDeviceInfo();
-  //   rpcWrapper();
-  //   request->send(200, "application/json", serJsonResponse);
-  // });
-
   webSocket.onEvent(webSocketEvent);
   server.addHandler(&webSocket);
   server.begin();
 
   // Set up RPC over UDP for Marstek users
-  UdpRPC.begin(String(shelly_port).toInt()); 
+  UdpRPC.begin(String(shelly_udp_port).toInt()); 
 
   // Set up MQTT
   if (dataMQTT) {
@@ -1339,10 +1471,10 @@ void setup(void) {
   // Set Up Modbus TCP for SUNSPEC register query
   if (dataSUNSPEC) {
     modbus1.client();
-    modbus_ip.fromString(mqtt_server);
-    if (!modbus1.isConnected(modbus_ip)) {  // reuse mqtt server adresss for modbus adress
-      modbus1.connect(modbus_ip, String(mqtt_port).toInt());
+    modbus_ip.fromString(modbus_server_ip);
+    if (!modbus1.isConnected(modbus_ip)) {
       Serial.println("Trying to connect SUNSPEC powermeter data");
+      modbus1.connect(modbus_ip, String(modbus_port).toInt());
     }
   }
 
@@ -1391,11 +1523,6 @@ void setup(void) {
   }
 #endif
   DEBUG_SERIAL.println("mDNS responder started");
-
-  // fix MAC address to uppercase
-  String mac = String(shelly_mac);
-  mac.toUpperCase();
-  strcpy(shelly_mac, mac.c_str());
 }
 
 void loop() {
