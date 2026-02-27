@@ -1498,6 +1498,7 @@ void setup(void) {
 
   // Set Up Modbus TCP for SUNSPEC register query
   if (dataSUNSPEC) {
+    period = atol(query_period);
     modbus1.client();
     modbus_ip.fromString(modbus_server_ip);
     if (!modbus1.isConnected(modbus_ip)) {
