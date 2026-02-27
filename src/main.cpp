@@ -35,6 +35,7 @@ tm timeinfo;
 
 // define your default values here, if there are different values in config.json, they are overwritten.
 char input_type[40];
+char reset_password[33] = "admin"; // default reset password
 char ntp_server[40] = "de.pool.ntp.org";
 char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
 char phase_number[2] = "3"; // number of phases: 1 or 3
@@ -48,13 +49,13 @@ char mqtt_passwd[40] = "";
 // HTTP related
 char http_url[160];
 // JSON PATHs for power and energy values in the source data
-char power_path[60] = "";
-char pwr_export_path[60] = "";
-char power_l1_path[60] = "";
-char power_l2_path[60] = "";
-char power_l3_path[60] = "";
-char energy_in_path[60] = "";
-char energy_out_path[60] = "";
+char power_path[150] = "";
+char pwr_export_path[150] = "";
+char power_l1_path[150] = "";
+char power_l2_path[150] = "";
+char power_l3_path[150] = "";
+char energy_in_path[150] = "";
+char energy_out_path[150] = "";
 // Shelly API related
 char shelly_gen[2] = "2";
 char shelly_fw_id[32] = "20250924-062729/1.7.1-gd336f31";
@@ -1040,6 +1041,7 @@ void WifiManagerSetup() {
   sprintf(shelly_mac, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
   preferences.begin("e2s_config", false);
+  strcpy(reset_password, preferences.getString("reset_password", reset_password).c_str());
   strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
   strcpy(timezone, preferences.getString("timezone", timezone).c_str());
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
@@ -1072,9 +1074,11 @@ void WifiManagerSetup() {
   strcpy(energy_in_path, preferences.getString("energy_in_path", energy_in_path).c_str());
   strcpy(energy_out_path, preferences.getString("energy_out_path", energy_out_path).c_str());
 
-  const char *ds_select_str = R"(
+  const char *dd_select_str = R"(
   <br/>
-  <label for='datasource'><b>Datasource</b></label>
+  <hr>
+  <br/>
+  <label for='datasource'>Datasource</label>
   <select name="datasource" id="datasource">
     <option value=""></option>
     <option value="MQTT">MQTT topic</option>
@@ -1085,14 +1089,14 @@ void WifiManagerSetup() {
   </select>
   <script>
   window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('input_type').hidden = true;
     const myvalue = "%s";
-    if (myvalue.length > 0) {
+    if (myvalue.length > 0 && document.getElementById(myvalue)) {
       console.log("Setting datasource to " + myvalue);
       document.getElementById('datasource').value = myvalue;
       document.getElementById(myvalue).style.display = "block";
     }
     document.querySelector("[for='input_type']").hidden = true;
-    document.getElementById('input_type').hidden = true;
     document.getElementById('datasource').addEventListener('change', function() {
       document.getElementById('input_type').value = this.value;
       document.getElementById('JSONPATH').style.display = (this.value === "MQTT" || this.value === "HTTP") ? "block" : "none";
@@ -1106,55 +1110,60 @@ void WifiManagerSetup() {
   });
   </script>
   )";
+  char buffer_datasource[1500];
+  sprintf(buffer_datasource, dd_select_str, input_type);
 
-  char bufferStr[1500];
-  // The sprintf is so we can input the value of the current selected day
-  // If you dont need to do that, then just pass the const char* straight in.
-  sprintf(bufferStr, ds_select_str, input_type);
-  //DEBUG_SERIAL.print(bufferStr);
+  const char *show_pwd_str = "<input type=\"checkbox\" onclick=\"t('%s')\">&nbsp;<label>Show password</label><br/>";
 
-  WiFiManagerParameter custom_section_general("<h3>General settings</h3>");
-  WiFiManagerParameter custom_ntp_server("ntp_server", "<b>NTP server</b><br>for time synchronization", ntp_server, 40);
-  WiFiManagerParameter custom_timezone("timezone", "<b>Timezone</b><br>e.g. <code>UTC0</code>, <code>UTC+1</code>, <code>UTC-3</code>, <code>UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00</code>", timezone, 64);
-  WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP, SUNSPEC and TIBBERPULSE, in milliseconds", query_period, 10);
-  WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
-  WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
-  WiFiManagerParameter custom_shelly_mac("shelly_mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
-  WiFiManagerParameter custom_shelly_udp_port("shelly_udp_port", "<b>Shelly UDP port</b><br><code>1010</code> for old Marstek FW, <code>2220</code> for new Marstek FW v226+/v108+", shelly_udp_port, 6);
-  WiFiManagerParameter custom_phase_number("phase_number", "<b>Phase number</b><br>Number of phases (e.g. 1 or 3)", phase_number, 1);
+  WiFiManagerParameter param_section_general("<h3>General settings</h3><script>function t(s) { var x = document.getElementById(s); x.type === \"password\" ? x.type = \"text\" : x.type = \"password\"; }</script>");
+  WiFiManagerParameter param_reset_password("reset_password", "Reset password <span title=\"Required to trigger config mode(Wifi AP mode)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", reset_password, 20, "type='password'");
+  char buf_rst_pwd_show_pwd[150];
+  sprintf(buf_rst_pwd_show_pwd, show_pwd_str, "reset_password");
+  WiFiManagerParameter param_reset_password_show_password(buf_rst_pwd_show_pwd);
+  WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
+  WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
+  WiFiManagerParameter param_query_period("query_period", "Query period <span title=\"for generic HTTP and SUNSPEC, in milliseconds\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", query_period, 10);
+  WiFiManagerParameter param_led_gpio("led_gpio", "GPIO of internal LED <span title=\"GPIO of internal LED\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", led_gpio, 3);
+  WiFiManagerParameter param_led_gpio_i("led_gpio_i", "GPIO is inverted <span title=\"true or false\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", led_gpio_i, 6);
+  WiFiManagerParameter param_shelly_mac("shelly_mac", "Shelly ID (12 char hexadecimal) <span title=\"defaults to MAC address of ESP\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", shelly_mac, 13);
+  WiFiManagerParameter param_shelly_udp_port("shelly_udp_port", "Shelly UDP port <span title=\"1010 for old Marstek FW, 2220 for new Marstek FW v226+/v108+\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", shelly_udp_port, 6);
+  WiFiManagerParameter param_phase_number("phase_number", "Number of phases <span title=\"Number of phases (e.g. 1 or 3)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", phase_number, 1);
 
-  WiFiManagerParameter custom_hidden("input_type", "Will be hidden", input_type, 40);
-  WiFiManagerParameter custom_field(bufferStr);
+  WiFiManagerParameter param_datasource("input_type", "Will be hidden", input_type, 40);
+  WiFiManagerParameter param_dd_datasource(buffer_datasource);
 
   // MQTT section
-  WiFiManagerParameter custom_section_mqtt("<div id=\"MQTT\" style=\"display:none\"><h3>MQTT Broker options</h3>");
-  WiFiManagerParameter custom_mqtt_server("mqtt_server", "<b>Host (IP / FQDN)</b>", mqtt_server, 160);
-  WiFiManagerParameter custom_mqtt_port("mqtt_port", "<b>Port</b>", mqtt_port, 6);
-  WiFiManagerParameter custom_mqtt_topic("mqtt_topic", "<b>Topic</b>", mqtt_topic, 90);
-  WiFiManagerParameter custom_mqtt_user("mqtt_user", "<b>User</b> (optional)", mqtt_user, 40);
-  WiFiManagerParameter custom_mqtt_passwd("mqtt_passwd", "<b>Password</b> (optional)", mqtt_passwd, 40, "type='password'");
+  WiFiManagerParameter param_section_mqtt("<div id=\"MQTT\" style=\"display:none\"><h4>MQTT Topic options</h4>");
+  WiFiManagerParameter param_mqtt_server("mqtt_server", "Host (IP / FQDN)", mqtt_server, 160);
+  WiFiManagerParameter param_mqtt_port("mqtt_port", "Port", mqtt_port, 6);
+  WiFiManagerParameter param_mqtt_topic("mqtt_topic", "Topic", mqtt_topic, 90);
+  WiFiManagerParameter param_mqtt_user("mqtt_user", "User (optional)", mqtt_user, 40);
+  WiFiManagerParameter param_mqtt_passwd("mqtt_passwd", "Password (optional)", mqtt_passwd, 40, "type='password'");
+  char buf_mqtt_pwd_show_pwd[150];
+  sprintf(buf_mqtt_pwd_show_pwd, show_pwd_str, "mqtt_passwd");
+  WiFiManagerParameter param_mqtt_passwd_show_password(buf_mqtt_pwd_show_pwd);
   // SMA section
-  WiFiManagerParameter custom_section_sma("<div id=\"SMA\" style=\"display:none\"><h3>SMA</h3>");
-  WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
+  WiFiManagerParameter param_section_sma("<div id=\"SMA\" style=\"display:none\"><h4>SMA options</h4>");
+  WiFiManagerParameter param_sma_id("sma_id", "SMA serial number <span title=\"optional serial number (if you have more than one SMA EM/HM in your network)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", sma_id, 16);
   // HTTP section
-  WiFiManagerParameter custom_section_http("<div id=\"HTTP\" style=\"display:none\"><h3>generic HTTP options</h3>");
-  WiFiManagerParameter custom_http_url("http_url", "<b>HTTP URL</b><br>e.g. <code>/status</code>", http_url, 160);
+  WiFiManagerParameter param_section_http("<div id=\"HTTP\" style=\"display:none\"><h4>generic HTTP options</h4>");
+  WiFiManagerParameter param_http_url("http_url", "HTTP URL <span title=\"e.g. /status\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", http_url, 160);
   // SUNSPEC section
-  WiFiManagerParameter custom_section_modbus("<div id=\"SUNSPEC\" style=\"display:none\"><h3>SUNSPEC Modbus options</h3>");
-  WiFiManagerParameter custom_modbus_server("modbus_server", "<b>Host IP</b>", modbus_server_ip, 16);
-  WiFiManagerParameter custom_modbus_port("modbus_port", "<b>Port</b>", modbus_port, 6);
-  WiFiManagerParameter custom_modbus_dev("modbus_dev", "<b>Modbus device ID</b><br><code>71</code> for Kostal SEM", modbus_dev, 60);
+  WiFiManagerParameter param_section_modbus("<div id=\"SUNSPEC\" style=\"display:none\"><h4>SUNSPEC Modbus options</h4>");
+  WiFiManagerParameter param_modbus_server("modbus_server", "Host IP", modbus_server_ip, 16);
+  WiFiManagerParameter param_modbus_port("modbus_port", "Port", modbus_port, 6);
+  WiFiManagerParameter param_modbus_dev("modbus_dev", "Modbus device ID <span title=\"71 for Kostal SEM\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", modbus_dev, 60);
   // JSON paths for MQTT and HTTP
-  WiFiManagerParameter custom_section_jsonpath("<div id=\"JSONPATH\" style=\"display:none\"><h4>JSON paths for MQTT and HTTP input</h4>");
-  WiFiManagerParameter custom_power_path("power_path", "<b>Total power JSON path</b><br>e.g. <code>ENERGY.Power</code> or <code>TRIPHASE</code> for tri-phase data", power_path, 60);
-  WiFiManagerParameter custom_pwr_export_path("pwr_export_path", "<b>Export power JSON path</b><br>Optional, for net calc (e.g. \"i-e\"", pwr_export_path, 60);
-  WiFiManagerParameter custom_power_l1_path("power_l1_path", "<b>Phase 1 power JSON path</b><br>optional", power_l1_path, 60);
-  WiFiManagerParameter custom_power_l2_path("power_l2_path", "<b>Phase 2 power JSON path</b><br>optional", power_l2_path, 60);
-  WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>optional", power_l3_path, 60);
-  WiFiManagerParameter custom_energy_in_path("energy_in_path", "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>", energy_in_path, 60);
-  WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
+  WiFiManagerParameter param_section_jsonpath("<div id=\"JSONPATH\" style=\"display:none\"><h5>JSON paths for MQTT and HTTP input</h5>");
+  WiFiManagerParameter param_power_path("power_path", "Total power <span title=\"e.g. ENERGY.Power or TRIPHASE for tri-phase data\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", power_path, 150);
+  WiFiManagerParameter param_pwr_export_path("pwr_export_path", "Export power <span title=\"Optional, for net calc (e.g. 'i-e')\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", pwr_export_path, 150);
+  WiFiManagerParameter param_power_l1_path("power_l1_path", "Phase 1 power <span title=\"optional\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", power_l1_path, 150);
+  WiFiManagerParameter param_power_l2_path("power_l2_path", "Phase 2 power <span title=\"optional\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", power_l2_path, 150);
+  WiFiManagerParameter param_power_l3_path("power_l3_path", "Phase 3 power <span title=\"optional\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", power_l3_path, 150);
+  WiFiManagerParameter param_energy_in_path("energy_in_path", "Energy consumed from grid <span title=\"e.g. ENERGY.Grid\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", energy_in_path, 150);
+  WiFiManagerParameter param_energy_out_path("energy_out_path", "Energy feeded into grid <span title=\"e.g. ENERGY.FeedIn\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", energy_out_path, 150);
 
-  WiFiManagerParameter custom_sectionx_end("</div>");
+  WiFiManagerParameter param_sectionx_end("</div>");
 
   WiFiManager wifiManager;
   if (!DEBUG) {
@@ -1164,50 +1173,52 @@ void WifiManagerSetup() {
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
   //add all your parameters here
-  wifiManager.addParameter(&custom_section_general);
-  wifiManager.addParameter(&custom_ntp_server);
-  wifiManager.addParameter(&custom_timezone);
-  wifiManager.addParameter(&custom_query_period);
-  wifiManager.addParameter(&custom_led_gpio);
-  wifiManager.addParameter(&custom_led_gpio_i);
-  wifiManager.addParameter(&custom_shelly_mac);
-  wifiManager.addParameter(&custom_shelly_udp_port);
-  wifiManager.addParameter(&custom_phase_number);
-
-  wifiManager.addParameter(&custom_hidden);
-  wifiManager.addParameter(&custom_field);
+  wifiManager.addParameter(&param_section_general);
+  wifiManager.addParameter(&param_reset_password);
+  wifiManager.addParameter(&param_reset_password_show_password);
+  wifiManager.addParameter(&param_ntp_server);
+  wifiManager.addParameter(&param_timezone);
+  wifiManager.addParameter(&param_query_period);
+  wifiManager.addParameter(&param_led_gpio);
+  wifiManager.addParameter(&param_led_gpio_i);
+  wifiManager.addParameter(&param_shelly_mac);
+  wifiManager.addParameter(&param_shelly_udp_port);
+  wifiManager.addParameter(&param_phase_number);
+  wifiManager.addParameter(&param_datasource);
+  wifiManager.addParameter(&param_dd_datasource);
   // MQTT section
-  wifiManager.addParameter(&custom_section_mqtt);
-  wifiManager.addParameter(&custom_mqtt_server);
-  wifiManager.addParameter(&custom_mqtt_port);
-  wifiManager.addParameter(&custom_mqtt_topic);
-  wifiManager.addParameter(&custom_mqtt_user);
-  wifiManager.addParameter(&custom_mqtt_passwd);
-  wifiManager.addParameter(&custom_sectionx_end);
+  wifiManager.addParameter(&param_section_mqtt);
+  wifiManager.addParameter(&param_mqtt_server);
+  wifiManager.addParameter(&param_mqtt_port);
+  wifiManager.addParameter(&param_mqtt_topic);
+  wifiManager.addParameter(&param_mqtt_user);
+  wifiManager.addParameter(&param_mqtt_passwd);
+  wifiManager.addParameter(&param_mqtt_passwd_show_password);
+  wifiManager.addParameter(&param_sectionx_end);
   // SMA section
-  wifiManager.addParameter(&custom_section_sma);
-  wifiManager.addParameter(&custom_sma_id);
-  wifiManager.addParameter(&custom_sectionx_end);
+  wifiManager.addParameter(&param_section_sma);
+  wifiManager.addParameter(&param_sma_id);
+  wifiManager.addParameter(&param_sectionx_end);
   // HTTP section
-  wifiManager.addParameter(&custom_section_http);
-  wifiManager.addParameter(&custom_http_url);
-  wifiManager.addParameter(&custom_sectionx_end);
+  wifiManager.addParameter(&param_section_http);
+  wifiManager.addParameter(&param_http_url);
+  wifiManager.addParameter(&param_sectionx_end);
   // SUNSPEC section
-  wifiManager.addParameter(&custom_section_modbus);
-  wifiManager.addParameter(&custom_modbus_server);
-  wifiManager.addParameter(&custom_modbus_port);
-  wifiManager.addParameter(&custom_modbus_dev);
-  wifiManager.addParameter(&custom_sectionx_end);
+  wifiManager.addParameter(&param_section_modbus);
+  wifiManager.addParameter(&param_modbus_server);
+  wifiManager.addParameter(&param_modbus_port);
+  wifiManager.addParameter(&param_modbus_dev);
+  wifiManager.addParameter(&param_sectionx_end);
   // JSON path section for MQTT and HTTP
-  wifiManager.addParameter(&custom_section_jsonpath);
-  wifiManager.addParameter(&custom_power_path);
-  wifiManager.addParameter(&custom_pwr_export_path);
-  wifiManager.addParameter(&custom_power_l1_path);
-  wifiManager.addParameter(&custom_power_l2_path);
-  wifiManager.addParameter(&custom_power_l3_path);
-  wifiManager.addParameter(&custom_energy_in_path);
-  wifiManager.addParameter(&custom_energy_out_path);
-  wifiManager.addParameter(&custom_sectionx_end);
+  wifiManager.addParameter(&param_section_jsonpath);
+  wifiManager.addParameter(&param_power_path);
+  wifiManager.addParameter(&param_pwr_export_path);
+  wifiManager.addParameter(&param_power_l1_path);
+  wifiManager.addParameter(&param_power_l2_path);
+  wifiManager.addParameter(&param_power_l3_path);
+  wifiManager.addParameter(&param_energy_in_path);
+  wifiManager.addParameter(&param_energy_out_path);
+  wifiManager.addParameter(&param_sectionx_end);
 
   if (!wifiManager.autoConnect("Energy2Shelly")) {
     DEBUG_SERIAL.println("failed to connect and hit timeout");
@@ -1219,40 +1230,41 @@ void WifiManagerSetup() {
 
   //read updated parameters
   // general options
-  strcpy(ntp_server, custom_ntp_server.getValue());
-  strcpy(timezone, custom_timezone.getValue());
-  strcpy(query_period, custom_query_period.getValue());
-  strcpy(led_gpio, custom_led_gpio.getValue());
-  strcpy(led_gpio_i, custom_led_gpio_i.getValue());
-  strcpy(shelly_mac, custom_shelly_mac.getValue());
-  strcpy(shelly_udp_port, custom_shelly_udp_port.getValue());
-  strcpy(phase_number, custom_phase_number.getValue());
-  // strcpy(input_type, custom_input_type.getValue());
-  strcpy(input_type, custom_hidden.getValue());
+  strcpy(reset_password, param_reset_password.getValue());
+  strcpy(ntp_server, param_ntp_server.getValue());
+  strcpy(timezone, param_timezone.getValue());
+  strcpy(query_period, param_query_period.getValue());
+  strcpy(led_gpio, param_led_gpio.getValue());
+  strcpy(led_gpio_i, param_led_gpio_i.getValue());
+  strcpy(shelly_mac, param_shelly_mac.getValue());
+  strcpy(shelly_udp_port, param_shelly_udp_port.getValue());
+  strcpy(phase_number, param_phase_number.getValue());
+  strcpy(input_type, param_datasource.getValue());
   // MQTT
-  strcpy(mqtt_server, custom_mqtt_server.getValue());
-  strcpy(mqtt_port, custom_mqtt_port.getValue());
-  strcpy(mqtt_topic, custom_mqtt_topic.getValue());
-  strcpy(mqtt_user, custom_mqtt_user.getValue());
-  strcpy(mqtt_passwd, custom_mqtt_passwd.getValue());
+  strcpy(mqtt_server, param_mqtt_server.getValue());
+  strcpy(mqtt_port, param_mqtt_port.getValue());
+  strcpy(mqtt_topic, param_mqtt_topic.getValue());
+  strcpy(mqtt_user, param_mqtt_user.getValue());
+  strcpy(mqtt_passwd, param_mqtt_passwd.getValue());
   // SMA
-  strcpy(sma_id, custom_sma_id.getValue());
+  strcpy(sma_id, param_sma_id.getValue());
   // HTTP
-  strcpy(http_url, custom_http_url.getValue());
+  strcpy(http_url, param_http_url.getValue());
   // SUNSPEC
-  strcpy(modbus_server_ip, custom_modbus_server.getValue());
-  strcpy(modbus_port, custom_modbus_port.getValue());
-  strcpy(modbus_dev, custom_modbus_dev.getValue());
+  strcpy(modbus_server_ip, param_modbus_server.getValue());
+  strcpy(modbus_port, param_modbus_port.getValue());
+  strcpy(modbus_dev, param_modbus_dev.getValue());
   // JSON paths for MQTT and HTTP
-  strcpy(power_path, custom_power_path.getValue());
-  strcpy(pwr_export_path, custom_pwr_export_path.getValue());
-  strcpy(power_l1_path, custom_power_l1_path.getValue());
-  strcpy(power_l2_path, custom_power_l2_path.getValue());
-  strcpy(power_l3_path, custom_power_l3_path.getValue());
-  strcpy(energy_in_path, custom_energy_in_path.getValue());
-  strcpy(energy_out_path, custom_energy_out_path.getValue());
+  strcpy(power_path, param_power_path.getValue());
+  strcpy(pwr_export_path, param_pwr_export_path.getValue());
+  strcpy(power_l1_path, param_power_l1_path.getValue());
+  strcpy(power_l2_path, param_power_l2_path.getValue());
+  strcpy(power_l3_path, param_power_l3_path.getValue());
+  strcpy(energy_in_path, param_energy_in_path.getValue());
+  strcpy(energy_out_path, param_energy_out_path.getValue());
 
   DEBUG_SERIAL.println("The values in the preferences are: ");
+  DEBUG_SERIAL.println("  reset_password: ********");
   DEBUG_SERIAL.println("  ntp_server: " + String(ntp_server));
   DEBUG_SERIAL.println("  timezone: " + String(timezone));
   DEBUG_SERIAL.println("  query_period: " + String(query_period));
@@ -1267,7 +1279,7 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("    - mqtt_port: " + String(mqtt_port));
   DEBUG_SERIAL.println("    - mqtt_topic: " + String(mqtt_topic));
   DEBUG_SERIAL.println("    - mqtt_user: " + String(mqtt_user));
-  DEBUG_SERIAL.println("    - mqtt_passwd: " + String(mqtt_passwd));
+  DEBUG_SERIAL.println("    - mqtt_passwd: ********");
   DEBUG_SERIAL.println("  SMA options:");
   DEBUG_SERIAL.println("    - sma_id: " + String(sma_id));
   DEBUG_SERIAL.println("  HTTP options:");
@@ -1311,6 +1323,7 @@ void WifiManagerSetup() {
 
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println("saving config");
+    preferences.putString("reset_password", reset_password);
     preferences.putString("ntp_server", ntp_server);
     preferences.putString("timezone", timezone);
     preferences.putString("query_period", query_period);
@@ -1390,8 +1403,23 @@ void setup(void) {
   });
 
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
-    shouldResetConfig = true;
-    request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
+    request->send(200, "text/html", "<html><body><form method='post' accept-charset='UTF-8'><h3>Enter password to put device in configuration mode:</h3><input type='password' name='password'><br/><input type='submit' value='Reset device'></form></body></html>");
+  });
+  server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
+    String password = "";
+    if (request->hasParam("password", true)) {
+      AsyncWebServerResponse *response;
+      const AsyncWebParameter *p = request->getParam("password", true);
+      password = p->value();
+      String storedPassword = preferences.getString("reset_password");
+      if (password == storedPassword) {
+        shouldResetConfig = true;
+        response = request->beginResponse(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
+      } else {
+        response = request->beginResponse(401, "text/plain", "Unauthorized: Invalid reset password.\r\n");
+      }
+      request->send(response);
+    }
   });
 
   server.on("/rpc/EM.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
