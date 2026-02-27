@@ -1403,7 +1403,7 @@ void setup(void) {
   });
 
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/html", "<html><body><form method='post' accept-charset='UTF-8'><h3>Enter password to put device in configuration mode:</h3><input type='password' name='password'><br/><input type='submit' value='Reset device'></form></body></html>");
+    request->send(200, "text/html", "<html><body><form method='post' accept-charset='UTF-8'><pre>Enter \"Reset password\" to put device in configuration mode:<br/><br/><input type='password' name='password'> <input type='submit' value='Reset device'></pre></form></body></html>");
   });
   server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
     String password = "";
