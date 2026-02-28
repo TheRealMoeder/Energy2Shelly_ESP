@@ -600,6 +600,33 @@ void scriptList() {
   blinkled(ledblinkduration);
 }
 
+// aligned with Shelly API docs
+// https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Wifi#wifigetstatus-example
+void wifiGetStatus() {
+  bool wifiConnected = (WiFi.status() == WL_CONNECTED);
+  JsonDocument jsonResponse;
+  jsonResponse["sta_ip"] = WiFi.localIP() ? WiFi.localIP().toString() : "null";
+  switch (WiFi.status()) {
+    case WL_CONNECTED:
+      jsonResponse["status"] = "connected";
+      break;
+    case WL_DISCONNECTED:
+      jsonResponse["status"] = "disconnected";
+      break;
+    default:
+      jsonResponse["status"] = WiFi.localIP() ? "got ip" : "connecting";
+      break;
+  }
+  jsonResponse["ssid"] = wifiConnected ? WiFi.SSID() : "null";
+  jsonResponse["bssid"] = wifiConnected ? WiFi.BSSIDstr() : "null";
+  jsonResponse["rssi"] = WiFi.RSSI();
+  jsonResponse["ap_client_count"] = 0; // not really relevant, as we are not in AP mode, but included for completeness
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print("wifiGetStatus: ");
+  DEBUG_SERIAL.println(serJsonResponse);
+  blinkled(ledblinkduration);
+}
+
 void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
   JsonDocument json;
   switch (type) {
@@ -656,6 +683,10 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
             webSocket.textAll(serJsonResponse);
           } else if (json["method"] == "Script.List") {
             scriptList();
+            rpcWrapper();
+            webSocket.textAll(serJsonResponse);
+          } else if (json["method"] == "Wifi.GetStatus") {
+            wifiGetStatus();
             rpcWrapper();
             webSocket.textAll(serJsonResponse);
           } else {
@@ -1470,25 +1501,6 @@ void setup(void) {
     }
   });
 
-  // Shelly RPC endpoint called via HTTP POST method with JSON-RPC body
-  server.on("/rpc", HTTP_POST,
-    [](AsyncWebServerRequest *request) {},
-    nullptr,
-    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-      String rpcRequestBuffer;
-      if (index == 0) {
-        // New request, clear buffer
-        rpcRequestBuffer = "";
-      }
-      // Append incoming data chunk to buffer
-      rpcRequestBuffer += String((char *)data).substring(0, len);
-      if (index + len >= total) {
-        // All data received, process RPC request
-        parseHttpRPC(rpcRequestBuffer, request);
-      }
-    }
-  );
-
   // Shelly RPC endpoints called via HTTP GET method
   server.on("/rpc/EM.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetConfig();
@@ -1529,6 +1541,28 @@ void setup(void) {
     sysGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
+
+  server.on("/rpc/Wifi.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+    wifiGetStatus();
+    request->send(200, "application/json", serJsonResponse);
+  });
+
+  // Shelly RPC endpoint called via HTTP POST method with JSON-RPC body
+  server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {}, nullptr,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+      String rpcRequestBuffer;
+      if (index == 0) {
+        // New request, clear buffer
+        rpcRequestBuffer = "";
+      }
+      // Append incoming data chunk to buffer
+      rpcRequestBuffer += String((char *)data).substring(0, len);
+      if (index + len >= total) {
+        // All data received, process RPC request
+        parseHttpRPC(rpcRequestBuffer, request);
+      }
+    }
+  );
 
   webSocket.onEvent(webSocketEvent);
   server.addHandler(&webSocket);
