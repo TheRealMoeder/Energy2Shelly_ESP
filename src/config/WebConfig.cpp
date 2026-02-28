@@ -428,12 +428,15 @@ void handleSave(AsyncWebServerRequest *request) {
   getParam("queryPeriod").toCharArray(query_period, sizeof(query_period));
   String ledGpioStr = getParam("ledGpio");
   ledGpioInt = ledGpioStr.toInt();
+  ledGpioStr.toCharArray(led_gpio, sizeof(led_gpio));
   String ledInvertedStr = getParam("ledInverted");
   ledInverted = (ledInvertedStr == "true");
+  ledInvertedStr.toCharArray(led_gpio_i, sizeof(led_gpio_i));
   getParam("shellyMac").toCharArray(shelly_mac, sizeof(shelly_mac));
   getParam("shellyPort").toCharArray(shelly_port, sizeof(shelly_port));
   String forcePwrDecimalsStr = getParam("forcePwrDecimals");
   forcePwrDecimals = (forcePwrDecimalsStr == "true");
+  forcePwrDecimalsStr.toCharArray(force_pwr_decimals, sizeof(force_pwr_decimals));
   getParam("smaId").toCharArray(sma_id, sizeof(sma_id));
   getParam("mqttPort").toCharArray(mqtt_port, sizeof(mqtt_port));
   getParam("mqttTopic").toCharArray(mqtt_topic, sizeof(mqtt_topic));

@@ -13,6 +13,10 @@ body{font-family:Arial;background:#f4f4f4;padding:20px}
 form{background:#fff;padding:20px;border-radius:8px;max-width:600px;margin:0 auto}
 label{display:block;margin:10px 0 5px;font-weight:bold}
 input,select{width:100%;padding:8px;margin-bottom:10px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box}
+.path-row{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.path-row input[type=text]{flex:1;margin-bottom:0}
+.path-row label{font-weight:normal;display:flex;align-items:center;gap:5px;margin-bottom:0;white-space:nowrap}
+.path-row input[type=checkbox]{width:auto;margin:0}
 .btn{padding:10px;border:none;border-radius:5px;width:100%;background:#4CAF50;color:#fff;font-size:16px;cursor:pointer}
 fieldset{border:1px solid #ddd;padding:15px;margin-bottom:15px;border-radius:4px}
 </style></head><body><h2 style='text-align:center'>Configuration</h2>
@@ -60,6 +64,13 @@ if(cfg.powerL2Path!==undefined)document.querySelector('[name=powerL2Path]').valu
 if(cfg.powerL3Path!==undefined)document.querySelector('[name=powerL3Path]').value=cfg.powerL3Path;
 if(cfg.energyInPath!==undefined)document.querySelector('[name=energyInPath]').value=cfg.energyInPath;
 if(cfg.energyOutPath!==undefined)document.querySelector('[name=energyOutPath]').value=cfg.energyOutPath;
+if(cfg.negatePowerPath!==undefined)document.querySelector('[name=negatePowerPath]').checked=cfg.negatePowerPath;
+if(cfg.negatePwrExportPath!==undefined)document.querySelector('[name=negatePwrExportPath]').checked=cfg.negatePwrExportPath;
+if(cfg.negatePowerL1Path!==undefined)document.querySelector('[name=negatePowerL1Path]').checked=cfg.negatePowerL1Path;
+if(cfg.negatePowerL2Path!==undefined)document.querySelector('[name=negatePowerL2Path]').checked=cfg.negatePowerL2Path;
+if(cfg.negatePowerL3Path!==undefined)document.querySelector('[name=negatePowerL3Path]').checked=cfg.negatePowerL3Path;
+if(cfg.negateEnergyInPath!==undefined)document.querySelector('[name=negateEnergyInPath]').checked=cfg.negateEnergyInPath;
+if(cfg.negateEnergyOutPath!==undefined)document.querySelector('[name=negateEnergyOutPath]').checked=cfg.negateEnergyOutPath;
 alert('Config imported! Review and Save.');
 }catch(err){alert('Import error: '+err.message);}};
 reader.readAsText(file);e.target.value='';
