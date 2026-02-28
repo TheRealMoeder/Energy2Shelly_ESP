@@ -36,6 +36,7 @@ tm timeinfo;
 char input_type[40];
 char ntp_server[40] = "de.pool.ntp.org";
 char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
+char phase_number[2] = "3"; // number of phases: 1 or 3
 char mqtt_server[160];
 char mqtt_port[6] = "1883";
 char mqtt_topic[90] = "tele/meter/SENSOR";
@@ -159,13 +160,29 @@ JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
 }
 
 void setPowerData(double totalPower) {
-  for (int i = 0; i <= 2; i++) {
-    PhasePower[i].power = round2(totalPower * 0.3333);
-    PhasePower[i].voltage = defaultVoltage;
-    PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
-    PhasePower[i].apparentPower = round2(PhasePower[i].power);
-    PhasePower[i].powerFactor = defaultPowerFactor;
-    PhasePower[i].frequency = defaultFrequency;
+  switch (phase_number[0]) {
+    case '1': // monophase
+      for (int i = 0; i <= 2; i++) {
+        PhasePower[i].power = (i == 0) ? round2(totalPower) : 0.0;
+        PhasePower[i].voltage = defaultVoltage;
+        PhasePower[i].current = (i == 0) ? round2(PhasePower[i].power / PhasePower[i].voltage) : 0.0;
+        PhasePower[i].apparentPower = (i == 0) ? round2(PhasePower[i].power) : 0.0;
+        PhasePower[i].powerFactor = defaultPowerFactor;
+        PhasePower[i].frequency = defaultFrequency;
+      }
+      break;
+    case '3': // triphase
+      for (int i = 0; i <= 2; i++) {
+        PhasePower[i].power = round2(totalPower * 0.3333);
+        PhasePower[i].voltage = defaultVoltage;
+        PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
+        PhasePower[i].apparentPower = round2(PhasePower[i].power);
+        PhasePower[i].powerFactor = defaultPowerFactor;
+        PhasePower[i].frequency = defaultFrequency;
+      }
+      break;
+    default:
+      break;
   }
   DEBUG_SERIAL.print("Current total power: ");
   DEBUG_SERIAL.println(totalPower);
@@ -191,13 +208,25 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
 }
 
 void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
-  for (int i = 0; i <= 2; i++) {
-    PhaseEnergy[i].consumption = round2(totalEnergyGridSupply * 0.3333);
-    PhaseEnergy[i].gridfeedin = round2(totalEnergyGridFeedIn * 0.3333);
+  switch (phase_number[0]) {
+    case '1': // monophase
+      for (int i = 0; i <= 2; i++) {
+        PhaseEnergy[i].consumption = (i == 0) ? round2(totalEnergyGridSupply) : 0.0;
+        PhaseEnergy[i].gridfeedin = (i == 0) ? round2(totalEnergyGridFeedIn) : 0.0;
+      }
+      break;
+    case '3': // triphase
+      for (int i = 0; i <= 2; i++) {
+        PhaseEnergy[i].consumption = round2(totalEnergyGridSupply * 0.3333);
+        PhaseEnergy[i].gridfeedin = round2(totalEnergyGridFeedIn * 0.3333);
+      }
+      break;
+    default:
+      break;
   }
-  DEBUG_SERIAL.print("Total consumption: ");
+  DEBUG_SERIAL.print("Total Consumption (Grid Feed-From)): ");
   DEBUG_SERIAL.print(totalEnergyGridSupply);
-  DEBUG_SERIAL.print(" - Total Grid Feed-In: ");
+  DEBUG_SERIAL.print(" - Total Production (Grid Feed-In)): ");
   DEBUG_SERIAL.println(totalEnergyGridFeedIn);
 }
 
@@ -763,6 +792,7 @@ void WifiManagerSetup() {
   strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
   strcpy(led_gpio_i, preferences.getString("led_gpio_i", led_gpio_i).c_str());
   strcpy(shelly_mac, preferences.getString("shelly_mac", shelly_mac).c_str());
+  strcpy(phase_number, preferences.getString("phase_number", phase_number).c_str());
   strcpy(mqtt_port, preferences.getString("mqtt_port", mqtt_port).c_str());
   strcpy(mqtt_topic, preferences.getString("mqtt_topic", mqtt_topic).c_str());
   strcpy(mqtt_user, preferences.getString("mqtt_user", mqtt_user).c_str());
@@ -790,6 +820,7 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
   WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
   WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> for old Marstek FW, <code>2220</code> for new Marstek FW v226+/v108+", shelly_port, 6);
+  WiFiManagerParameter param_phase_number("phase_number", "Number of phases <span title=\"Number of phases (e.g. 1 or 3)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", phase_number, 1);
   WiFiManagerParameter custom_force_pwr_decimals("force_pwr_decimals", "<b>Force decimals numbers for Power values</b><br><code>true</code> to fix Marstek bug", force_pwr_decimals, 6);
   WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
   WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
@@ -825,6 +856,7 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_led_gpio_i);
   wifiManager.addParameter(&custom_shelly_mac);
   wifiManager.addParameter(&custom_shelly_port);
+  wifiManager.addParameter(&param_phase_number);
   wifiManager.addParameter(&custom_force_pwr_decimals);
   wifiManager.addParameter(&custom_sma_id);
   wifiManager.addParameter(&custom_section2);
@@ -862,6 +894,7 @@ void WifiManagerSetup() {
   strcpy(led_gpio, custom_led_gpio.getValue());
   strcpy(led_gpio_i, custom_led_gpio_i.getValue());
   strcpy(shelly_mac, custom_shelly_mac.getValue());
+  strcpy(phase_number, param_phase_number.getValue());
   strcpy(mqtt_topic, custom_mqtt_topic.getValue());
   strcpy(mqtt_user, custom_mqtt_user.getValue());
   strcpy(mqtt_passwd, custom_mqtt_passwd.getValue());
@@ -887,6 +920,7 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tled_gpio : " + String(led_gpio));
   DEBUG_SERIAL.println("\tled_gpio_i : " + String(led_gpio_i));
   DEBUG_SERIAL.println("\tshelly_mac : " + String(shelly_mac));
+  DEBUG_SERIAL.println("  phase_number: " + String(phase_number));
   DEBUG_SERIAL.println("\tmqtt_topic : " + String(mqtt_topic));
   DEBUG_SERIAL.println("\tmqtt_user : " + String(mqtt_user));
   DEBUG_SERIAL.println("\tmqtt_passwd : " + String(mqtt_passwd));
@@ -942,6 +976,7 @@ void WifiManagerSetup() {
     preferences.putString("led_gpio", led_gpio);
     preferences.putString("led_gpio_i", led_gpio_i);
     preferences.putString("shelly_mac", shelly_mac);
+    preferences.putString("phase_number", phase_number);
     preferences.putString("mqtt_topic", mqtt_topic);
     preferences.putString("mqtt_user", mqtt_user);
     preferences.putString("mqtt_passwd", mqtt_passwd);
