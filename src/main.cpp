@@ -1158,7 +1158,7 @@ void setup(void) {
       password = p->value();
       String storedPassword = preferences.getString("reset_password");
       if (password == storedPassword) {
-    shouldResetConfig = true;
+        shouldResetConfig = true;
         response = request->beginResponse(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
       } else {
         response = request->beginResponse(401, "text/plain", "Unauthorized: Invalid reset password.\r\n");
