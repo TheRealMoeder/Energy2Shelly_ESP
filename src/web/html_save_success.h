@@ -22,12 +22,12 @@ a{color:#007bff;text-decoration:none}
 <div class='spinner'></div>
 <p>Your configuration has been saved.</p>
 <p><strong>The device is restarting...</strong></p>
-<div class='countdown' id='countdown'>30</div>
+<div class='countdown' id='countdown'>5</div>
 <p>Redirecting to home page, when countdown has finished</p>
 <p><a href='/'>Click here</a> if not redirected automatically</p>
 </div>
 <script>
-let seconds=30;
+let seconds=5;
 const timer=setInterval(()=>{
 seconds--;
 document.getElementById('countdown').textContent=seconds;

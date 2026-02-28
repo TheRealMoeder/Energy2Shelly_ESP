@@ -119,20 +119,27 @@ void setJsonPathPower(JsonDocument json) {
     DEBUG_SERIAL.print(json["a_current"].as<double>());
     DEBUG_SERIAL.print(F(", Voltage: "));
     DEBUG_SERIAL.print(json["a_voltage"].as<double>());
+    double pwrA = json["a_act_power"].as<double>();
+    double pwrB = json["b_act_power"].as<double>();
+    double pwrC = json["c_act_power"].as<double>();
+    if (negate_power_l1_path) pwrA = -pwrA;
+    if (negate_power_l2_path) pwrB = -pwrB;
+    if (negate_power_l3_path) pwrC = -pwrC;
+
     DEBUG_SERIAL.print(F(", Power: "));
-    DEBUG_SERIAL.println(json["a_act_power"].as<double>());
+    DEBUG_SERIAL.println(pwrA);
 
     setPhaseData(
         0, json["a_current"].as<double>(), json["a_voltage"].as<double>(),
-        json["a_act_power"].as<double>(), json["a_aprt_power"].as<double>(),
+        pwrA, json["a_aprt_power"].as<double>(),
         json["a_pf"].as<double>(), json["a_freq"].as<int>());
     setPhaseData(
         1, json["b_current"].as<double>(), json["b_voltage"].as<double>(),
-        json["b_act_power"].as<double>(), json["b_aprt_power"].as<double>(),
+        pwrB, json["b_aprt_power"].as<double>(),
         json["b_pf"].as<double>(), json["b_freq"].as<int>());
     setPhaseData(
         2, json["c_current"].as<double>(), json["c_voltage"].as<double>(),
-        json["c_act_power"].as<double>(), json["c_aprt_power"].as<double>(),
+        pwrC, json["c_aprt_power"].as<double>(),
         json["c_pf"].as<double>(), json["c_freq"].as<int>());
 
     DEBUG_SERIAL.println(F("All three phases parsed successfully"));
@@ -159,9 +166,18 @@ void setJsonPathPower(JsonDocument json) {
     double power3 = resolveJsonPath(json, power_l3_path).as<double>();
 
     // Apply negation if configured
-    if (negate_power_l1_path) power1 = -power1;
-    if (negate_power_l2_path) power2 = -power2;
-    if (negate_power_l3_path) power3 = -power3;
+    if (negate_power_l1_path){ 
+      DEBUG_SERIAL.println(F("Negating power1.................."));
+      power1 = -power1;
+    }
+    if (negate_power_l2_path) {
+      DEBUG_SERIAL.println(F("Negating power2.................."));
+      power2 = -power2;
+    }
+    if (negate_power_l3_path) {
+      DEBUG_SERIAL.println(F("Negating power3.................."));
+      power3 = -power3;
+    }
 
     DEBUG_SERIAL.print(F("TRIPHASE powers: L1="));
     DEBUG_SERIAL.print(power1);
@@ -217,9 +233,14 @@ void setJsonPathPower(JsonDocument json) {
     double energyOut = resolveJsonPath(json, energy_out_path).as<double>();
 
     // Apply negation if configured
-    if (negate_energy_in_path) energyIn = -energyIn;
-    if (negate_energy_out_path) energyOut = -energyOut;
-
+    if (negate_energy_in_path){ 
+      DEBUG_SERIAL.println(F("Negating energyIn.................."));
+      energyIn = -energyIn;
+    }
+    if (negate_energy_out_path)   {
+      DEBUG_SERIAL.println(F("Negating energyOut.................."));
+      energyOut = -energyOut;
+    }
     DEBUG_SERIAL.print(F("Resolved values - energyIn: "));
     DEBUG_SERIAL.print(energyIn);
     DEBUG_SERIAL.print(F(", energyOut: "));

@@ -12,7 +12,7 @@ void queryHTTP() {
     return;
   }
   if (!serverAddr.startsWith(F("http://")) && !serverAddr.startsWith(F("https://"))) {
-    serverAddr = F("http://") + serverAddr;
+    serverAddr = String(F("http://")) + serverAddr;
   }
 
   // Query power data endpoint

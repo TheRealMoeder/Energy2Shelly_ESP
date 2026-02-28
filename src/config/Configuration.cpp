@@ -162,17 +162,17 @@ void loadConfiguration() {
   preferences.getString("energy_out_path", energy_out_path, sizeof(energy_out_path));
   preferences.getString("shelly_port", shelly_port, sizeof(shelly_port));
   shellyPortInt = atoi(shelly_port);
-  forcePwrDecimals = preferences.getBool("force_pwr_decimals", true);
+  forcePwrDecimals = preferences.getBool("force_pwr_dec", true);
   preferences.getString("sma_id", sma_id, sizeof(sma_id));
 
-  // Load negation flags
-  negate_power_path = preferences.getBool("negate_power_path", false);
-  negate_pwr_export_path = preferences.getBool("negate_pwr_export_path", false);
-  negate_power_l1_path = preferences.getBool("negate_power_l1_path", false);
-  negate_power_l2_path = preferences.getBool("negate_power_l2_path", false);
-  negate_power_l3_path = preferences.getBool("negate_power_l3_path", false);
-  negate_energy_in_path = preferences.getBool("negate_energy_in_path", false);
-  negate_energy_out_path = preferences.getBool("negate_energy_out_path", false);
+  // Load negation flags (keys must be ≤15 chars for ESP32 NVS)
+  negate_power_path = preferences.getBool("neg_pwr", false);
+  negate_pwr_export_path = preferences.getBool("neg_pwr_exp", false);
+  negate_power_l1_path = preferences.getBool("neg_pwr_l1", false);
+  negate_power_l2_path = preferences.getBool("neg_pwr_l2", false);
+  negate_power_l3_path = preferences.getBool("neg_pwr_l3", false);
+  negate_energy_in_path = preferences.getBool("neg_eng_in", false);
+  negate_energy_out_path = preferences.getBool("neg_eng_out", false);
 
   preferences.end();
 }
@@ -186,7 +186,7 @@ void saveConfiguration() {
   preferences.putString("led_gpio_i", led_gpio_i);
   preferences.putString("shelly_mac", shelly_mac);
   preferences.putString("shelly_port", shelly_port);
-  preferences.putBool("force_pwr_decimals", forcePwrDecimals);
+  preferences.putBool("force_pwr_dec", forcePwrDecimals);
   preferences.putString("sma_id", sma_id);
   preferences.putString("mqtt_port", mqtt_port);
   preferences.putString("mqtt_topic", mqtt_topic);
@@ -201,14 +201,14 @@ void saveConfiguration() {
   preferences.putString("energy_in_path", energy_in_path);
   preferences.putString("energy_out_path", energy_out_path);
 
-  // Save negation flags
-  preferences.putBool("negate_power_path", negate_power_path);
-  preferences.putBool("negate_pwr_export_path", negate_pwr_export_path);
-  preferences.putBool("negate_power_l1_path", negate_power_l1_path);
-  preferences.putBool("negate_power_l2_path", negate_power_l2_path);
-  preferences.putBool("negate_power_l3_path", negate_power_l3_path);
-  preferences.putBool("negate_energy_in_path", negate_energy_in_path);
-  preferences.putBool("negate_energy_out_path", negate_energy_out_path);
+  // Save negation flags (keys must be ≤15 chars for ESP32 NVS)
+  preferences.putBool("neg_pwr", negate_power_path);
+  preferences.putBool("neg_pwr_exp", negate_pwr_export_path);
+  preferences.putBool("neg_pwr_l1", negate_power_l1_path);
+  preferences.putBool("neg_pwr_l2", negate_power_l2_path);
+  preferences.putBool("neg_pwr_l3", negate_power_l3_path);
+  preferences.putBool("neg_eng_in", negate_energy_in_path);
+  preferences.putBool("neg_eng_out", negate_energy_out_path);
 
   preferences.end();
 }
