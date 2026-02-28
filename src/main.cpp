@@ -37,27 +37,30 @@ char input_type[40];
 char ntp_server[40] = "de.pool.ntp.org";
 char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
 char phase_number[2] = "3"; // number of phases: 1 or 3
+char query_period[10] = "1000";
+// MQTT related
 char mqtt_server[160];
 char mqtt_port[6] = "1883";
 char mqtt_topic[90] = "tele/meter/SENSOR";
 char mqtt_user[40] = "";
 char mqtt_passwd[40] = "";
-char power_path[60] = "";
-char pwr_export_path[60] = "";
-char power_l1_path[60] = "";
-char power_l2_path[60] = "";
-char power_l3_path[60] = "";
-char energy_in_path[60] = "";
-char energy_out_path[60] = "";
+// JSON PATHs for power and energy values in the source data
+char power_path[150] = "";
+char pwr_export_path[150] = "";
+char power_l1_path[150] = "";
+char power_l2_path[150] = "";
+char power_l3_path[150] = "";
+char energy_in_path[150] = "";
+char energy_out_path[150] = "";
+// Shelly API related
 char shelly_gen[2] = "2";
 char shelly_fw_id[32] = "20241011-114455/1.4.4-g6d2a586";
 char shelly_mac[13];
 char shelly_name[26] = "shellypro3em-";
-char query_period[10] = "1000";
-char modbus_dev[10] = "71"; // default for KSEM
-char shelly_port[6] = "2220"; // old: 1010; new (FW>=226): 2220
-char force_pwr_decimals[6] = "true"; // to fix Marstek bug
-bool forcePwrDecimals = true; // to fix Marstek bug
+char shelly_udp_port[6] = "2220"; // old: 1010; new (FW>=226): 2220
+// Modbus related
+char modbus_dev[10] = "71";   // default for KSEM
+// SMA related
 char sma_id[17] = "";
 
 IPAddress modbus_ip;
@@ -133,13 +136,9 @@ WiFiUDP UdpRPC;
 #define UDPPRINT write
 #endif
 
+// use for values in JsonDocument to force 2 decimals in double/float
 double round2(double value) {
-  int ivalue = (int)(value * 100.0 + (value > 0.0 ? 0.5 : -0.5));
-
-  // fix Marstek bug: make sure to have decimal numbers
-  if(forcePwrDecimals && (ivalue % 100 == 0)) ivalue++;
-  
-  return ivalue / 100.0;
+  return (int)(value * 100 + (value > 0.0 ? 0.5 : -0.5)) / 100.0;
 }
 
 JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
@@ -324,27 +323,27 @@ void GetDeviceInfo() {
 void EMGetStatus() {
   JsonDocument jsonResponse;
   jsonResponse["id"] = 0;
-  jsonResponse["a_current"] = PhasePower[0].current;
-  jsonResponse["a_voltage"] = PhasePower[0].voltage;
-  jsonResponse["a_act_power"] = PhasePower[0].power;
-  jsonResponse["a_aprt_power"] = PhasePower[0].apparentPower;
-  jsonResponse["a_pf"] = PhasePower[0].powerFactor;
-  jsonResponse["a_freq"] = PhasePower[0].frequency;
-  jsonResponse["b_current"] = PhasePower[1].current;
-  jsonResponse["b_voltage"] = PhasePower[1].voltage;
-  jsonResponse["b_act_power"] = PhasePower[1].power;
-  jsonResponse["b_aprt_power"] = PhasePower[1].apparentPower;
-  jsonResponse["b_pf"] = PhasePower[1].powerFactor;
-  jsonResponse["b_freq"] = PhasePower[1].frequency;
-  jsonResponse["c_current"] = PhasePower[2].current;
-  jsonResponse["c_voltage"] = PhasePower[2].voltage;
-  jsonResponse["c_act_power"] = PhasePower[2].power;
-  jsonResponse["c_aprt_power"] = PhasePower[2].apparentPower;
-  jsonResponse["c_pf"] = PhasePower[2].powerFactor;
-  jsonResponse["c_freq"] = PhasePower[2].frequency;
-  jsonResponse["total_current"] = round2((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / ((float)defaultVoltage));
-  jsonResponse["total_act_power"] = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
-  jsonResponse["total_aprt_power"] = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
+  jsonResponse["a_current"] = serialized(String(PhasePower[0].current, 2));
+  jsonResponse["a_voltage"] = serialized(String(PhasePower[0].voltage, 2));
+  jsonResponse["a_act_power"] = serialized(String(PhasePower[0].power, 2));
+  jsonResponse["a_aprt_power"] = serialized(String(PhasePower[0].apparentPower, 2));
+  jsonResponse["a_pf"] = serialized(String(PhasePower[0].powerFactor, 2));
+  jsonResponse["a_freq"] = serialized(String(PhasePower[0].frequency, 2));
+  jsonResponse["b_current"] = serialized(String(PhasePower[1].current, 2));
+  jsonResponse["b_voltage"] = serialized(String(PhasePower[1].voltage, 2));
+  jsonResponse["b_act_power"] = serialized(String(PhasePower[1].power, 2));
+  jsonResponse["b_aprt_power"] = serialized(String(PhasePower[1].apparentPower, 2));
+  jsonResponse["b_pf"] = serialized(String(PhasePower[1].powerFactor, 2));
+  jsonResponse["b_freq"] = serialized(String(PhasePower[1].frequency, 2));
+  jsonResponse["c_current"] = serialized(String(PhasePower[2].current, 2));
+  jsonResponse["c_voltage"] = serialized(String(PhasePower[2].voltage, 2));
+  jsonResponse["c_act_power"] = serialized(String(PhasePower[2].power, 2));
+  jsonResponse["c_aprt_power"] = serialized(String(PhasePower[2].apparentPower, 2));
+  jsonResponse["c_pf"] = serialized(String(PhasePower[2].powerFactor, 2));
+  jsonResponse["c_freq"] = serialized(String(PhasePower[2].frequency, 2));
+  jsonResponse["total_current"] = serialized(String((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / defaultVoltage, 2));
+  jsonResponse["total_act_power"] = serialized(String(PhasePower[0].power + PhasePower[1].power + PhasePower[2].power, 2));
+  jsonResponse["total_aprt_power"] = serialized(String(PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower, 2));
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
@@ -353,14 +352,14 @@ void EMGetStatus() {
 void EMDataGetStatus() {
   JsonDocument jsonResponse;
   jsonResponse["id"] = 0;
-  jsonResponse["a_total_act_energy"] = PhaseEnergy[0].consumption;
-  jsonResponse["a_total_act_ret_energy"] = PhaseEnergy[0].gridfeedin;
-  jsonResponse["b_total_act_energy"] = PhaseEnergy[1].consumption;
-  jsonResponse["b_total_act_ret_energy"] = PhaseEnergy[1].gridfeedin;
-  jsonResponse["c_total_act_energy"] = PhaseEnergy[2].consumption;
-  jsonResponse["c_total_act_ret_energy"] = PhaseEnergy[2].gridfeedin;
-  jsonResponse["total_act"] = PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption;
-  jsonResponse["total_act_ret"] = PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin;
+  jsonResponse["a_total_act_energy"] = serialized(String(PhaseEnergy[0].consumption, 2));
+  jsonResponse["a_total_act_ret_energy"] = serialized(String(PhaseEnergy[0].gridfeedin, 2));
+  jsonResponse["b_total_act_energy"] = serialized(String(PhaseEnergy[1].consumption, 2));
+  jsonResponse["b_total_act_ret_energy"] = serialized(String(PhaseEnergy[1].gridfeedin, 2));
+  jsonResponse["c_total_act_energy"] = serialized(String(PhaseEnergy[2].consumption, 2));
+  jsonResponse["c_total_act_ret_energy"] = serialized(String(PhaseEnergy[2].gridfeedin, 2));
+  jsonResponse["total_act"] = serialized(String(PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption, 2));
+  jsonResponse["total_act_ret"] = serialized(String(PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin, 2));
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
@@ -784,15 +783,18 @@ void WifiManagerSetup() {
   sprintf(shelly_mac, "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
   preferences.begin("e2s_config", false);
-  strcpy(input_type, preferences.getString("input_type", input_type).c_str());
-  strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
   strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
   strcpy(timezone, preferences.getString("timezone", timezone).c_str());
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
   strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
   strcpy(led_gpio_i, preferences.getString("led_gpio_i", led_gpio_i).c_str());
   strcpy(shelly_mac, preferences.getString("shelly_mac", shelly_mac).c_str());
+  strcpy(shelly_udp_port, preferences.getString("shelly_udp_port", shelly_udp_port).c_str());
   strcpy(phase_number, preferences.getString("phase_number", phase_number).c_str());
+
+  strcpy(input_type, preferences.getString("input_type", input_type).c_str());
+  // MQTT settings
+  strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
   strcpy(mqtt_port, preferences.getString("mqtt_port", mqtt_port).c_str());
   strcpy(mqtt_topic, preferences.getString("mqtt_topic", mqtt_topic).c_str());
   strcpy(mqtt_user, preferences.getString("mqtt_user", mqtt_user).c_str());
@@ -805,8 +807,6 @@ void WifiManagerSetup() {
   strcpy(power_l3_path, preferences.getString("power_l3_path", power_l3_path).c_str());
   strcpy(energy_in_path, preferences.getString("energy_in_path", energy_in_path).c_str());
   strcpy(energy_out_path, preferences.getString("energy_out_path", energy_out_path).c_str());
-  strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
-  strcpy(force_pwr_decimals, preferences.getString("force_pwr_decimals", force_pwr_decimals).c_str());
   strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
   
   WiFiManagerParameter custom_section1("<h3>General settings</h3>");
@@ -815,13 +815,12 @@ void WifiManagerSetup() {
   WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
   WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 160);
   WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
-  WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
-  WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
-  WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
-  WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
-  WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> for old Marstek FW, <code>2220</code> for new Marstek FW v226+/v108+", shelly_port, 6);
+  WiFiManagerParameter param_query_period("query_period", "Query period <span title=\"for generic HTTP and SUNSPEC, in milliseconds\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", query_period, 10);
+  WiFiManagerParameter param_led_gpio("led_gpio", "GPIO of internal LED <span title=\"GPIO of internal LED\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", led_gpio, 3);
+  WiFiManagerParameter param_led_gpio_i("led_gpio_i", "GPIO is inverted <span title=\"true or false\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", led_gpio_i, 6);
+  WiFiManagerParameter param_shelly_mac("shelly_mac", "Shelly ID (12 char hexadecimal) <span title=\"defaults to MAC address of ESP\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", shelly_mac, 13);
+  WiFiManagerParameter param_shelly_udp_port("shelly_udp_port", "Shelly UDP port <span title=\"1010 for old Marstek FW, 2220 for new Marstek FW v226+/v108+\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", shelly_udp_port, 6);
   WiFiManagerParameter param_phase_number("phase_number", "Number of phases <span title=\"Number of phases (e.g. 1 or 3)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", phase_number, 1);
-  WiFiManagerParameter custom_force_pwr_decimals("force_pwr_decimals", "<b>Force decimals numbers for Power values</b><br><code>true</code> to fix Marstek bug", force_pwr_decimals, 6);
   WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
   WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
   WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", mqtt_topic, 90);
@@ -851,13 +850,12 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&param_ntp_server);
   wifiManager.addParameter(&param_timezone);
-  wifiManager.addParameter(&custom_query_period);
-  wifiManager.addParameter(&custom_led_gpio);
-  wifiManager.addParameter(&custom_led_gpio_i);
-  wifiManager.addParameter(&custom_shelly_mac);
-  wifiManager.addParameter(&custom_shelly_port);
+  wifiManager.addParameter(&param_query_period);
+  wifiManager.addParameter(&param_led_gpio);
+  wifiManager.addParameter(&param_led_gpio_i);
+  wifiManager.addParameter(&param_shelly_mac);
+  wifiManager.addParameter(&param_shelly_udp_port);
   wifiManager.addParameter(&param_phase_number);
-  wifiManager.addParameter(&custom_force_pwr_decimals);
   wifiManager.addParameter(&custom_sma_id);
   wifiManager.addParameter(&custom_section2);
   wifiManager.addParameter(&custom_mqtt_port);
@@ -890,10 +888,11 @@ void WifiManagerSetup() {
   strcpy(mqtt_port, custom_mqtt_port.getValue());
   strcpy(ntp_server, param_ntp_server.getValue());
   strcpy(timezone, param_timezone.getValue());
-  strcpy(query_period, custom_query_period.getValue());
-  strcpy(led_gpio, custom_led_gpio.getValue());
-  strcpy(led_gpio_i, custom_led_gpio_i.getValue());
-  strcpy(shelly_mac, custom_shelly_mac.getValue());
+  strcpy(query_period, param_query_period.getValue());
+  strcpy(led_gpio, param_led_gpio.getValue());
+  strcpy(led_gpio_i, param_led_gpio_i.getValue());
+  strcpy(shelly_mac, param_shelly_mac.getValue());
+  strcpy(shelly_udp_port, param_shelly_udp_port.getValue());
   strcpy(phase_number, param_phase_number.getValue());
   strcpy(mqtt_topic, custom_mqtt_topic.getValue());
   strcpy(mqtt_user, custom_mqtt_user.getValue());
@@ -906,8 +905,6 @@ void WifiManagerSetup() {
   strcpy(power_l3_path, custom_power_l3_path.getValue());
   strcpy(energy_in_path, custom_energy_in_path.getValue());
   strcpy(energy_out_path, custom_energy_out_path.getValue());
-  strcpy(shelly_port, custom_shelly_port.getValue());
-  strcpy(force_pwr_decimals, custom_force_pwr_decimals.getValue());
   strcpy(sma_id, custom_sma_id.getValue());
 
   DEBUG_SERIAL.println("The values in the preferences are: ");
@@ -916,10 +913,11 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tmqtt_port : " + String(mqtt_port));
   DEBUG_SERIAL.println("  ntp_server: " + String(ntp_server));
   DEBUG_SERIAL.println("  timezone: " + String(timezone));
-  DEBUG_SERIAL.println("\tquery_period : " + String(query_period));
-  DEBUG_SERIAL.println("\tled_gpio : " + String(led_gpio));
-  DEBUG_SERIAL.println("\tled_gpio_i : " + String(led_gpio_i));
-  DEBUG_SERIAL.println("\tshelly_mac : " + String(shelly_mac));
+  DEBUG_SERIAL.println("  query_period: " + String(query_period));
+  DEBUG_SERIAL.println("  led_gpio: " + String(led_gpio));
+  DEBUG_SERIAL.println("  led_gpio_i: " + String(led_gpio_i));
+  DEBUG_SERIAL.println("  shelly_mac: " + String(shelly_mac));
+  DEBUG_SERIAL.println("  shelly_udp_port: " + String(shelly_udp_port));
   DEBUG_SERIAL.println("  phase_number: " + String(phase_number));
   DEBUG_SERIAL.println("\tmqtt_topic : " + String(mqtt_topic));
   DEBUG_SERIAL.println("\tmqtt_user : " + String(mqtt_user));
@@ -932,8 +930,6 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tpower_l3_path : " + String(power_l3_path));
   DEBUG_SERIAL.println("\tenergy_in_path : " + String(energy_in_path));
   DEBUG_SERIAL.println("\tenergy_out_path : " + String(energy_out_path));
-  DEBUG_SERIAL.println("\tshelly_port : " + String(shelly_port));
-  DEBUG_SERIAL.println("\tforce_pwr_decimals : " + String(force_pwr_decimals));
   DEBUG_SERIAL.println("\tsma_id : " + String(sma_id));
 
   if (strcmp(input_type, "MQTT") == 0) {
@@ -959,12 +955,6 @@ void WifiManagerSetup() {
     led_i = false;
   }
 
-  if (strcmp(force_pwr_decimals, "true") == 0) {
-    forcePwrDecimals = true;
-  } else {
-    forcePwrDecimals = false;
-  }
-
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println("saving config");
     preferences.putString("input_type", input_type);
@@ -976,6 +966,7 @@ void WifiManagerSetup() {
     preferences.putString("led_gpio", led_gpio);
     preferences.putString("led_gpio_i", led_gpio_i);
     preferences.putString("shelly_mac", shelly_mac);
+    preferences.putString("shelly_udp_port", shelly_udp_port);
     preferences.putString("phase_number", phase_number);
     preferences.putString("mqtt_topic", mqtt_topic);
     preferences.putString("mqtt_user", mqtt_user);
@@ -988,8 +979,6 @@ void WifiManagerSetup() {
     preferences.putString("power_l3_path", power_l3_path);
     preferences.putString("energy_in_path", energy_in_path);
     preferences.putString("energy_out_path", energy_out_path);
-    preferences.putString("shelly_port", shelly_port);
-    preferences.putString("force_pwr_decimals", force_pwr_decimals);
     preferences.putString("sma_id", sma_id);
     wifiManager.reboot();
   }
@@ -1077,7 +1066,7 @@ void setup(void) {
   server.begin();
 
   // Set up RPC over UDP for Marstek users
-  UdpRPC.begin(String(shelly_port).toInt()); 
+  UdpRPC.begin(String(shelly_udp_port).toInt()); 
 
   // Set up MQTT
   if (dataMQTT) {
@@ -1103,6 +1092,7 @@ void setup(void) {
 
   // Set Up Modbus TCP for SUNSPEC register query
   if (dataSUNSPEC) {
+    period = atol(query_period);
     modbus1.client();
     modbus_ip.fromString(mqtt_server);
     if (!modbus1.isConnected(modbus_ip)) {  // reuse mqtt server adresss for modbus adress
