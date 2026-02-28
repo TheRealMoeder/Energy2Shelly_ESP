@@ -685,7 +685,7 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
             scriptList();
             rpcWrapper();
             webSocket.textAll(serJsonResponse);
-          } else if (json["method"] == "Wifi.GetStatus") {
+          } else if (json["method"] == "WiFi.GetStatus") {
             wifiGetStatus();
             rpcWrapper();
             webSocket.textAll(serJsonResponse);
@@ -1542,7 +1542,7 @@ void setup(void) {
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/rpc/Wifi.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/rpc/WiFi.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
     wifiGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
