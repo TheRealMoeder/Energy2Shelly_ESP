@@ -305,17 +305,17 @@ String processor(const String &var) {
 // ============================================================================
 
 void handleConfig(AsyncWebServerRequest *request) {
-  DEBUG_SERIAL.println("Config page requested");
-  DEBUG_SERIAL.print("Free heap before: ");
+  DEBUG_SERIAL.println(F("Config page requested"));
+  DEBUG_SERIAL.print(F("Free heap before: "));
   DEBUG_SERIAL.println(ESP.getFreeHeap());
 
   // Debug: print current configuration values
-  DEBUG_SERIAL.println("Current config values:");
-  DEBUG_SERIAL.print("  input_type: "); DEBUG_SERIAL.println(input_type);
-  DEBUG_SERIAL.print("  mqtt_server: "); DEBUG_SERIAL.println(mqtt_server);
-  DEBUG_SERIAL.print("  power_path: "); DEBUG_SERIAL.println(power_path);
-  DEBUG_SERIAL.print("  power_l1_path: "); DEBUG_SERIAL.println(power_l1_path);
-  DEBUG_SERIAL.print("  energy_in_path: "); DEBUG_SERIAL.println(energy_in_path);
+  DEBUG_SERIAL.println(F("Current config values:"));
+  DEBUG_SERIAL.print(F("  input_type: ")); DEBUG_SERIAL.println(input_type);
+  DEBUG_SERIAL.print(F("  mqtt_server: ")); DEBUG_SERIAL.println(mqtt_server);
+  DEBUG_SERIAL.print(F("  power_path: ")); DEBUG_SERIAL.println(power_path);
+  DEBUG_SERIAL.print(F("  power_l1_path: ")); DEBUG_SERIAL.println(power_l1_path);
+  DEBUG_SERIAL.print(F("  energy_in_path: ")); DEBUG_SERIAL.println(energy_in_path);
 
   // Build HTML with dynamic values
   String html = "";
@@ -399,18 +399,18 @@ void handleConfig(AsyncWebServerRequest *request) {
   // Add footer with export/import functionality from template
   html += FPSTR(CONFIG_FOOTER);
 
-  request->send(200, "text/html", html);
+  request->send(200, F("text/html"), html);
 
-  DEBUG_SERIAL.println("Config page sent");
-  DEBUG_SERIAL.print("Free heap after: ");
+  DEBUG_SERIAL.println(F("Config page sent"));
+  DEBUG_SERIAL.print(F("Free heap after: "));
   DEBUG_SERIAL.println(ESP.getFreeHeap());
 }
 
 void handleSave(AsyncWebServerRequest *request) {
   // CSRF protection: verify request came from this device
   if (!validateCsrfToken(request)) {
-    DEBUG_SERIAL.println("CSRF attempt blocked on /save endpoint");
-    request->send(403, "text/plain", "Forbidden: Invalid request origin");
+    DEBUG_SERIAL.println(F("CSRF attempt blocked on /save endpoint"));
+    request->send(403, F("text/plain"), F("Forbidden: Invalid request origin"));
     return;
   }
 
@@ -462,10 +462,10 @@ void handleSave(AsyncWebServerRequest *request) {
   // Save all settings to Preferences
   saveConfiguration();
 
-  DEBUG_SERIAL.println("Configuration saved, device will reboot");
+  DEBUG_SERIAL.println(F("Configuration saved, device will reboot"));
 
   // Send success page from template
-  request->send(200, "text/html", FPSTR(HTML_SAVE_SUCCESS));
+  request->send(200, F("text/html"), FPSTR(HTML_SAVE_SUCCESS));
 
   shouldReboot = true;
 }
@@ -514,5 +514,5 @@ void handleExportConfig(AsyncWebServerRequest *request) {
   String jsonString;
   serializeJson(jsonConfig, jsonString);
 
-  request->send(200, "application/json", jsonString);
+  request->send(200, F("application/json"), jsonString);
 }

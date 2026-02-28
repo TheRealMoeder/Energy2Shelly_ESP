@@ -125,7 +125,7 @@ MDNSResponder::hMDNSService hMDNSService2 = 0; // handle of the shelly service i
 
 // callback notifying us of the need to save WifiManager config
 void saveConfigCallback() {
-  DEBUG_SERIAL.println("Should save config");
+  DEBUG_SERIAL.println(F("Should save config"));
   shouldSaveConfig = true;
 }
 
@@ -218,7 +218,7 @@ void saveConfiguration() {
 // ============================================================================
 
 void WifiManagerSetup() {
-  DEBUG_SERIAL.println("DEBUG: WifiManagerSetup() START");
+  DEBUG_SERIAL.println(F("DEBUG: WifiManagerSetup() START"));
 
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
@@ -226,14 +226,14 @@ void WifiManagerSetup() {
   sprintf(shelly_mac, "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2],
           mac[3], mac[4], mac[5]);
 
-  DEBUG_SERIAL.println("DEBUG: About to call preferences.begin()");
+  DEBUG_SERIAL.println(F("DEBUG: About to call preferences.begin()"));
   loadConfiguration();
-  DEBUG_SERIAL.println("DEBUG: preferences.begin() done, now loading values");
+  DEBUG_SERIAL.println(F("DEBUG: preferences.begin() done, now loading values"));
 
   // Load all preferences first - avoid any network operations during loading
-  DEBUG_SERIAL.print("DEBUG: loaded input_type=");
+  DEBUG_SERIAL.print(F("DEBUG: loaded input_type="));
   DEBUG_SERIAL.println(input_type);
-  DEBUG_SERIAL.print("DEBUG: loaded mqtt_server=");
+  DEBUG_SERIAL.print(F("DEBUG: loaded mqtt_server="));
   DEBUG_SERIAL.println(mqtt_server);
 
   // WiFi-only initial setup - all other configuration is done via web interface
@@ -262,44 +262,42 @@ void WifiManagerSetup() {
 
   // All other parameters removed - configure via web interface at /config
 
-  DEBUG_SERIAL.println("DEBUG: About to call wifiManager.autoConnect()");
+  DEBUG_SERIAL.println(F("DEBUG: About to call wifiManager.autoConnect()"));
   // Only attempt WiFiManager if configuration is invalid or incomplete
   bool needsConfiguration = (input_type[0] == '\0' || mqtt_server[0] == '\0');
   if (needsConfiguration) {
-    DEBUG_SERIAL.println(
-        "DEBUG: Configuration incomplete, running WiFiManager.autoConnect()");
+    DEBUG_SERIAL.println(F("DEBUG: Configuration incomplete, running WiFiManager.autoConnect()"));
     if (!wifiManager.autoConnect("Energy2Shelly")) {
-      DEBUG_SERIAL.println("failed to connect and hit timeout");
+      DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
       delay(3000);
       ESP.restart();
       delay(5000);
     }
-    DEBUG_SERIAL.println("DEBUG: wifiManager.autoConnect() completed");
+    DEBUG_SERIAL.println(F("DEBUG: wifiManager.autoConnect() completed"));
   } else {
-    DEBUG_SERIAL.println(
-        "DEBUG: Configuration complete, attempting normal WiFi connection");
+    DEBUG_SERIAL.println(F("DEBUG: Configuration complete, attempting normal WiFi connection"));
     WiFi.mode(WIFI_STA);
     WiFi.begin();
     int timeout = 20;
     while (WiFi.status() != WL_CONNECTED && timeout--) {
       delay(500);
-      DEBUG_SERIAL.print(".");
+      DEBUG_SERIAL.print(F("."));
     }
     if (WiFi.status() != WL_CONNECTED) {
-      DEBUG_SERIAL.println("\nFailed to connect, entering WiFiManager");
+      DEBUG_SERIAL.println(F("\nFailed to connect, entering WiFiManager"));
       if (!wifiManager.autoConnect("Energy2Shelly")) {
-        DEBUG_SERIAL.println("failed to connect and hit timeout");
+        DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
         delay(3000);
         ESP.restart();
       }
     }
   }
-  DEBUG_SERIAL.println("connected");
+  DEBUG_SERIAL.println(F("connected"));
 
   // Configuration is loaded from Preferences only (not from WiFiManager)
   // All configuration is done via web interface at /config after initial WiFi setup
 
-  DEBUG_SERIAL.println("The values in the preferences are: ");
+  DEBUG_SERIAL.println(F("The values in the preferences are: "));
   DEBUG_SERIAL.printf("\tinput_type : %s\n", input_type);
   DEBUG_SERIAL.printf("\tmqtt_server : %s\n", mqtt_server);
   DEBUG_SERIAL.printf("\tmqtt_port : %s\n", mqtt_port);
@@ -324,43 +322,40 @@ void WifiManagerSetup() {
 
   if (strcmp(input_type, "SMA") == 0) {
     dataSMA = true;
-    DEBUG_SERIAL.println("Enabling SMA Multicast data input");
+    DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
   } else if (strcmp(input_type, "SHRDZM") == 0) {
     dataSHRDZM = true;
-    DEBUG_SERIAL.println("Enabling SHRDZM UDP data input");
+    DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
   } else if (strcmp(input_type, "HTTP") == 0) {
     if (mqtt_server[0] != '\0') {
       dataHTTP = true;
-      DEBUG_SERIAL.println("Enabling generic HTTP data input");
+      DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
     } else {
-      DEBUG_SERIAL.println(
-          "HTTP server not configured - disabling HTTP data input");
+      DEBUG_SERIAL.println(F("HTTP server not configured - disabling HTTP data input"));
     }
   } else if (strcmp(input_type, "SUNSPEC") == 0) {
     if (mqtt_server[0] != '\0') {
       dataSUNSPEC = true;
-      DEBUG_SERIAL.println("Enabling SUNSPEC data input");
+      DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
     } else {
-      DEBUG_SERIAL.println(
-          "SUNSPEC server not configured - disabling SUNSPEC data input");
+      DEBUG_SERIAL.println(F("SUNSPEC server not configured - disabling SUNSPEC data input"));
     }
   } else {
     if (mqtt_server[0] != '\0') {
       dataMQTT = true;
-      DEBUG_SERIAL.println("Enabling MQTT data input");
+      DEBUG_SERIAL.println(F("Enabling MQTT data input"));
     } else {
-      DEBUG_SERIAL.println(
-          "MQTT server not configured - disabling MQTT data input");
+      DEBUG_SERIAL.println(F("MQTT server not configured - disabling MQTT data input"));
     }
   }
 
   led_i = ledInverted;
 
   if (shouldSaveConfig) {
-    DEBUG_SERIAL.println("saving config");
+    DEBUG_SERIAL.println(F("saving config"));
     saveConfiguration();
     wifiManager.reboot();
   }
-  DEBUG_SERIAL.println("local ip");
+  DEBUG_SERIAL.println(F("local ip"));
   DEBUG_SERIAL.println(WiFi.localIP());
 }

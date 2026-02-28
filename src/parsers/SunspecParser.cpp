@@ -2,6 +2,26 @@
 #include "../data/DataStructures.h"
 #include "../data/DataProcessor.h"
 
+// FIX: Moved #defines out of function body to file scope.
+// Defining macros inside a function is legal but misleading - they persist
+// beyond the function scope. File-scope placement is clearer and correct.
+#define SUNSPEC_BASE                  40072
+#define SUNSPEC_CURRENT               40072
+#define SUNSPEC_CURRENT_SCALE         40075
+#define SUNSPEC_VOLTAGE               40077
+#define SUNSPEC_VOLTAGE_SCALE         40084
+#define SUNSPEC_FREQUENCY             40085
+#define SUNSPEC_FREQUENCY_SCALE       40086
+#define SUNSPEC_REAL_POWER            40088
+#define SUNSPEC_REAL_POWER_SCALE      40091
+#define SUNSPEC_APPARANT_POWER        40093
+#define SUNSPEC_APPARANT_POWER_SCALE  40096
+#define SUNSPEC_POWER_FACTOR          40103
+#define SUNSPEC_POWER_FACTOR_SCALE    40106
+#define SUNSPEC_REAL_ENERGY_EXPORTED  40109
+#define SUNSPEC_REAL_IMPORTED_EXPORTED 40117
+#define SUNSPEC_REAL_ENERGY_SCALE     40123
+
 // Scale factor conversion for Sunspec Modbus registers
 double SUNSPEC_scale(int n) {
   double val = 1.0;
@@ -34,20 +54,6 @@ double SUNSPEC_scale(int n) {
 void parseSUNSPEC() {
   DEBUG_SERIAL.printf("DEBUG: parseSUNSPEC() called, server=%s\n", mqtt_server);
 
-#define SUNSPEC_BASE 40072
-#define SUNSPEC_VOLTAGE 40077
-#define SUNSPEC_VOLTAGE_SCALE 40084
-#define SUNSPEC_REAL_POWER 40088
-#define SUNSPEC_REAL_POWER_SCALE 40091
-#define SUNSPEC_APPARANT_POWER 40093
-#define SUNSPEC_APPARANT_POWER_SCALE 40096
-#define SUNSPEC_CURRENT 40072
-#define SUNSPEC_CURRENT_SCALE 40075
-#define SUNSPEC_POWER_FACTOR 40103
-#define SUNSPEC_POWER_FACTOR_SCALE 40106
-#define SUNSPEC_FREQUENCY 40085
-#define SUNSPEC_FREQUENCY_SCALE 40086
-
   if (mqtt_server[0] == '\0') {
     return;
   }
@@ -58,15 +64,21 @@ void parseSUNSPEC() {
     uint16_t transaction =
         modbus1.readHreg(modbus_ip, SUNSPEC_BASE, (uint16_t *)&modbus_result[0],
                          64, nullptr, modbusDeviceId);
-    delay(10);
+
+    // FIX: Replaced delay(10) + busy-wait with yield()-based polling.
+    // The original delay(10) blocked the CPU entirely, starving the WiFi stack,
+    // WebSocket and MQTT handlers. yield() processes background tasks instead.
+    // parseSUNSPEC() is called from loop() on a timer, so the overall polling
+    // interval is preserved - only the blocking within each call is eliminated.
     modbus1.task();
+    yield();
     int t = 0;
     while (modbus1.isTransaction(transaction)) {
       modbus1.task();
-      delay(10);
+      yield();
       t++;
       if (t > 50) {
-        DEBUG_SERIAL.println("Timeout SUNSPEC");
+        DEBUG_SERIAL.println(F("Timeout SUNSPEC"));
         modbus1.disconnect(modbus_ip);
         break;
       }
@@ -105,9 +117,6 @@ void parseSUNSPEC() {
         power += PhasePower[n].power;
       }
 
-#define SUNSPEC_REAL_ENERGY_EXPORTED 40109
-#define SUNSPEC_REAL_IMPORTED_EXPORTED 40117
-#define SUNSPEC_REAL_ENERGY_SCALE 40123
       double scale_real_energy = SUNSPEC_scale(
           modbus_result[SUNSPEC_REAL_ENERGY_SCALE - SUNSPEC_BASE]);
       for (int n = 0; n < 3; n++) {

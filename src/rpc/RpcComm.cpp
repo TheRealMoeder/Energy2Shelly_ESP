@@ -69,7 +69,7 @@ void parseUdpRPC() {
   if (packetSize) {
     int rSize = UdpRPC.read(networkBuffer, 1024);
     networkBuffer[rSize] = 0;
-    DEBUG_SERIAL.print("Received UDP packet on port 1010: ");
+    DEBUG_SERIAL.print(F("Received UDP packet on port 1010: "));
     DEBUG_SERIAL.println((char *)networkBuffer);
     deserializeJson(globalJsonDoc, networkBuffer);
     if (globalJsonDoc["method"].is<JsonVariant>()) {

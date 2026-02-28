@@ -1,3 +1,5 @@
+
+                
 // Energy2Shelly_ESP v0.5.2
 // Main orchestration - delegates to modular components
 
@@ -49,12 +51,12 @@ extern void mqtt_reconnect();
 void setup(void) {
   // Serial initialization for debugging
   DEBUG_SERIAL.begin(115200);
-  DEBUG_SERIAL.println("\n\n=== SETUP START ===");
-  DEBUG_SERIAL.println("About to call WifiManagerSetup()");
+  DEBUG_SERIAL.println(F("\n\n=== SETUP START ==="));
+  DEBUG_SERIAL.println(F("About to call WifiManagerSetup()"));
 
   // WiFi & Configuration initialization
   WifiManagerSetup();
-  DEBUG_SERIAL.println("WifiManagerSetup() completed");
+  DEBUG_SERIAL.println(F("WifiManagerSetup() completed"));
 
   // LED setup
   led = ledGpioInt;
@@ -73,81 +75,81 @@ void setup(void) {
 
   // Home page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/html", FPSTR(HTML_HOME));
+    request->send(200, F("text/html"), FPSTR(HTML_HOME));
   });
 
   // Configuration page - more specific routes first
   server.on("/config/export", HTTP_GET, handleExportConfig);
   server.on("/config", HTTP_GET, handleConfig);
   server.on("/save", HTTP_POST, handleSave);
-  DEBUG_SERIAL.println("Config routes registered");
+  DEBUG_SERIAL.println(F("Config routes registered"));
 
   // Test endpoint to verify server is working
   server.on("/test", HTTP_GET, [](AsyncWebServerRequest *request) {
-    DEBUG_SERIAL.println("Test endpoint hit");
-    request->send(200, "text/plain", "Server is working!");
+    DEBUG_SERIAL.println(F("Test endpoint hit"));
+    request->send(200, F("text/plain"), F("Server is working!"));
   });
 
   // Status endpoint
   server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetStatus();
-    request->send(200, "application/json", serJsonResponse);
+    request->send(200, F("application/json"), serJsonResponse);
   });
 
   // Reset WiFi configuration (GET - show confirmation)
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/html", FPSTR(HTML_RESET));
+    request->send(200, F("text/html"), FPSTR(HTML_RESET));
   });
 
   // Reset WiFi configuration (POST - perform reset)
   server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
     // CSRF protection: verify request came from this device
     if (!validateCsrfToken(request)) {
-      DEBUG_SERIAL.println("CSRF attempt blocked on /reset endpoint");
-      request->send(403, "text/plain", "Forbidden: Invalid request origin");
+      DEBUG_SERIAL.println(F("CSRF attempt blocked on /reset endpoint"));
+      request->send(403, F("text/plain"), F("Forbidden: Invalid request origin"));
       return;
     }
 
     shouldResetConfig = true;
-    request->send(200, "text/plain",
-                  "Resetting WiFi configuration, please log back into the "
-                  "hotspot to reconfigure...\r\n");
+    request->send(200, F("text/plain"),
+                  F("Resetting WiFi configuration, please log back into the "
+                    "hotspot to reconfigure...\r\n"));
   });
 
   // RPC endpoints (REST-style)
   server.on("/rpc/EM.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetStatus();
-    request->send(200, "application/json", serJsonResponse);
+    request->send(200, F("application/json"), serJsonResponse);
   });
 
   server.on("/rpc/EMData.GetStatus", HTTP_GET,
             [](AsyncWebServerRequest *request) {
               EMDataGetStatus();
-              request->send(200, "application/json", serJsonResponse);
+              request->send(200, F("application/json"), serJsonResponse);
             });
 
   server.on("/rpc/EM.GetConfig", HTTP_GET,
             [](AsyncWebServerRequest *request) {
               EMGetConfig();
-              request->send(200, "application/json", serJsonResponse);
+              request->send(200, F("application/json"), serJsonResponse);
             });
 
   server.on("/rpc/Shelly.GetDeviceInfo", HTTP_GET,
             [](AsyncWebServerRequest *request) {
               GetDeviceInfo();
-              request->send(200, "application/json", serJsonResponse);
+              request->send(200, F("application/json"), serJsonResponse);
             });
 
   // Generic RPC POST endpoint
   server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {
     GetDeviceInfo();
     rpcWrapper();
-    request->send(200, "application/json", serJsonResponse);
+    request->send(200, F("application/json"), serJsonResponse);
   });
 
   // Favicon endpoint
   server.on("/favicon.svg", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "image/svg+xml", FPSTR(SVG_FAVICON));
+    request->send(200, F("image/svg+xml"), FPSTR(SVG_FAVICON));
   });
 
   // WebSocket handler for RPC
@@ -155,8 +157,8 @@ void setup(void) {
   server.addHandler(&webSocket);
   server.begin();
 
-  DEBUG_SERIAL.println("Web server started successfully");
-  DEBUG_SERIAL.print("Access at: http://");
+  DEBUG_SERIAL.println(F("Web server started successfully"));
+  DEBUG_SERIAL.print(F("Access at: http://"));
   DEBUG_SERIAL.println(WiFi.localIP());
 
   // ========================================================================
@@ -181,7 +183,7 @@ void setup(void) {
       mqtt_client.setCallback(mqtt_callback);
       mqtt_configured = true;
     } else {
-      DEBUG_SERIAL.println("MQTT server not configured - skipping MQTT setup");
+      DEBUG_SERIAL.println(F("MQTT server not configured - skipping MQTT setup"));
       dataMQTT = false;
       mqtt_configured = false;
     }
@@ -205,15 +207,14 @@ void setup(void) {
   // SUNSPEC Modbus TCP setup
   if (dataSUNSPEC) {
     if (mqtt_server[0] == '\0') {
-      DEBUG_SERIAL.println(
-          "SUNSPEC server not configured - skipping SUNSPEC setup");
+      DEBUG_SERIAL.println(F("SUNSPEC server not configured - skipping SUNSPEC setup"));
       dataSUNSPEC = false;
     } else {
       modbus1.client();
       modbus_ip.fromString(mqtt_server);
       if (!modbus1.isConnected(modbus_ip)) {
         modbus1.connect(modbus_ip, mqttPortInt);
-        DEBUG_SERIAL.println("Trying to connect SUNSPEC powermeter data");
+        DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
       }
     }
   }
@@ -228,7 +229,7 @@ void setup(void) {
   // mDNS setup
   setupMdns();
 
-  DEBUG_SERIAL.println("=== SETUP COMPLETE ===");
+  DEBUG_SERIAL.println(F("=== SETUP COMPLETE ==="));
 }
 
 // ============================================================================
@@ -236,10 +237,16 @@ void setup(void) {
 // ============================================================================
 
 void loop() {
-  // Handle reboot request
+  // FIX: Call millis() once per loop iteration and reuse the value everywhere.
+  // Avoids redundant calls and ensures consistent timestamps within one cycle.
+  currentMillis = millis();
+
+  // FIX: Non-blocking reboot - replaces delay(1000) which starved networking.
+  // Sets a future timestamp on first trigger, restarts only when time has elapsed.
   if (shouldReboot) {
-    delay(1000);
-    ESP.restart();
+    static unsigned long rebootAt = 0;
+    if (rebootAt == 0) rebootAt = currentMillis + 1000;
+    if (currentMillis >= rebootAt) ESP.restart();
   }
 
   // ESP8266 mDNS update
@@ -250,15 +257,18 @@ void loop() {
   // UDP RPC polling (Marstek)
   parseUdpRPC();
 
-  // Handle reset request
+  // FIX: Non-blocking reset - same pattern as reboot above.
   if (shouldResetConfig) {
+    static unsigned long resetAt = 0;
+    if (resetAt == 0) resetAt = currentMillis + 1000;
+    if (currentMillis >= resetAt) {
 #ifdef ESP32
-    WiFi.disconnect(true, true);
+      WiFi.disconnect(true, true);
 #else
-    WiFi.disconnect(true);
+      WiFi.disconnect(true);
 #endif
-    delay(1000);
-    ESP.restart();
+      ESP.restart();
+    }
   }
 
   // MQTT handling
@@ -280,8 +290,8 @@ void loop() {
   }
 
   // SUNSPEC Modbus polling (periodic)
+  // FIX: Reuses currentMillis captured at top of loop instead of calling millis() again.
   if (dataSUNSPEC) {
-    currentMillis = millis();
     if (currentMillis - startMillis_sunspec >= period) {
       parseSUNSPEC();
       startMillis_sunspec = currentMillis;
@@ -289,8 +299,8 @@ void loop() {
   }
 
   // HTTP query polling (periodic)
+  // FIX: Same - reuses currentMillis, no redundant millis() call.
   if (dataHTTP) {
-    currentMillis = millis();
     if (currentMillis - startMillis >= period) {
       queryHTTP();
       startMillis = currentMillis;
@@ -299,4 +309,15 @@ void loop() {
 
   // LED blinking
   handleblinkled();
+
+  // FIX: Periodic WebSocket cleanup to free memory from stale/disconnected clients.
+  // Critical for long-running ESP devices to prevent heap fragmentation.
+  webSocket.cleanupClients();
+
+  // FIX: yield() on ESP8266 feeds the watchdog timer and allows the WiFi stack
+  // to process background tasks. Prevents random resets under heavy load.
+  // Not needed on ESP32 which uses FreeRTOS and manages this automatically.
+#ifndef ESP32
+  yield();
+#endif
 }

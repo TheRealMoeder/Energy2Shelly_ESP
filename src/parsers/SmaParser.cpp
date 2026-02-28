@@ -9,7 +9,7 @@ void parseSMA() {
     int rSize = Udp.read(networkBuffer, 1024);
     if (networkBuffer[0] != 'S' || networkBuffer[1] != 'M' ||
         networkBuffer[2] != 'A') {
-      DEBUG_SERIAL.println("Not an SMA packet?");
+      DEBUG_SERIAL.println(F("Not an SMA packet?"));
       return;
     }
     uint16_t grouplen;
@@ -31,10 +31,10 @@ void parseSMA() {
         offset += 2;
         uint32_t serial = (offset[0] << 24) + (offset[1] << 16) +
                           (offset[2] << 8) + offset[3];
-        DEBUG_SERIAL.print("Received SMA multicast from ");
+        DEBUG_SERIAL.print(F("Received SMA multicast from "));
         DEBUG_SERIAL.println(serial);
         if ((sma_id[0] != '\0') && (atoi(sma_id) != serial)) {
-          DEBUG_SERIAL.println("SMA serial not matching - ignoring packet");
+          DEBUG_SERIAL.println(F("SMA serial not matching - ignoring packet"));
           break;
         }
         offset += 4;
@@ -159,16 +159,16 @@ void parseSMA() {
             offset += 4;
           } else {
             offset += type;
-            DEBUG_SERIAL.println("Unknown measurement");
+            DEBUG_SERIAL.println(F("Unknown measurement"));
           }
         }
       } else if (grouptag == 0) {
         // end marker
         offset += grouplen;
       } else {
-        DEBUG_SERIAL.print("unhandled group ");
+        DEBUG_SERIAL.print(F("unhandled group "));
         DEBUG_SERIAL.print(grouptag);
-        DEBUG_SERIAL.print(" with len=");
+        DEBUG_SERIAL.print(F(" with len="));
         DEBUG_SERIAL.println(grouplen);
         offset += grouplen;
       }

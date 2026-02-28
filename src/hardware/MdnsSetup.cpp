@@ -6,7 +6,7 @@ void setupMdns() {
           sizeof(shelly_name) - strlen(shelly_name) - 1);
 
   if (!MDNS.begin(shelly_name)) {
-    DEBUG_SERIAL.println("Error setting up MDNS responder!");
+    DEBUG_SERIAL.println(F("Error setting up MDNS responder!"));
   }
 
 #ifdef ESP32
@@ -40,5 +40,5 @@ void setupMdns() {
     MDNS.addServiceTxt(hMDNSService2, "gen", shelly_gen);
   }
 #endif
-  DEBUG_SERIAL.println("mDNS responder started");
+  DEBUG_SERIAL.println(F("mDNS responder started"));
 }
