@@ -740,6 +740,50 @@ void parseUdpRPC() {
   }
 }
 
+void parseHttpRPC(String requestBody, AsyncWebServerRequest *request) {
+  if (request && requestBody) {
+    JsonDocument json;
+    DEBUG_SERIAL.print("Received HTTP RPC request: ");
+    DEBUG_SERIAL.println(requestBody);
+    deserializeJson(json, requestBody);
+    if (json["method"].is<JsonVariant>()) {
+      rpcId = json["id"];
+      // strcpy(rpcUser, "EMPTY");
+      if (json["method"] == "Shelly.GetDeviceInfo") {
+        shellyGetDeviceInfo();
+        rpcWrapper();
+        request->send(200, "application/json", serJsonResponse);
+      } else if (json["method"] == "Shelly.GetComponents") {
+        shellyGetComponents();
+        rpcWrapper();
+        request->send(200, "application/json", serJsonResponse);
+      } else if (json["method"] == "Shelly.GetConfig") {
+        shellyGetConfig();
+        rpcWrapper();
+        request->send(200, "application/json", serJsonResponse);
+      } else if (json["method"] == "Shelly.GetStatus") {
+        shellyGetStatus();
+        rpcWrapper();
+        request->send(200, "application/json", serJsonResponse);
+      } else if (json["method"] == "EM.GetStatus") {
+        EMGetStatus();
+        rpcWrapper();
+        request->send(200, "application/json", serJsonResponse);
+      } else if (json["method"] == "EMData.GetStatus") {
+        EMDataGetStatus();
+        rpcWrapper();
+        request->send(200, "application/json", serJsonResponse);
+      } else if (json["method"] == "EM.GetConfig") {
+        EMGetConfig();
+        rpcWrapper();
+        request->send(200, "application/json", serJsonResponse);
+      } else {
+        DEBUG_SERIAL.printf("RPC over HTTP: unknown request: %s\n", requestBody);
+      }
+    }
+  }
+}
+
 void parseSMA() {
   uint8_t buffer[1024];
   int packetSize = Udp.parsePacket();
@@ -1426,8 +1470,26 @@ void setup(void) {
     }
   });
 
-  // Shelly RPC endpoints
+  // Shelly RPC endpoint called via HTTP POST method with JSON-RPC body
+  server.on("/rpc", HTTP_POST,
+    [](AsyncWebServerRequest *request) {},
+    nullptr,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+      String rpcRequestBuffer;
+      if (index == 0) {
+        // New request, clear buffer
+        rpcRequestBuffer = "";
+      }
+      // Append incoming data chunk to buffer
+      rpcRequestBuffer += String((char *)data).substring(0, len);
+      if (index + len >= total) {
+        // All data received, process RPC request
+        parseHttpRPC(rpcRequestBuffer, request);
+      }
+    }
+  );
 
+  // Shelly RPC endpoints called via HTTP GET method
   server.on("/rpc/EM.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetConfig();
     request->send(200, "application/json", serJsonResponse);
