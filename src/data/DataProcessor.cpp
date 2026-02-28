@@ -167,15 +167,12 @@ void setJsonPathPower(JsonDocument json) {
 
     // Apply negation if configured
     if (negate_power_l1_path){ 
-      DEBUG_SERIAL.println(F("Negating power1.................."));
       power1 = -power1;
     }
     if (negate_power_l2_path) {
-      DEBUG_SERIAL.println(F("Negating power2.................."));
       power2 = -power2;
     }
     if (negate_power_l3_path) {
-      DEBUG_SERIAL.println(F("Negating power3.................."));
       power3 = -power3;
     }
 
@@ -234,11 +231,9 @@ void setJsonPathPower(JsonDocument json) {
 
     // Apply negation if configured
     if (negate_energy_in_path){ 
-      DEBUG_SERIAL.println(F("Negating energyIn.................."));
       energyIn = -energyIn;
     }
     if (negate_energy_out_path)   {
-      DEBUG_SERIAL.println(F("Negating energyOut.................."));
       energyOut = -energyOut;
     }
     DEBUG_SERIAL.print(F("Resolved values - energyIn: "));
