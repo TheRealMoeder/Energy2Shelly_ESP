@@ -157,6 +157,12 @@ void setJsonPathPower(JsonDocument json) {
     double power1 = resolveJsonPath(json, power_l1_path).as<double>();
     double power2 = resolveJsonPath(json, power_l2_path).as<double>();
     double power3 = resolveJsonPath(json, power_l3_path).as<double>();
+
+    // Apply negation if configured
+    if (negate_power_l1_path) power1 = -power1;
+    if (negate_power_l2_path) power2 = -power2;
+    if (negate_power_l3_path) power3 = -power3;
+
     DEBUG_SERIAL.print("TRIPHASE powers: L1=");
     DEBUG_SERIAL.print(power1);
     DEBUG_SERIAL.print(", L2=");
@@ -171,6 +177,11 @@ void setJsonPathPower(JsonDocument json) {
       DEBUG_SERIAL.println("Resolving net power (import - export)");
       double importPower = resolveJsonPath(json, power_path).as<double>();
       double exportPower = resolveJsonPath(json, pwr_export_path).as<double>();
+
+      // Apply negation if configured
+      if (negate_power_path) importPower = -importPower;
+      if (negate_pwr_export_path) exportPower = -exportPower;
+
       double netPower = importPower - exportPower;
       DEBUG_SERIAL.print("Import: ");
       DEBUG_SERIAL.print(importPower);
@@ -185,6 +196,10 @@ void setJsonPathPower(JsonDocument json) {
     else if (power_path[0] != '\0') {
       DEBUG_SERIAL.println("Resolving monophase (single path only)");
       double power = resolveJsonPath(json, power_path).as<double>();
+
+      // Apply negation if configured
+      if (negate_power_path) power = -power;
+
       DEBUG_SERIAL.print("Resolved power: ");
       DEBUG_SERIAL.println(power);
       setPowerData(power);
@@ -200,6 +215,10 @@ void setJsonPathPower(JsonDocument json) {
 
     double energyIn = resolveJsonPath(json, energy_in_path).as<double>();
     double energyOut = resolveJsonPath(json, energy_out_path).as<double>();
+
+    // Apply negation if configured
+    if (negate_energy_in_path) energyIn = -energyIn;
+    if (negate_energy_out_path) energyOut = -energyOut;
 
     DEBUG_SERIAL.print("Resolved values - energyIn: ");
     DEBUG_SERIAL.print(energyIn);

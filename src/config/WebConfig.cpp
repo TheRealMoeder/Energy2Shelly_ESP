@@ -22,6 +22,10 @@ h2 { text-align: center; color: #333; }
 form { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
 label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
 input[type=text], input[type=password], select { width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+.path-row { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; }
+.path-row input[type=text] { flex: 1; margin-bottom: 0; }
+.path-row label.checkbox-label { font-weight: normal; display: flex; align-items: center; gap: 5px; margin-bottom: 0; white-space: nowrap; }
+.path-row input[type=checkbox] { width: auto; margin: 0; }
 .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; display: block; width: 100%; }
 .btn-save { background-color: #4CAF50; color: white; }
 .note { font-size: 0.9em; color: #777; text-align: center; margin-top: 20px; }
@@ -87,19 +91,40 @@ legend { font-weight: bold; color: #333; padding: 0 5px; }
   <fieldset>
     <legend>JSON Paths</legend>
     <label for="powerPath">Total Power Path</label>
-    <input type='text' id='powerPath' name='powerPath' value='%v_powerPath%'>
+    <div class="path-row">
+      <input type='text' id='powerPath' name='powerPath' value='%v_powerPath%'>
+      <label class="checkbox-label"><input type='checkbox' name='negatePowerPath' %c_negatePowerPath%> Negate</label>
+    </div>
     <label for="pwrExportPath">Export Power Path</label>
-    <input type='text' id='pwrExportPath' name='pwrExportPath' value='%v_pwrExpPath%'>
+    <div class="path-row">
+      <input type='text' id='pwrExportPath' name='pwrExportPath' value='%v_pwrExpPath%'>
+      <label class="checkbox-label"><input type='checkbox' name='negatePwrExportPath' %c_negatePwrExportPath%> Negate</label>
+    </div>
     <label for="powerL1Path">Phase 1 Power Path</label>
-    <input type='text' id='powerL1Path' name='powerL1Path' value='%v_powerL1Path%'>
+    <div class="path-row">
+      <input type='text' id='powerL1Path' name='powerL1Path' value='%v_powerL1Path%'>
+      <label class="checkbox-label"><input type='checkbox' name='negatePowerL1Path' %c_negatePowerL1Path%> Negate</label>
+    </div>
     <label for="powerL2Path">Phase 2 Power Path</label>
-    <input type='text' id='powerL2Path' name='powerL2Path' value='%v_powerL2Path%'>
+    <div class="path-row">
+      <input type='text' id='powerL2Path' name='powerL2Path' value='%v_powerL2Path%'>
+      <label class="checkbox-label"><input type='checkbox' name='negatePowerL2Path' %c_negatePowerL2Path%> Negate</label>
+    </div>
     <label for="powerL3Path">Phase 3 Power Path</label>
-    <input type='text' id='powerL3Path' name='powerL3Path' value='%v_powerL3Path%'>
+    <div class="path-row">
+      <input type='text' id='powerL3Path' name='powerL3Path' value='%v_powerL3Path%'>
+      <label class="checkbox-label"><input type='checkbox' name='negatePowerL3Path' %c_negatePowerL3Path%> Negate</label>
+    </div>
     <label for="energyInPath">Energy In Path</label>
-    <input type='text' id='energyInPath' name='energyInPath' value='%v_energyInPath%'>
+    <div class="path-row">
+      <input type='text' id='energyInPath' name='energyInPath' value='%v_energyInPath%'>
+      <label class="checkbox-label"><input type='checkbox' name='negateEnergyInPath' %c_negateEnergyInPath%> Negate</label>
+    </div>
     <label for="energyOutPath">Energy Out Path</label>
-    <input type='text' id='energyOutPath' name='energyOutPath' value='%v_energyOutPath%'>
+    <div class="path-row">
+      <input type='text' id='energyOutPath' name='energyOutPath' value='%v_energyOutPath%'>
+      <label class="checkbox-label"><input type='checkbox' name='negateEnergyOutPath' %c_negateEnergyOutPath%> Negate</label>
+    </div>
   </fieldset>
 
   <button type='submit' class='btn btn-save'>Save Configuration</button>
@@ -161,6 +186,15 @@ function importConfig(event) {
       if (config.powerL3Path) document.getElementById('powerL3Path').value = config.powerL3Path;
       if (config.energyInPath) document.getElementById('energyInPath').value = config.energyInPath;
       if (config.energyOutPath) document.getElementById('energyOutPath').value = config.energyOutPath;
+
+      // Set negation checkboxes
+      if (config.negatePowerPath !== undefined) document.querySelector('input[name="negatePowerPath"]').checked = config.negatePowerPath;
+      if (config.negatePwrExportPath !== undefined) document.querySelector('input[name="negatePwrExportPath"]').checked = config.negatePwrExportPath;
+      if (config.negatePowerL1Path !== undefined) document.querySelector('input[name="negatePowerL1Path"]').checked = config.negatePowerL1Path;
+      if (config.negatePowerL2Path !== undefined) document.querySelector('input[name="negatePowerL2Path"]').checked = config.negatePowerL2Path;
+      if (config.negatePowerL3Path !== undefined) document.querySelector('input[name="negatePowerL3Path"]').checked = config.negatePowerL3Path;
+      if (config.negateEnergyInPath !== undefined) document.querySelector('input[name="negateEnergyInPath"]').checked = config.negateEnergyInPath;
+      if (config.negateEnergyOutPath !== undefined) document.querySelector('input[name="negateEnergyOutPath"]').checked = config.negateEnergyOutPath;
 
       alert('Configuration imported successfully! Please review and click Save to apply.');
     } catch (error) {
@@ -247,6 +281,22 @@ String processor(const String &var) {
   if (var == "v_energyOutPath")
     return energy_out_path;
 
+  // Path negation checkboxes
+  if (var == "c_negatePowerPath")
+    return negate_power_path ? "checked" : "";
+  if (var == "c_negatePwrExportPath")
+    return negate_pwr_export_path ? "checked" : "";
+  if (var == "c_negatePowerL1Path")
+    return negate_power_l1_path ? "checked" : "";
+  if (var == "c_negatePowerL2Path")
+    return negate_power_l2_path ? "checked" : "";
+  if (var == "c_negatePowerL3Path")
+    return negate_power_l3_path ? "checked" : "";
+  if (var == "c_negateEnergyInPath")
+    return negate_energy_in_path ? "checked" : "";
+  if (var == "c_negateEnergyOutPath")
+    return negate_energy_out_path ? "checked" : "";
+
   return String();
 }
 
@@ -301,13 +351,49 @@ void handleConfig(AsyncWebServerRequest *request) {
   html += F("</fieldset>");
 
   html += F("<fieldset><legend>JSON Paths</legend>");
-  html += F("<label>Total Power Path</label><input name='powerPath' value='"); html += power_path; html += F("'>");
-  html += F("<label>Export Power Path</label><input name='pwrExportPath' value='"); html += pwr_export_path; html += F("'>");
-  html += F("<label>Phase 1 Power Path</label><input name='powerL1Path' value='"); html += power_l1_path; html += F("'>");
-  html += F("<label>Phase 2 Power Path</label><input name='powerL2Path' value='"); html += power_l2_path; html += F("'>");
-  html += F("<label>Phase 3 Power Path</label><input name='powerL3Path' value='"); html += power_l3_path; html += F("'>");
-  html += F("<label>Energy In Path</label><input name='energyInPath' value='"); html += energy_in_path; html += F("'>");
-  html += F("<label>Energy Out Path</label><input name='energyOutPath' value='"); html += energy_out_path; html += F("'>");
+
+  html += F("<label>Total Power Path</label><div class='path-row'><input name='powerPath' value='");
+  html += power_path;
+  html += F("'><label class='checkbox-label'><input type='checkbox' name='negatePowerPath'");
+  if (negate_power_path) html += F(" checked");
+  html += F("> Negate</label></div>");
+
+  html += F("<label>Export Power Path</label><div class='path-row'><input name='pwrExportPath' value='");
+  html += pwr_export_path;
+  html += F("'><label class='checkbox-label'><input type='checkbox' name='negatePwrExportPath'");
+  if (negate_pwr_export_path) html += F(" checked");
+  html += F("> Negate</label></div>");
+
+  html += F("<label>Phase 1 Power Path</label><div class='path-row'><input name='powerL1Path' value='");
+  html += power_l1_path;
+  html += F("'><label class='checkbox-label'><input type='checkbox' name='negatePowerL1Path'");
+  if (negate_power_l1_path) html += F(" checked");
+  html += F("> Negate</label></div>");
+
+  html += F("<label>Phase 2 Power Path</label><div class='path-row'><input name='powerL2Path' value='");
+  html += power_l2_path;
+  html += F("'><label class='checkbox-label'><input type='checkbox' name='negatePowerL2Path'");
+  if (negate_power_l2_path) html += F(" checked");
+  html += F("> Negate</label></div>");
+
+  html += F("<label>Phase 3 Power Path</label><div class='path-row'><input name='powerL3Path' value='");
+  html += power_l3_path;
+  html += F("'><label class='checkbox-label'><input type='checkbox' name='negatePowerL3Path'");
+  if (negate_power_l3_path) html += F(" checked");
+  html += F("> Negate</label></div>");
+
+  html += F("<label>Energy In Path</label><div class='path-row'><input name='energyInPath' value='");
+  html += energy_in_path;
+  html += F("'><label class='checkbox-label'><input type='checkbox' name='negateEnergyInPath'");
+  if (negate_energy_in_path) html += F(" checked");
+  html += F("> Negate</label></div>");
+
+  html += F("<label>Energy Out Path</label><div class='path-row'><input name='energyOutPath' value='");
+  html += energy_out_path;
+  html += F("'><label class='checkbox-label'><input type='checkbox' name='negateEnergyOutPath'");
+  if (negate_energy_out_path) html += F(" checked");
+  html += F("> Negate</label></div>");
+
   html += F("</fieldset>");
 
   // Add footer with export/import functionality from template
@@ -364,6 +450,15 @@ void handleSave(AsyncWebServerRequest *request) {
   getParam("energyOutPath")
       .toCharArray(energy_out_path, sizeof(energy_out_path));
 
+  // Get negation checkboxes (unchecked checkboxes don't send values, so default to false)
+  negate_power_path = request->hasParam("negatePowerPath", true);
+  negate_pwr_export_path = request->hasParam("negatePwrExportPath", true);
+  negate_power_l1_path = request->hasParam("negatePowerL1Path", true);
+  negate_power_l2_path = request->hasParam("negatePowerL2Path", true);
+  negate_power_l3_path = request->hasParam("negatePowerL3Path", true);
+  negate_energy_in_path = request->hasParam("negateEnergyInPath", true);
+  negate_energy_out_path = request->hasParam("negateEnergyOutPath", true);
+
   // Save all settings to Preferences
   saveConfiguration();
 
@@ -406,6 +501,15 @@ void handleExportConfig(AsyncWebServerRequest *request) {
   jsonConfig["powerL3Path"] = power_l3_path;
   jsonConfig["energyInPath"] = energy_in_path;
   jsonConfig["energyOutPath"] = energy_out_path;
+
+  // Path negation flags
+  jsonConfig["negatePowerPath"] = negate_power_path;
+  jsonConfig["negatePwrExportPath"] = negate_pwr_export_path;
+  jsonConfig["negatePowerL1Path"] = negate_power_l1_path;
+  jsonConfig["negatePowerL2Path"] = negate_power_l2_path;
+  jsonConfig["negatePowerL3Path"] = negate_power_l3_path;
+  jsonConfig["negateEnergyInPath"] = negate_energy_in_path;
+  jsonConfig["negateEnergyOutPath"] = negate_energy_out_path;
 
   String jsonString;
   serializeJson(jsonConfig, jsonString);

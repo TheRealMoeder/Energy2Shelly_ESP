@@ -26,6 +26,15 @@ char power_l3_path[60] = "";
 char energy_in_path[60] = "";
 char energy_out_path[60] = "";
 
+// Path negation flags
+bool negate_power_path = false;
+bool negate_pwr_export_path = false;
+bool negate_power_l1_path = false;
+bool negate_power_l2_path = false;
+bool negate_power_l3_path = false;
+bool negate_energy_in_path = false;
+bool negate_energy_out_path = false;
+
 // Device settings
 char shelly_gen[2] = "2";
 char shelly_fw_id[32] = "20241011-114455/1.4.4-g6d2a586";
@@ -155,6 +164,16 @@ void loadConfiguration() {
   shellyPortInt = atoi(shelly_port);
   forcePwrDecimals = preferences.getBool("force_pwr_decimals", true);
   preferences.getString("sma_id", sma_id, sizeof(sma_id));
+
+  // Load negation flags
+  negate_power_path = preferences.getBool("negate_power_path", false);
+  negate_pwr_export_path = preferences.getBool("negate_pwr_export_path", false);
+  negate_power_l1_path = preferences.getBool("negate_power_l1_path", false);
+  negate_power_l2_path = preferences.getBool("negate_power_l2_path", false);
+  negate_power_l3_path = preferences.getBool("negate_power_l3_path", false);
+  negate_energy_in_path = preferences.getBool("negate_energy_in_path", false);
+  negate_energy_out_path = preferences.getBool("negate_energy_out_path", false);
+
   preferences.end();
 }
 
@@ -181,6 +200,16 @@ void saveConfiguration() {
   preferences.putString("power_l3_path", power_l3_path);
   preferences.putString("energy_in_path", energy_in_path);
   preferences.putString("energy_out_path", energy_out_path);
+
+  // Save negation flags
+  preferences.putBool("negate_power_path", negate_power_path);
+  preferences.putBool("negate_pwr_export_path", negate_pwr_export_path);
+  preferences.putBool("negate_power_l1_path", negate_power_l1_path);
+  preferences.putBool("negate_power_l2_path", negate_power_l2_path);
+  preferences.putBool("negate_power_l3_path", negate_power_l3_path);
+  preferences.putBool("negate_energy_in_path", negate_energy_in_path);
+  preferences.putBool("negate_energy_out_path", negate_energy_out_path);
+
   preferences.end();
 }
 

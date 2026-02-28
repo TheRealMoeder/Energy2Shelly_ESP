@@ -62,6 +62,15 @@ extern char power_l3_path[60];
 extern char energy_in_path[60];
 extern char energy_out_path[60];
 
+// Path negation settings
+extern bool negate_power_path;
+extern bool negate_pwr_export_path;
+extern bool negate_power_l1_path;
+extern bool negate_power_l2_path;
+extern bool negate_power_l3_path;
+extern bool negate_energy_in_path;
+extern bool negate_energy_out_path;
+
 // Device settings
 extern char shelly_gen[2];
 extern char shelly_fw_id[32];
