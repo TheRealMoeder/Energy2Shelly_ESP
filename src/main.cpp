@@ -34,6 +34,7 @@ tm timeinfo;
 
 // define your default values here, if there are different values in config.json, they are overwritten.
 char input_type[40];
+char reset_password[33] = "admin"; // default reset password
 char ntp_server[40] = "de.pool.ntp.org";
 char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
 char phase_number[2] = "3"; // number of phases: 1 or 3
@@ -787,6 +788,7 @@ void WifiManagerSetup() {
   sprintf(shelly_mac, "%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
   preferences.begin("e2s_config", false);
+  strcpy(reset_password, preferences.getString("reset_password", reset_password).c_str());
   strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
   strcpy(timezone, preferences.getString("timezone", timezone).c_str());
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
@@ -858,7 +860,13 @@ void WifiManagerSetup() {
   char buffer_datasource[1500];
   sprintf(buffer_datasource, dd_select_str, input_type);
 
-  WiFiManagerParameter param_section_general("<h3>General settings</h3>");
+  const char *show_pwd_str = "<input type=\"checkbox\" onclick=\"t('%s')\">&nbsp;<label>Show password</label><br/>";
+
+  WiFiManagerParameter param_section_general("<h3>General settings</h3><script>function t(s) { var x = document.getElementById(s); x.type === \"password\" ? x.type = \"text\" : x.type = \"password\"; }</script>");
+  WiFiManagerParameter param_reset_password("reset_password", "Reset password <span title=\"Required to trigger config mode(Wifi AP mode)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", reset_password, 20, "type='password'");
+  char buf_rst_pwd_show_pwd[150];
+  sprintf(buf_rst_pwd_show_pwd, show_pwd_str, "reset_password");
+  WiFiManagerParameter param_reset_password_show_password(buf_rst_pwd_show_pwd);
   WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
   WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
   WiFiManagerParameter param_query_period("query_period", "Query period <span title=\"for generic HTTP and SUNSPEC, in milliseconds\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", query_period, 10);
@@ -877,7 +885,10 @@ void WifiManagerSetup() {
   WiFiManagerParameter param_mqtt_port("mqtt_port", "Port", mqtt_port, 6);
   WiFiManagerParameter param_mqtt_topic("mqtt_topic", "Topic", mqtt_topic, 90);
   WiFiManagerParameter param_mqtt_user("mqtt_user", "User (optional)", mqtt_user, 40);
-  WiFiManagerParameter param_mqtt_passwd("mqtt_passwd", "Password (optional)", mqtt_passwd, 40);
+  WiFiManagerParameter param_mqtt_passwd("mqtt_passwd", "Password (optional)", mqtt_passwd, 40, "type='password'");
+  char buf_mqtt_pwd_show_pwd[150];
+  sprintf(buf_mqtt_pwd_show_pwd, show_pwd_str, "mqtt_passwd");
+  WiFiManagerParameter param_mqtt_passwd_show_password(buf_mqtt_pwd_show_pwd);
   // SMA section
   WiFiManagerParameter param_section_sma("<div id=\"SMA\" style=\"display:none\"><h4>SMA options</h4>");
   WiFiManagerParameter param_sma_id("sma_id", "SMA serial number <span title=\"optional serial number (if you have more than one SMA EM/HM in your network)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", sma_id, 16);
@@ -910,6 +921,8 @@ void WifiManagerSetup() {
 
   //add all your parameters here
   wifiManager.addParameter(&param_section_general);
+  wifiManager.addParameter(&param_reset_password);
+  wifiManager.addParameter(&param_reset_password_show_password);
   wifiManager.addParameter(&param_ntp_server);
   wifiManager.addParameter(&param_timezone);
   wifiManager.addParameter(&param_query_period);
@@ -927,6 +940,7 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&param_mqtt_topic);
   wifiManager.addParameter(&param_mqtt_user);
   wifiManager.addParameter(&param_mqtt_passwd);
+  wifiManager.addParameter(&param_mqtt_passwd_show_password);
   wifiManager.addParameter(&param_sectionx_end);
   // SMA section
   wifiManager.addParameter(&param_section_sma);
@@ -963,6 +977,7 @@ void WifiManagerSetup() {
 
   //read updated parameters
   // general options
+  strcpy(reset_password, param_reset_password.getValue());
   strcpy(ntp_server, param_ntp_server.getValue());
   strcpy(timezone, param_timezone.getValue());
   strcpy(query_period, param_query_period.getValue());
@@ -1055,6 +1070,7 @@ void WifiManagerSetup() {
 
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println("saving config");
+    preferences.putString("reset_password", reset_password);
     preferences.putString("ntp_server", ntp_server);
     preferences.putString("timezone", timezone);
     preferences.putString("query_period", query_period);
@@ -1132,8 +1148,23 @@ void setup(void) {
   });
 
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/html", "<html><body><form method='post' accept-charset='UTF-8'><pre>Enter \"Reset password\" to put device in configuration mode:<br/><br/><input type='password' name='password'> <input type='submit' value='Reset device'></pre></form></body></html>");
+  });
+  server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
+    String password = "";
+    if (request->hasParam("password", true)) {
+      AsyncWebServerResponse *response;
+      const AsyncWebParameter *p = request->getParam("password", true);
+      password = p->value();
+      String storedPassword = preferences.getString("reset_password");
+      if (password == storedPassword) {
     shouldResetConfig = true;
-    request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
+        response = request->beginResponse(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
+      } else {
+        response = request->beginResponse(401, "text/plain", "Unauthorized: Invalid reset password.\r\n");
+      }
+      request->send(response);
+    }
   });
 
   server.on("/rpc/EM.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
