@@ -14,42 +14,50 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
 ## Option 2: Flash pre-compiled binary via browser 
 1) connect your ESP to your PC using USB and follow the instructions on the [webflasher](https://therealmoeder.github.io/Energy2Shelly_ESP/)
 
-## Configuration
+# Configuration
 1) Power device and wait for a hotspot named "Energy2Shelly"
 2) Connect to that hotspot
 3) Enter wifi and configuration data using the captive portal or by opening http://192.168.4.1/
 
-  ### On the captive portal you can currently enter:
+  ### On the captive portal you can currently set a data source for power data. The following options are available:
   - <code>MQTT</code>
-    - Server IP, port and topic; power values on the MQTT topic are expected in JSON format. The are multiple fields to define the available values using a JSON Path-style syntax.
+    - Server IP, port, username, password and topic
+    - Power values on the MQTT topic are expected in JSON format. The are multiple fields to define available values using a JSON Path-style syntax.
       You can also select between monophase and triphase power data.<br>
       
-      examples (monophase profile):
+      example (monophase profile):
         - Total power JSON path -> <code>ENERGY.Power</code> for <code>{"ENERGY":{"Power":9.99}}</code><br>
         - Phase 1 power JSON path -> "no definition" <br>
         - Phase 2 power JSON path -> "no definition" <br>
         - Phase 3 power JSON path -> "no definition" <br>
-        - Energy from grid JSON path -> <code>ENERGY.Consumption</code> for <code>{"ENERGY":{"Consumption"77}}</code><br>
-        - Energy to grid JSON path ->  <code>ENERGY.Production</code> for  <code>{"ENERGY":{"Production"33}}</code><br>
+        - Energy from grid JSON path -> <code>ENERGY.Consumption</code> for <code>{"ENERGY":{"Consumption":77}}</code><br>
+        - Energy to grid JSON path ->  <code>ENERGY.Production</code> for  <code>{"ENERGY":{"Production":33}}</code><br>
               -> Energy2Shelly_ESP responds to <br><code>{"ENERGY":{"Power": 9.99,"Consumption":77,"Production":33}}</code><br>
 
-      examples (triphase profile):
+      example (triphase profile):
         - Total power JSON path -> <code>ENERGY.Power</code> for <code>{"ENERGY":{"Power":7.3}}</code><br>
         - Phase 1 power JSON path -> <code>ENERGY.Pow1</code> for <code>{"ENERGY":{"Pow1":98}}</code><br>
         - Phase 2 power JSON path -> <code>ENERGY.Pow2</code> for <code>{"ENERGY":{"Pow2":196}}</code><br>
         - Phase 3 power JSON path -> <code>ENERGY.Pow3</code> for <code>{"ENERGY":{"Pow3":294}}</code><br>
-        - Energy from grid JSON path -> <code>ENERGY.Consumption</code> for <code>{"ENERGY":{"Consumption"98}}</code>
-        - Energy to grid JSON path ->  <code>ENERGY.Production</code> for  <code>{"ENERGY":{"Production"131}}</code><br>
+        - Energy from grid JSON path -> <code>ENERGY.Consumption</code> for <code>{"ENERGY":{"Consumption":98}}</code>
+        - Energy to grid JSON path ->  <code>ENERGY.Production</code> for  <code>{"ENERGY":{"Production":131}}</code><br>
               -> Energy2Shelly_ESP responds to <br><code>{"ENERGY":{"Power":7.3,"Pow1":98,"Pow2":196,"Pow3":294,"Consumption":98,"Production":131}}</code><br>
         
   - <code>SMA</code>
-    - SMA Energy Meter or Home Manager UDP multicast data; if you have multiple SMA energy meters you can optionally provide the serial number of the source you want to use in the configuration options
+    - SMA Energy Meter or Home Manager UDP multicast data
+    - if you have multiple SMA energy meters you can optionally provide the serial number of the source you want to use in the configuration options
   - <code>SHRDZM</code>
-      - SHRDZM smart meter interface (common in Austria) with UDP unicast data; please enable UDP broadcasts to the IP of the ESP and port 9522 within SHRDZM
+    - SHRDZM smart meter interface (common in Austria) with UDP unicast data
+    - please enable UDP broadcasts to the IP of the ESP and port 9522 within SHRDZM
   - <code>HTTP</code>
-      - a generic HTTP input; enter a query URL in the second parameter field which delivers JSON data and define at least the JSON Path for total power. For full details on JSONPath configuration, check the section on MQTT above.<br>
+    - a generic HTTP input
+    - enter a query URL in the second parameter field which delivers JSON data and define at least the JSON Path for total power.
+    - for full details on JSONPath configuration, check the section on MQTT above.<br>
   - <code>SUNSPEC</code>
-      - generic SUNSPEC register data polling via Modbus TCP; use server for address of Modbus device (e.g. Kostal Smart energy meter), port for Modbus TCP port (usually 502) and Modbus device ID for the unit ID (71 for KSEM)
+    - generic SUNSPEC register data polling via Modbus TCP
+    - you can setup host ip of Modbus device (e.g. Kostal Smart energy meter)
+    - Modbus TCP port (usually 502)
+    - Modbus Device ID of the unit ID (71 for KSEM)
 
   ### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>
@@ -68,13 +76,14 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
 
 # You found a bug
 First, sorry. This software is not perfect.
-1. Open a issue
--With helpful title - use descriptive keywords in the title and body so others can find your bug (avoiding duplicates).
+1. Open an issue
+- With helpful title - use descriptive keywords in the title and body so others can find your bug (avoiding duplicates).
 - Which branch, what microcontroller, what setup
 - Steps to reproduce the problem, with actual vs. expected results
 - If you find a bug in our code, post the files and the lines.
-<br>
-<br>
+2. Open a PR 😻
+- Explain in detail your changes
+- Ask for a review
 
 # some screenshots from project
   ![wifi](./screenshots/screenshot_01.png)
@@ -90,4 +99,4 @@ First, sorry. This software is not perfect.
   ![status](./screenshots/screenshot_05.png)
 
   > [!NOTE]
-> Images may vary depending on the version. We always try to be up to date.
+  > Images may vary depending on the version. We always try to be up to date.
