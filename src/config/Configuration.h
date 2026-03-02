@@ -151,5 +151,6 @@ extern WiFiUDP UdpRPC;
 
 void saveConfigCallback();
 void WifiManagerSetup();
+void setupMdns();
 
 #endif // CONFIGURATION_H
