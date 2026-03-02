@@ -100,6 +100,31 @@ WiFiUDP UdpRPC;
   MDNSResponder::hMDNSService hMDNSService2 = 0; // handle of the shelly service in the MDNS responder
 #endif
 
+// Blink LED handlers
+void blinkled(int duration) {
+  if (led > 0) {
+    if (led_i) {
+      digitalWrite(led, HIGH);
+    } else {
+      digitalWrite(led, LOW);
+    }
+    ledOffTime = millis() + duration;
+  }
+}
+
+void handleblinkled() {
+  if (led > 0) {
+    if (ledOffTime > 0 && millis() > ledOffTime) {
+      if (led_i) {
+        digitalWrite(led, LOW);
+      } else {
+        digitalWrite(led, HIGH);
+      }
+      ledOffTime = 0;
+    }
+  }
+}
+
 //callback notifying us of the need to save WifiManager config
 void saveConfigCallback() {
   DEBUG_SERIAL.println("Should save config");

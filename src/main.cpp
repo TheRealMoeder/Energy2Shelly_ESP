@@ -24,30 +24,6 @@ void rpcWrapper() {
   serializeJson(jsonResponse, serJsonResponse);
 }
 
-void blinkled(int duration) {
-  if (led > 0) {
-    if (led_i) {
-      digitalWrite(led, HIGH);
-    } else {
-      digitalWrite(led, LOW);
-    }
-    ledOffTime = millis() + duration;
-  }
-}
-
-void handleblinkled() {
-  if (led > 0) {
-    if (ledOffTime > 0 && millis() > ledOffTime) {
-      if (led_i) {
-        digitalWrite(led, LOW);
-      } else {
-        digitalWrite(led, HIGH);
-      }
-      ledOffTime = 0;
-    }
-  }
-}
-
 // aligned with Shelly API docs
 // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Shelly#shellygetdeviceinfo-example
 void shellyGetDeviceInfo() {
