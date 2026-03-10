@@ -19,6 +19,24 @@ void setup(void) {
   DEBUG_SERIAL.begin(115200);
   WifiManagerSetup();
 
+  // Initialize time via NTP
+#ifdef ESP32
+  configTime(0, 0, ntp_server);
+  setenv("TZ", timezone, 1);
+  tzset();
+#else
+  //ESP8266
+  configTime(timezone, ntp_server);
+#endif
+  while (!getLocalTime(&timeinfo)) {
+    DEBUG_SERIAL.println("Waiting for NTP time...");
+    delay(500);
+  }
+  DEBUG_SERIAL.print("Current time: ");
+  char time_buffer[20];
+  strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+  DEBUG_SERIAL.println(time_buffer);
+
   if (String(led_gpio).toInt() > 0) {
     led = String(led_gpio).toInt();
   }
@@ -179,15 +197,17 @@ void setup(void) {
   // Set Up HTTP query
   if (dataHTTP) {
     period = atol(query_period);
-    startMillis = millis();
     http.useHTTP10(true);
   }
 
   // Set up mDNS responder
   setupMdns();
+
+  startMillis = millis();
 }
 
 void loop() {
+  currentMillis = millis();
 #ifndef ESP32
   MDNS.update();
 #endif
@@ -214,10 +234,9 @@ void loop() {
     parseSHRDZM();
   }
   if (dataSUNSPEC) {
-     currentMillis = millis();
-    if (currentMillis - startMillis_sunspec >= period) {
-       parseSUNSPEC();
-      startMillis_sunspec = currentMillis;
+    if (currentMillis - startMillis >= period) {
+      parseSUNSPEC();
+      startMillis = currentMillis;
     }
    
   }

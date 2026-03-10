@@ -40,6 +40,8 @@
 extern unsigned long startMillis;
 extern unsigned long startMillis_sunspec;
 extern unsigned long currentMillis;
+extern time_t now;
+extern tm timeinfo;
 
 // ============================================================================
 // CONFIGURATION VARIABLES (stored in Preferences)
@@ -47,6 +49,8 @@ extern unsigned long currentMillis;
 
 // Data source and server settings
 extern char input_type[40];
+extern char ntp_server[40];
+extern char timezone[64];
 extern char mqtt_server[160];
 extern char mqtt_port[6];
 extern char mqtt_topic[90];
