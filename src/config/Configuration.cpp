@@ -1,8 +1,10 @@
 #include "Configuration.h"
 
 unsigned long startMillis = 0;
-unsigned long startMillis_sunspec = 0;
 unsigned long currentMillis;
+// for time synchronization
+time_t now;
+tm timeinfo;
 
 // ============================================================================
 // CONFIGURATION VARIABLES (stored in Preferences)
@@ -10,6 +12,8 @@ unsigned long currentMillis;
 
 // Data source and server settings
 char input_type[40];
+char ntp_server[40] = "de.pool.ntp.org";
+char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
 char mqtt_server[160];
 char mqtt_port[6] = "1883";
 char mqtt_topic[90] = "tele/meter/SENSOR";
@@ -140,6 +144,8 @@ void WifiManagerSetup() {
   preferences.begin("e2s_config", false);
   strcpy(input_type, preferences.getString("input_type", input_type).c_str());
   strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
+  strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
+  strcpy(timezone, preferences.getString("timezone", timezone).c_str());
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
   strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
   strcpy(led_gpio_i, preferences.getString("led_gpio_i", led_gpio_i).c_str());
@@ -164,6 +170,8 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_input_type("type", "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data", input_type, 40);
   WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 160);
   WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
+  WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
+  WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
   WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
   WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
@@ -197,6 +205,8 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_section1);
   wifiManager.addParameter(&custom_input_type);
   wifiManager.addParameter(&custom_mqtt_server);
+  wifiManager.addParameter(&param_ntp_server);
+  wifiManager.addParameter(&param_timezone);
   wifiManager.addParameter(&custom_query_period);
   wifiManager.addParameter(&custom_led_gpio);
   wifiManager.addParameter(&custom_led_gpio_i);
@@ -233,6 +243,8 @@ void WifiManagerSetup() {
   strcpy(input_type, custom_input_type.getValue());
   strcpy(mqtt_server, custom_mqtt_server.getValue());
   strcpy(mqtt_port, custom_mqtt_port.getValue());
+  strcpy(ntp_server, param_ntp_server.getValue());
+  strcpy(timezone, param_timezone.getValue());
   strcpy(query_period, custom_query_period.getValue());
   strcpy(led_gpio, custom_led_gpio.getValue());
   strcpy(led_gpio_i, custom_led_gpio_i.getValue());
@@ -256,6 +268,8 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tinput_type : " + String(input_type));
   DEBUG_SERIAL.println("\tmqtt_server : " + String(mqtt_server));
   DEBUG_SERIAL.println("\tmqtt_port : " + String(mqtt_port));
+  DEBUG_SERIAL.println("\tntp_server: " + String(ntp_server));
+  DEBUG_SERIAL.println("\ttimezone: " + String(timezone));
   DEBUG_SERIAL.println("\tquery_period : " + String(query_period));
   DEBUG_SERIAL.println("\tled_gpio : " + String(led_gpio));
   DEBUG_SERIAL.println("\tled_gpio_i : " + String(led_gpio_i));
@@ -310,6 +324,8 @@ void WifiManagerSetup() {
     preferences.putString("input_type", input_type);
     preferences.putString("mqtt_server", mqtt_server);
     preferences.putString("mqtt_port", mqtt_port);
+    preferences.putString("ntp_server", ntp_server);
+    preferences.putString("timezone", timezone);
     preferences.putString("query_period", query_period);
     preferences.putString("led_gpio", led_gpio);
     preferences.putString("led_gpio_i", led_gpio_i);
