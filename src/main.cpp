@@ -1,4 +1,4 @@
-// Energy2Shelly_ESP v0.6.0
+// Energy2Shelly_ESP v0.6.1
 #include <Arduino.h>
 
 // Configuration & setup
@@ -53,21 +53,21 @@ void setup(void) {
 
   // Set up web server and endpoints
 
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "This is the Energy2Shelly for ESP converter!\r\nDevice and Energy status is available under /status\r\nTo reset configuration, goto /reset\r\n");
   });
 
-  server.on("/shelly", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/shelly", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     shellyGetDeviceInfo();
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/status", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     shellyGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/reset", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     String html = "<!DOCTYPE html><html><head><title>Reset Confirmation</title>";
     html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
     html += "<style>body{font-family:Arial,sans-serif;text-align:center;padding:20px;}";
@@ -84,59 +84,59 @@ void setup(void) {
     request->send(200, "text/html", html);
   });
 
-  server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request) {
+  server.on("/reset", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {
     shouldResetConfig = true;
     request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
   });
 
   // Shelly RPC endpoints called via HTTP GET method
-  server.on("/rpc/EM.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/rpc/EM.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetConfig();
     request->send(200, "application/json", serJsonResponse);
   });
-  server.on("/rpc/EM.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/rpc/EM.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/rpc/EMData.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/rpc/EMData.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     EMDataGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/rpc/Shelly.GetComponents", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/rpc/Shelly.GetComponents", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     shellyGetComponents();
     request->send(200, "application/json", serJsonResponse);
   });
-  server.on("/rpc/Shelly.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/rpc/Shelly.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     shellyGetConfig();
     request->send(200, "application/json", serJsonResponse);
   });
-  server.on("/rpc/Shelly.GetDeviceInfo", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/rpc/Shelly.GetDeviceInfo", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     shellyGetDeviceInfo();
     request->send(200, "application/json", serJsonResponse);
   });
-  server.on("/rpc/Shelly.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/rpc/Shelly.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     shellyGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/rpc/Sys.GetConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/rpc/Sys.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     sysGetConfig();
     request->send(200, "application/json", serJsonResponse);
   });
-  server.on("/rpc/Sys.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/rpc/Sys.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     sysGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
-  server.on("/rpc/WiFi.GetStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/rpc/WiFi.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     wifiGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
 
   // Shelly RPC endpoint called via HTTP POST method with JSON-RPC body
-  server.on("/rpc", HTTP_POST, [](AsyncWebServerRequest *request) {}, nullptr,
+  server.on("/rpc", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {}, nullptr,
     [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
       String rpcRequestBuffer;
       if (index == 0) {
