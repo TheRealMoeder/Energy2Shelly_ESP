@@ -1,6 +1,11 @@
 // Energy2Shelly_ESP v0.6.1
 #include <Arduino.h>
 
+// Fix WifiManager/WebServer conflicts
+#ifndef ESP32
+  #define WEBSERVER_H "fix WifiManager conflict"
+#endif
+
 // Configuration & setup
 #include "config/Configuration.h"
 
