@@ -30,7 +30,7 @@ void parseSMA() {
         uint32_t serial = (offset[0] << 24) + (offset[1] << 16) + (offset[2] << 8) + offset[3];
         DEBUG_SERIAL.print("Received SMA multicast from ");
         DEBUG_SERIAL.println(serial);
-        if ((strcmp(sma_id, "") != 0) && (String(sma_id).toInt() != serial)) {
+        if (sma_id[0] != '\0' && strtoul(sma_id, nullptr, 10) != serial) {
           DEBUG_SERIAL.println("SMA serial not matching - ignoring packet");
           break;
         }
