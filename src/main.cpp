@@ -2,6 +2,9 @@
 #include <Arduino.h>
 
 // Fix WifiManager/WebServer conflicts
+#ifndef ESP32
+  #define WEBSERVER_H "fix WifiManager conflict"
+#endif
 #include <WiFiManager.h>
 
 // Configuration & setup
