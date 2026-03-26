@@ -34,7 +34,7 @@ char shelly_gen[2] = "2";
 char shelly_fw_id[32] = "20241011-114455/1.4.4-g6d2a586";
 char shelly_mac[13];
 char shelly_name[26] = "shellypro3em-";
-char shelly_port[6] = "2220"; // old: 1010; new (FW>=226): 2220
+char shelly_port[6] = "2220"; // old: 1010; new (FW>=226): 2220; Venus A and E 3.0 use 1010 again
 
 // Query and protocol settings
 char query_period[10] = "1000";
