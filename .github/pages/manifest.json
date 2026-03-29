@@ -17,6 +17,13 @@
         ]
       },
       {
+        "chipFamily": "ESP32-C3",
+        "improv": false,
+        "parts": [
+          { "path": "esp32-c3.bin", "offset": 0 }
+        ]
+      },
+      {
         "chipFamily": "ESP32-S3",
         "improv": false,
         "parts": [
