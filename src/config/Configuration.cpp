@@ -11,6 +11,7 @@ tm timeinfo;
 // ============================================================================
 
 // Data source and server settings
+char reset_password[33] = "admin-changeMe"; // default reset password
 char input_type[40];
 char ntp_server[40] = "de.pool.ntp.org";
 char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
@@ -142,6 +143,7 @@ void WifiManagerSetup() {
   sprintf(shelly_mac, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
   preferences.begin("e2s_config", false);
+  strcpy(reset_password, preferences.getString("reset_password", reset_password).c_str());
   strcpy(input_type, preferences.getString("input_type", input_type).c_str());
   strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
   strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
@@ -165,9 +167,15 @@ void WifiManagerSetup() {
   strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
   strcpy(force_pwr_decimals, preferences.getString("force_pwr_decimals", force_pwr_decimals).c_str());
   strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
-  
-  WiFiManagerParameter custom_section1("<h3>General settings</h3>");
-  WiFiManagerParameter custom_input_type("type", "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data", input_type, 40);
+
+  const char *show_pwd_str = "<input type=\"checkbox\" onclick=\"t('%s')\">&nbsp;<label>Show Password</label><br/>";
+
+  WiFiManagerParameter custom_section1("<h3>General settings</h3><script>function t(s) { var x = document.getElementById(s); x.type === \"password\" ? x.type = \"text\" : x.type = \"password\"; }</script>");
+  WiFiManagerParameter param_reset_password("reset_password", "Reset Password <span title=\"For resetting the WiFi configuration and putting the device in AP / config mode\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", reset_password, 32, "type='password'");
+  char buf_rst_pwd_show_pwd[150];
+  sprintf(buf_rst_pwd_show_pwd, show_pwd_str, "reset_password");
+  WiFiManagerParameter param_reset_password_show_password(buf_rst_pwd_show_pwd);
+  WiFiManagerParameter custom_input_type("type", "<hr><b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data", input_type, 40);
   WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 160);
   WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
   WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
@@ -181,8 +189,11 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
   WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
   WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", mqtt_topic, 90);
-  WiFiManagerParameter custom_mqtt_user("user", "<b>MQTT user</b><br>optional", mqtt_user, 40);
-  WiFiManagerParameter custom_mqtt_passwd("passwd", "<b>MQTT password</b><br>optional", mqtt_passwd, 40);
+  WiFiManagerParameter custom_mqtt_user("user", "<b>MQTT user</b> (optional)", mqtt_user, 40);
+  WiFiManagerParameter custom_mqtt_passwd("passwd", "<b>MQTT password</b> (optional)", mqtt_passwd, 40, "type='password'");
+  char buf_mqtt_pwd_show_pwd[150];
+  sprintf(buf_mqtt_pwd_show_pwd, show_pwd_str, "passwd");
+  WiFiManagerParameter param_mqtt_passwd_show_password(buf_mqtt_pwd_show_pwd);
   WiFiManagerParameter custom_section3("<hr><h3>Modbus TCP options</h3>");
   WiFiManagerParameter custom_modbus_dev("modbus_dev", "<b>Modbus device ID</b><br><code>71</code> for Kostal SEM", modbus_dev, 60);
   WiFiManagerParameter custom_section4("<hr><h3>JSON paths for MQTT and generic HTTP</h3>");
@@ -203,6 +214,8 @@ void WifiManagerSetup() {
 
   //add all your parameters here
   wifiManager.addParameter(&custom_section1);
+  wifiManager.addParameter(&param_reset_password);
+  wifiManager.addParameter(&param_reset_password_show_password);
   wifiManager.addParameter(&custom_input_type);
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&param_ntp_server);
@@ -219,6 +232,7 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_mqtt_topic);
   wifiManager.addParameter(&custom_mqtt_user);
   wifiManager.addParameter(&custom_mqtt_passwd);
+  wifiManager.addParameter(&param_mqtt_passwd_show_password);
   wifiManager.addParameter(&custom_section3);
   wifiManager.addParameter(&custom_modbus_dev);
   wifiManager.addParameter(&custom_section4);
@@ -240,6 +254,7 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("connected");
 
   //read updated parameters
+  strcpy(reset_password, param_reset_password.getValue());
   strcpy(input_type, custom_input_type.getValue());
   strcpy(mqtt_server, custom_mqtt_server.getValue());
   strcpy(mqtt_port, custom_mqtt_port.getValue());
@@ -265,6 +280,7 @@ void WifiManagerSetup() {
   strcpy(sma_id, custom_sma_id.getValue());
 
   DEBUG_SERIAL.println("The values in the preferences are: ");
+  DEBUG_SERIAL.println("\treset_password: ********");
   DEBUG_SERIAL.println("\tinput_type : " + String(input_type));
   DEBUG_SERIAL.println("\tmqtt_server : " + String(mqtt_server));
   DEBUG_SERIAL.println("\tmqtt_port : " + String(mqtt_port));
@@ -276,7 +292,7 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tshelly_mac : " + String(shelly_mac));
   DEBUG_SERIAL.println("\tmqtt_topic : " + String(mqtt_topic));
   DEBUG_SERIAL.println("\tmqtt_user : " + String(mqtt_user));
-  DEBUG_SERIAL.println("\tmqtt_passwd : " + String(mqtt_passwd));
+  DEBUG_SERIAL.println("\tmqtt_passwd : ********");
   DEBUG_SERIAL.println("\tmodbus_dev : " + String(modbus_dev));
   DEBUG_SERIAL.println("\tpower_path : " + String(power_path));
   DEBUG_SERIAL.println("\tpwr_export_path : " + String(pwr_export_path));
@@ -301,8 +317,7 @@ void WifiManagerSetup() {
   } else if (strcmp(input_type, "SUNSPEC") == 0) {
     dataSUNSPEC = true;
     DEBUG_SERIAL.println("Enabling SUNSPEC data input");
-  }
-  else {
+  } else {
     dataMQTT = true;
     DEBUG_SERIAL.println("Enabling MQTT data input");
   }
@@ -321,6 +336,7 @@ void WifiManagerSetup() {
 
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println("saving config");
+    preferences.putString("reset_password", reset_password);
     preferences.putString("input_type", input_type);
     preferences.putString("mqtt_server", mqtt_server);
     preferences.putString("mqtt_port", mqtt_port);
