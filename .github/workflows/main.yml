@@ -59,7 +59,7 @@ jobs:
             ./.github/pages/esp32-s3.bin
             ./.github/pages/esp32-c3.bin
       - name: Setup Github Page
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Upload webflash files
         uses: actions/upload-pages-artifact@v4
         with:
