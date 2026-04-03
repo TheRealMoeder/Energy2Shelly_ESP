@@ -378,10 +378,10 @@ void setupMdns() {
   MDNS.addService("http", "tcp", 80);
   MDNS.addService("shelly", "tcp", 80);
   mdns_txt_item_t serviceTxtData[4] = {
-    { "id", shelly_name },
-    { "fw_id", shelly_fw_id },
-    { "gen", shelly_gen },
-    { "arch", "esp8266" }
+    {"arch", "esp8266"},
+    {"gen", shelly_gen},
+    {"fw_id", shelly_fw_id},
+    {"id", shelly_name}
   };
   mdns_service_instance_name_set("_http", "_tcp", shelly_name);
   mdns_service_txt_set("_http", "_tcp", serviceTxtData, 4);
