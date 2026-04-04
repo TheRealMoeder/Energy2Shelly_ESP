@@ -1,5 +1,7 @@
 # Energy2Shelly_ESP
 
+[![CI](https://github.com/TheRealMoeder/Energy2Shelly_ESP/actions/workflows/main.yml/badge.svg)](https://github.com/TheRealMoeder/Energy2Shelly_ESP/actions/workflows/main.yml)
+
 ### Getting started
 This is a Shelly Pro 3EM Emulator running on ESP8266 or ESP32 using various input sources for power data.<br>
 This can be used for zero feed-in with Hoymiles MS-A2, Growatt NOAH/NEXA and Marstek Venus (testers needed!).
