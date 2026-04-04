@@ -28,8 +28,7 @@ void setup(void) {
   // ESP8266
   configTime(timezone, ntp_server);
 #endif
-  while (!getLocalTime(&timeinfo))
-  {
+  while (!getLocalTime(&timeinfo)) {
     DEBUG_SERIAL.println("Waiting for NTP time...");
     delay(500);
   }
