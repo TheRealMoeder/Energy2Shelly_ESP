@@ -86,7 +86,7 @@ void sysGetStatus() {
   jsonResponse["restart_required"] = false;
   jsonResponse["time"] = time_buffer;
   jsonResponse["unixtime"] = now;
-  jsonResponse["last_sync_ts"] = nullptr;
+  jsonResponse["last_sync_ts"] = now;
   jsonResponse["uptime"] = millis() / 1000;
   jsonResponse["ram_size"] = ram_total;
   jsonResponse["ram_free"] = ESP.getFreeHeap();
@@ -97,7 +97,7 @@ void sysGetStatus() {
   jsonResponse["schedule_rev"] = 0;
   jsonResponse["webhook_rev"] = 0;
   jsonResponse["btrelay_rev"] = 0;
-  jsonResponse["avail_updates"].to<JsonObject>();
+  jsonResponse["available_updates"]["beta"]["version"] = "1.7.5-beta1";
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.print("sysGetStatus: ");
   DEBUG_SERIAL.println(serJsonResponse);
@@ -127,9 +127,11 @@ void EMGetStatus() {
   jsonResponse["c_aprt_power"] = serialized(String(PhasePower[2].apparentPower, 2));
   jsonResponse["c_pf"] = serialized(String(PhasePower[2].powerFactor, 2));
   jsonResponse["c_freq"] = serialized(String(PhasePower[2].frequency, 2));
+  jsonResponse["n_current"] = nullptr;
   jsonResponse["total_current"] = serialized(String((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / defaultVoltage, 2));
   jsonResponse["total_act_power"] = serialized(String(PhasePower[0].power + PhasePower[1].power + PhasePower[2].power, 2));
   jsonResponse["total_aprt_power"] = serialized(String(PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower, 2));
+  jsonResponse["user_calibrated_phase"] = JsonArray();
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.print("EMGetStatus: ");
   DEBUG_SERIAL.println(serJsonResponse);
@@ -237,28 +239,30 @@ void shellyGetStatus() {
 #endif
 
   jsonResponse["ble"].to<JsonObject>();
-
+  jsonResponse["bthome"].to<JsonObject>();
   jsonResponse["cloud"]["connected"] = false;
-  jsonResponse["mqtt"]["connected"] = false;
-
   EMGetStatus();
   jsonResponse["em:0"] = serialized(serJsonResponse);
   EMDataGetStatus();
   jsonResponse["emdata:0"] = serialized(serJsonResponse);
-
-  // temperature is not really in the examples, but makes sense to include it
-  JsonObject temp = jsonResponse["tmp"].to<JsonObject>();
-  temp["tC"] = serialized(String(temperature, 2));
-  temp["tF"] = serialized(String((temperature * 9.0 / 5.0) + 32.0, 2));
-
+  JsonObject eth = jsonResponse["eth"].to<JsonObject>();
+  eth["ip"] = nullptr;
+  eth["ip6"] = nullptr;
+  jsonResponse["modbus"].to<JsonObject>();
+  jsonResponse["mqtt"]["connected"] = false;
   sysGetStatus();
   jsonResponse["sys"] = serialized(serJsonResponse);
-
+  JsonObject temp = jsonResponse["temperature:0"].to<JsonObject>();
+  temp["id"] = 0;
+  temp["tC"] = serialized(String(temperature, 2));
+  temp["tF"] = serialized(String((temperature * 9.0 / 5.0) + 32.0, 2));
   jsonResponse["wifi"]["sta_ip"] = WiFi.localIP().toString();
-  jsonResponse["wifi"]["status"] = (WiFi.status() == WL_CONNECTED);
-  jsonResponse["wifi"]["ssid"] = WiFi.SSID();
+  jsonResponse["wifi"]["status"] = (WiFi.status() == WL_CONNECTED) ? "got ip" : "connecting";
+  jsonResponse["wifi"]["ssid"] = (WiFi.status() == WL_CONNECTED) ? WiFi.SSID() : "null";
+  jsonResponse["wifi"]["bssid"] = (WiFi.status() == WL_CONNECTED) ? WiFi.BSSIDstr() : "null";
   jsonResponse["wifi"]["rssi"] = WiFi.RSSI();
-
+  jsonResponse["wifi"]["sta_ip6"].to<JsonArray>();
+  jsonResponse["ws"]["connected"] = false;
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.print("shellyGetStatus: ");
   DEBUG_SERIAL.println(serJsonResponse);
@@ -271,17 +275,7 @@ void wifiGetStatus() {
   bool wifiConnected = (WiFi.status() == WL_CONNECTED);
   JsonDocument jsonResponse;
   jsonResponse["sta_ip"] = WiFi.localIP() ? WiFi.localIP().toString() : "null";
-  switch (WiFi.status()) {
-    case WL_CONNECTED:
-      jsonResponse["status"] = "connected";
-      break;
-    case WL_DISCONNECTED:
-      jsonResponse["status"] = "disconnected";
-      break;
-    default:
-      jsonResponse["status"] = WiFi.localIP() ? "got ip" : "connecting";
-      break;
-  }
+  jsonResponse["status"] = wifiConnected ? "got ip" : "connecting";
   jsonResponse["ssid"] = wifiConnected ? WiFi.SSID() : "null";
   jsonResponse["bssid"] = wifiConnected ? WiFi.BSSIDstr() : "null";
   jsonResponse["rssi"] = WiFi.RSSI();
