@@ -8,11 +8,11 @@ EnergyData PhaseEnergy[3];
 String serJsonResponse;
 
 double round2(double value) {
-  int ivalue = (int)(value * 100.0 + (value > 0.0 ? 0.5 : -0.5));
+  int ivalue = (int) round(value * 100.0);
 
   // fix Marstek bug: make sure to have decimal numbers
   if(forcePwrDecimals && (ivalue % 100 == 0)) ivalue++;
-  
+
   return ivalue / 100.0;
 }
 
