@@ -77,7 +77,7 @@ void setup(void) {
     html += "<h2>Reset Configuration?</h2>";
     html += "<p>Are you sure you want to reset the WiFi configuration? This will clear current WiFi settings and restart the device in AP mode.</p>";
     html += "<form method='POST' style='display:inline;' accept-charset='UTF-8'>";
-    if (preferences.isKey("reset_password") && preferences.getString("reset_password").length() > 0) {
+    if (reset_password != nullptr && String(reset_password).length() > 0) {
       html += "<input type='password' name='reset_password' placeholder='Enter reset password' required><br/>";
     }
     html += "<button type='submit' class='btn btn-yes'>Yes, Reset</button>";
@@ -88,10 +88,9 @@ void setup(void) {
   });
 
   server.on("/reset", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (preferences.isKey("reset_password") && preferences.getString("reset_password").length() > 0) {
+    if (reset_password != nullptr && String(reset_password).length() > 0) {
        if (request->hasParam("reset_password", true)) {
-        String resetPassword = request->getParam("reset_password", true)->value();
-        if (resetPassword == preferences.getString("reset_password")) {
+        if (String(reset_password) == request->getParam("reset_password", true)->value()) {
           shouldResetConfig = true;
           request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
         } else {
