@@ -39,8 +39,20 @@ JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
 }
 
 void setPowerData(double totalPower) {
+  switch(phase_number[0]) {
+    case '1': // monophase
+      PhasePower[0].power = round2(totalPower);
+      PhasePower[1].power = 0.0;
+      PhasePower[2].power = 0.0;
+      break;
+    case '3': // triphase
+    default:
+      PhasePower[0].power = round2(totalPower * 0.3333);
+      PhasePower[1].power = round2(totalPower * 0.3333);
+      PhasePower[2].power = round2(totalPower * 0.3333);
+      break;
+  }
   for (int i = 0; i <= 2; i++) {
-    PhasePower[i].power = round2(totalPower * 0.3333);
     PhasePower[i].voltage = round2(defaultVoltage);
     PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
     PhasePower[i].apparentPower = round2(PhasePower[i].power);
@@ -52,9 +64,19 @@ void setPowerData(double totalPower) {
 }
 
 void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
-  PhasePower[0].power = round2(phase1Power);
-  PhasePower[1].power = round2(phase2Power);
-  PhasePower[2].power = round2(phase3Power);
+  switch(phase_number[0]) {
+    case '1': // monophase
+      PhasePower[0].power = round2(phase1Power) + round2(phase2Power) + round2(phase3Power);
+      PhasePower[1].power = 0.0;
+      PhasePower[2].power = 0.0;
+      break;
+    case '3': // triphase
+    default:
+      PhasePower[0].power = round2(phase1Power);
+      PhasePower[1].power = round2(phase2Power);
+      PhasePower[2].power = round2(phase3Power);
+      break;
+  }
   for (int i = 0; i <= 2; i++) {
     PhasePower[i].voltage = round2(defaultVoltage);
     PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
@@ -71,13 +93,24 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
 }
 
 void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
-  for (int i = 0; i <= 2; i++) {
-    PhaseEnergy[i].consumption = round2(totalEnergyGridSupply * 0.3333);
-    PhaseEnergy[i].gridfeedin = round2(totalEnergyGridFeedIn * 0.3333);
+  switch (phase_number[0]) {
+  case '1': // monophase
+    for (int i = 0; i <= 2; i++) {
+      PhaseEnergy[i].consumption = (i == 0) ? round2(totalEnergyGridSupply) : 0.0;
+      PhaseEnergy[i].gridfeedin = (i == 0) ? round2(totalEnergyGridFeedIn) : 0.0;
+    }
+    break;
+  case '3': // triphase
+  default:
+    for (int i = 0; i <= 2; i++){
+      PhaseEnergy[i].consumption = round2(totalEnergyGridSupply * 0.3333);
+      PhaseEnergy[i].gridfeedin = round2(totalEnergyGridFeedIn * 0.3333);
+    }
+    break;
   }
-  DEBUG_SERIAL.print("Total consumption: ");
+  DEBUG_SERIAL.print("Total Consumption (Grid Supply): ");
   DEBUG_SERIAL.print(totalEnergyGridSupply);
-  DEBUG_SERIAL.print(" - Total Grid Feed-In: ");
+  DEBUG_SERIAL.print(" - Total Production (Grid Feed-In): ");
   DEBUG_SERIAL.println(totalEnergyGridFeedIn);
 }
 
