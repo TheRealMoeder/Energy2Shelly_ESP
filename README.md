@@ -17,11 +17,11 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
 1) connect your ESP to your PC using USB and follow the instructions on the [webflasher](https://therealmoeder.github.io/Energy2Shelly_ESP/)
 
 # Configuration
-## 1. Power device and wait for a hotspot named "Energy2Shelly"
-## 2. Connect to that hotspot
-## 3. Enter wifi and configuration data using the captive portal or by opening http://192.168.4.1/
+### 1. Power device and wait for a hotspot named "Energy2Shelly"
+### 2. Connect to that hotspot
+### 3. Enter wifi and configuration data using the captive portal or by opening http://192.168.4.1/
 
-  ### On the captive portal you can currently set a data source for power data. The following options are available:
+  #### On the captive portal you can currently set a data source for power data. The following options are available:
   - <code>MQTT</code>
     - Server IP, port, username, password and topic
     - Power values on the MQTT topic are expected in JSON format. The are multiple fields to define available values using a JSON Path-style syntax.
@@ -70,15 +70,15 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
       - eBZ DD3 (SML message length: 396)
     - Support for additional power meters can be added. If you can provide your meter's SML sample data and message length and confirm that the parser works with your meter's data stream, then please open an issue or, even better, a PR with the details!
 
-  ### Here are some sample generic HTTP query paths for common devices:
+  #### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>
   - Tasmota devices: <code>http://IP-address/cm?cmnd=status%2010</code>
   - ioBroker datapoints: <code>http://IP-address:8082/getBulk/smartmeter.0.1-0:1_8_0__255.value,smartmeter.0.1-0:2_8_0__255.value,smartmeter.0.1-0:16_7_0__255.value/?json</code>
   
   The Shelly ID defaults to the ESP's MAC address, you may change this if you want to substitute an existing uni-meter configuration without reconnecting the battery to a new shelly device.
   
-## 4. Check if your device is visible in the WLAN. <code>http://IP-address</code><br>
-## 5. Check the current power data at <code>http://IP-address/status</code><br>
+### 4. Check if your device is visible in the WLAN. <code>http://IP-address</code><br>
+### 5. Check the current power data at <code>http://IP-address/status</code><br>
 - [ ] \(Optional) If you want to reset you Wifi-Configuration and/or reconfigure other settings go to <code>http://IP-address/reset</code> and reconnect to the Energy2Shelly hotspot.
 
 # Tested microcontrollers
