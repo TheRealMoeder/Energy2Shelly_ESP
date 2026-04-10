@@ -14,6 +14,7 @@ tm timeinfo;
 char input_type[40];
 char ntp_server[40] = "de.pool.ntp.org";
 char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
+char phase_number[2] = "3"; // number of phases: 1 for monophase or 3 for triphase
 char mqtt_server[160];
 char mqtt_port[6] = "1883";
 char mqtt_topic[90] = "tele/meter/SENSOR";
@@ -153,6 +154,7 @@ void WifiManagerSetup() {
   strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
   strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
   strcpy(timezone, preferences.getString("timezone", timezone).c_str());
+  strcpy(phase_number, preferences.getString("phase_number", phase_number).c_str());
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
   strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
   strcpy(led_gpio_i, preferences.getString("led_gpio_i", led_gpio_i).c_str());
@@ -185,6 +187,7 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
   WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
   WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
+  WiFiManagerParameter param_phase_number("phase_number", "Number of phases <span title=\"Number of phases (e.g. 1 or 3)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", phase_number, 1);
   WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
   WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
@@ -202,8 +205,8 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_power_path("power_path", "<b>Total power JSON path</b><br>e.g. <code>ENERGY.Power</code> or <code>TRIPHASE</code> for tri-phase data", power_path, 60);
   WiFiManagerParameter custom_pwr_export_path("pwr_export_path", "<b>Export power JSON path</b><br>Optional, for net calc (e.g. \"i-e\"", pwr_export_path, 60);
   WiFiManagerParameter custom_power_l1_path("power_l1_path", "<b>Phase 1 power JSON path</b><br>optional", power_l1_path, 60);
-  WiFiManagerParameter custom_power_l2_path("power_l2_path", "<b>Phase 2 power JSON path</b><br>Phase 2 power JSON path<br>optional", power_l2_path, 60);
-  WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>Phase 3 power JSON path<br>optional", power_l3_path, 60);
+  WiFiManagerParameter custom_power_l2_path("power_l2_path", "<b>Phase 2 power JSON path</b><br>optional", power_l2_path, 60);
+  WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>optional", power_l3_path, 60);
   WiFiManagerParameter custom_energy_in_path("energy_in_path", "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>", energy_in_path, 60);
   WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
   // TibberPulse section
@@ -228,6 +231,7 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&param_ntp_server);
   wifiManager.addParameter(&param_timezone);
+  wifiManager.addParameter(&param_phase_number);
   wifiManager.addParameter(&custom_query_period);
   wifiManager.addParameter(&custom_led_gpio);
   wifiManager.addParameter(&custom_led_gpio_i);
@@ -271,6 +275,7 @@ void WifiManagerSetup() {
   strcpy(mqtt_port, custom_mqtt_port.getValue());
   strcpy(ntp_server, param_ntp_server.getValue());
   strcpy(timezone, param_timezone.getValue());
+  strcpy(phase_number, param_phase_number.getValue());
   strcpy(query_period, custom_query_period.getValue());
   strcpy(led_gpio, custom_led_gpio.getValue());
   strcpy(led_gpio_i, custom_led_gpio_i.getValue());
@@ -300,6 +305,7 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tmqtt_port : " + String(mqtt_port));
   DEBUG_SERIAL.println("\tntp_server: " + String(ntp_server));
   DEBUG_SERIAL.println("\ttimezone: " + String(timezone));
+  DEBUG_SERIAL.println("\tphase_number : " + String(phase_number));
   DEBUG_SERIAL.println("\tquery_period : " + String(query_period));
   DEBUG_SERIAL.println("\tled_gpio : " + String(led_gpio));
   DEBUG_SERIAL.println("\tled_gpio_i : " + String(led_gpio_i));
@@ -362,6 +368,7 @@ void WifiManagerSetup() {
     preferences.putString("mqtt_port", mqtt_port);
     preferences.putString("ntp_server", ntp_server);
     preferences.putString("timezone", timezone);
+    preferences.putString("phase_number", phase_number);
     preferences.putString("query_period", query_period);
     preferences.putString("led_gpio", led_gpio);
     preferences.putString("led_gpio_i", led_gpio_i);
