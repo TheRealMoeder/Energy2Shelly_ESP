@@ -75,8 +75,11 @@ void setup(void) {
     html += ".btn-yes{background-color:#d9534f;color:white;border:none;}";
     html += ".btn-no{background-color:#5bc0de;color:white;border:none;}</style></head><body>";
     html += "<h2>Reset Configuration?</h2>";
-    html += "<p>Are you sure you want to reset the WiFi configuration? This will clear all settings and restart the device.</p>";
-    html += "<form method='POST' action='/reset' style='display:inline;'>";
+    html += "<p>Are you sure you want to reset the WiFi configuration? This will clear current WiFi settings and restart the device in AP mode.</p>";
+    html += "<form method='POST' style='display:inline;' accept-charset='UTF-8'>";
+    if (reset_password != nullptr && strlen(reset_password) > 0) {
+      html += "<input type='password' name='reset_password' placeholder='Enter reset password' required><br/>";
+    }
     html += "<button type='submit' class='btn btn-yes'>Yes, Reset</button>";
     html += "</form>";
     html += "<a href='/' class='btn btn-no'>Cancel</a>";
@@ -85,8 +88,21 @@ void setup(void) {
   });
 
   server.on("/reset", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {
-    shouldResetConfig = true;
-    request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
+    if (reset_password != nullptr && strlen(reset_password) > 0) {
+       if (request->hasParam("reset_password", true)) {
+        if (String(reset_password) == request->getParam("reset_password", true)->value()) {
+          shouldResetConfig = true;
+          request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
+        } else {
+          request->send(403, "text/plain", "Unauthorized: Invalid reset password.\r\n");
+        }
+      } else {
+        request->send(400, "text/plain", "Reset password missing.\r\n");
+      }
+    } else {
+      shouldResetConfig = true;
+      request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
+    }
   });
 
   // Shelly RPC endpoints called via HTTP GET method
