@@ -63,12 +63,12 @@ Connect your ESP to your PC using USB and follow the instructions on the [webfla
   - <code>TIBBERPULSE</code>
     - Parses SML data from your Tibber Pulse IR locally using the [sml_parser](https://github.com/olliiiver/sml_parser) ESP library. This is a great option if you want to use Tibber Pulse data for zero feed-in with Hoymiles MS-A2, Growatt NOAH/NEXA, or Marstek Venus inverters/batteries.
     - Follow [these](https://github.com/marq24/ha-tibber-pulse-local#tibber-pulse-ir-local) instructions to access your Tibber Pulse/Bridge data locally.
-    - Provide the IP address and port of the WebSocket API, plus username and password of your Tibber Bridge, in the configuration options so Energy2Shelly_ESP can connect and receive power data.
-    - The parser automatically extracts total power, phase power, and energy from/to the grid from the WebSocket API data stream and makes it available for the Shelly Pro 3EM Emulator.
+    - Provide the `IP address / hostname` and `port` of the WebSocket API, plus `username` and `password` of your Tibber Bridge, in the configuration options so Energy2Shelly_ESP can connect and receive power data.
+    - The parser automatically extracts `total power`, `phase power` and `energy from/to the grid` from the WebSocket API data stream and makes it available for the Shelly Pro 3EM Emulator.
     - Following power meters are currently supported and implemented in the parser:
-      - EMH EHZB (SML message length: 248)
-      - eBZ DD3 (SML message length: 396)
-    - Support for additional power meters can be added. If you can provide your meter's SML sample data and message length and confirm that the parser works with your meter's data stream, then please open an issue or, even better, a PR with the details!
+      - **EMH EHZB** (SML message length: 248)
+      - **eBZ DD3** (SML message length: 396)
+    - Support for additional power meters can be easily added. If you can provide your meter's SML sample data and message length and confirm that the parser works with your meter's data stream, then please open an issue or, even better, a PR with the details!
 
   #### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>
