@@ -61,15 +61,14 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
     - Modbus TCP port (usually 502)
     - Modbus Device ID of the unit ID (71 for KSEM)
   - <code>TIBBERPULSE</code>
-    - parses SML data provided by your Tibber Pulse IR locally using [sml_parser](https://github.com/olliiiver/sml_parser) ESP library. This is a great option if you have a Tibber Pulse and want to use the data for zero feed-in with Hoymiles MS-A2, Growatt NOAH/NEXA or Marstek Venus inverters/batteries.
-    - follow [these](https://github.com/marq24/ha-tibber-pulse-local#tibber-pulse-ir-local) instructions to access
-      the data of your Tibber Pulse / Bridge locally
-    - provide the IP address and port of the Websocket API, device admin and password of your Tibber Bridge in the configuration options to allow Energy2Shelly_ESP to connect to the Websocket API and receive power data
-    - the parser will automatically extract total power, phase power and energy from/to grid data from the Websocket API data stream and make it available for the Shelly Pro 3EM Emulator.
-    - support for following power meters is implemented and tested:
-      - EMH EHZB (SML message length 248)
-      - eBZ DD3 (SML message length 396)
-    - support for your power meter can be added, if you provide the SML message length of your meter and confirm that the parser works with your meter's data stream, please open an issue or even better a PR with the details!
+    - Parses SML data from your Tibber Pulse IR locally using the [sml_parser](https://github.com/olliiiver/sml_parser) ESP library. This is a great option if you want to use Tibber Pulse data for zero feed-in with Hoymiles MS-A2, Growatt NOAH/NEXA, or Marstek Venus inverters/batteries.
+    - Follow [these](https://github.com/marq24/ha-tibber-pulse-local#tibber-pulse-ir-local) instructions to access your Tibber Pulse/Bridge data locally.
+    - Provide the IP address and port of the WebSocket API, plus username and password of your Tibber Bridge, in the configuration options so Energy2Shelly_ESP can connect and receive power data.
+    - The parser automatically extracts total power, phase power, and energy from/to the grid from the WebSocket API data stream and makes it available for the Shelly Pro 3EM Emulator.
+    - Following power meters are currently supported and implemented in the parser:
+      - EMH EHZB (SML message length: 248)
+      - eBZ DD3 (SML message length: 396)
+    - Support for additional power meters can be added. If you can provide your meter's SML sample data and message length and confirm that the parser works with your meter's data stream, then please open an issue or, even better, a PR with the details!
 
   ### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>
