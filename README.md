@@ -12,14 +12,14 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
 
 # Installation
 ## Option 1: Compile yourself
-1) compile and flash for your microcontroller using [PlatformIO](https://platformio.org/)
+Compile and flash for your microcontroller using [PlatformIO](https://platformio.org/)
 ## Option 2: Flash pre-compiled binary via browser 
-1) connect your ESP to your PC using USB and follow the instructions on the [webflasher](https://therealmoeder.github.io/Energy2Shelly_ESP/)
+Connect your ESP to your PC using USB and follow the instructions on the [webflasher](https://therealmoeder.github.io/Energy2Shelly_ESP/)
 
 # Configuration
-### 1. Power device and wait for a hotspot named "Energy2Shelly"
-### 2. Connect to that hotspot
-### 3. Enter wifi and configuration data using the captive portal or by opening http://192.168.4.1/
+#### 1. Power device and wait for a hotspot named "Energy2Shelly"
+#### 2. Connect to that hotspot
+#### 3. Enter wifi and configuration data using the captive portal or by opening http://192.168.4.1/
 
   #### On the captive portal you can currently set a data source for power data. The following options are available:
   - <code>MQTT</code>
@@ -77,8 +77,8 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
   
   The Shelly ID defaults to the ESP's MAC address, you may change this if you want to substitute an existing uni-meter configuration without reconnecting the battery to a new shelly device.
   
-### 4. Check if your device is visible in the WLAN. <code>http://IP-address</code><br>
-### 5. Check the current power data at <code>http://IP-address/status</code><br>
+#### 4. Check if your device is visible in the WLAN. <code>http://IP-address</code><br>
+#### 5. Check the current power data at <code>http://IP-address/status</code><br>
 - [ ] \(Optional) If you want to reset you Wifi-Configuration and/or reconfigure other settings go to <code>http://IP-address/reset</code> and reconnect to the Energy2Shelly hotspot.
 
 # Tested microcontrollers
