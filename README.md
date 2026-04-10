@@ -72,6 +72,9 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
   - If you have a monophase setup, set <code>phase_number</code> to <code>1</code>. This asigns all power and energy data to phase 1.
   - If you have a triphase setup, set <code>phase_number</code> to <code>3</code>. This distributes power and energy data across all three phases.
   
+  > [!NOTE]
+  > This option controls how energy2shelly firmware outputs energy data, it does not change the input data. So if you have a triphase setup but want to assign all data to phase 1, set <code>phase_number</code> to <code>1</code>. The TRIPAHSE option in JSONPATH settings only controls how the firmware reads the input data, not how it outputs this data.
+  
 4) Check if your device is visible in the WLAN. <code>http://IP-address</code><br>
 5) Check the current power data at <code>http://IP-address/status</code><br>
 - [ ] \(Optional) If you want to reset you Wifi-Configuration and/or reconfigure other settings go to <code>http://IP-address/reset</code> and reconnect to the Energy2Shelly hotspot.
