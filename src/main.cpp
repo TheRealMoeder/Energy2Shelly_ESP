@@ -255,11 +255,16 @@ void loop() {
       parseSUNSPEC();
       startMillis = currentMillis;
     }
-   
   }
   if (dataHTTP) {
     if (currentMillis - startMillis >= period) {
       queryHTTP();
+      startMillis = currentMillis;
+    }
+  }
+  if (dataTIBBERPULSE) {
+    if (currentMillis - startMillis >= period) {
+      parseTibberPulse();
       startMillis = currentMillis;
     }
   }
