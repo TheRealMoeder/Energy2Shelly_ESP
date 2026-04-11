@@ -48,6 +48,7 @@ extern tm timeinfo;
 // ============================================================================
 
 // Data source and server settings
+extern char reset_password[33];
 extern char input_type[40];
 extern char ntp_server[40];
 extern char timezone[64];
