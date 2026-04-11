@@ -78,8 +78,6 @@ extern char shelly_port[6];
 // Query and protocol settings
 extern char query_period[10];
 extern char modbus_dev[10];
-extern char force_pwr_decimals[6];
-extern bool forcePwrDecimals;
 extern char sma_id[17];
 
 // LED settings
