@@ -80,6 +80,11 @@ extern char query_period[10];
 extern char modbus_dev[10];
 extern char sma_id[17];
 
+extern char tibber_url[41];
+extern char tibber_user[6];
+extern char tibber_password[10];
+extern char tibber_rpc[21];
+
 // LED settings
 extern char led_gpio[3];
 extern char led_gpio_i[6];
@@ -117,6 +122,7 @@ extern bool dataSMA;
 extern bool dataSHRDZM;
 extern bool dataHTTP;
 extern bool dataSUNSPEC;
+extern bool dataTIBBERPULSE;
 
 extern Preferences preferences;
 

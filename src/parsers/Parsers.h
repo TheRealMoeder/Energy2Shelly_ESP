@@ -9,5 +9,6 @@ void mqtt_reconnect();
 void parseSHRDZM();
 void parseSMA();
 void parseSUNSPEC();
+void parseTibberPulse();
 
 #endif // PARSERS_H

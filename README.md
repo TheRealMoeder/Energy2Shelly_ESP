@@ -12,16 +12,16 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
 
 # Installation
 ## Option 1: Compile yourself
-1) compile and flash for your microcontroller using [PlatformIO](https://platformio.org/)
+Compile and flash for your microcontroller using [PlatformIO](https://platformio.org/)
 ## Option 2: Flash pre-compiled binary via browser 
-1) connect your ESP to your PC using USB and follow the instructions on the [webflasher](https://therealmoeder.github.io/Energy2Shelly_ESP/)
+Connect your ESP to your PC using USB and follow the instructions on the [webflasher](https://therealmoeder.github.io/Energy2Shelly_ESP/)
 
 # Configuration
-1) Power device and wait for a hotspot named "Energy2Shelly"
-2) Connect to that hotspot
-3) Enter wifi and configuration data using the captive portal or by opening http://192.168.4.1/
+#### 1. Power device and wait for a hotspot named "Energy2Shelly"
+#### 2. Connect to that hotspot
+#### 3. Enter wifi and configuration data using the captive portal or by opening http://192.168.4.1/
 
-  ### On the captive portal you can currently set a data source for power data. The following options are available:
+  #### On the captive portal you can currently set a data source for power data. The following options are available:
   - <code>MQTT</code>
     - Server IP, port, username, password and topic
     - Power values on the MQTT topic are expected in JSON format. The are multiple fields to define available values using a JSON Path-style syntax.
@@ -60,23 +60,32 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
     - you can setup host ip of Modbus device (e.g. Kostal Smart energy meter)
     - Modbus TCP port (usually 502)
     - Modbus Device ID of the unit ID (71 for KSEM)
+  - <code>TIBBERPULSE</code>
+    - Parses SML data from your Tibber Pulse IR locally using the [sml_parser](https://github.com/olliiiver/sml_parser) ESP library. This is a great option if you want to use Tibber Pulse data for zero feed-in with Hoymiles MS-A2, Growatt NOAH/NEXA, or Marstek Venus inverters/batteries.
+    - Follow [these](https://github.com/marq24/ha-tibber-pulse-local#tibber-pulse-ir-local) instructions to access your Tibber Pulse/Bridge data locally.
+    - Provide the `IP address / hostname` and `port` of the WebSocket API, plus `username` and `password` of your Tibber Bridge, in the configuration options so Energy2Shelly_ESP can connect and receive power data.
+    - The parser automatically extracts `total power`, `phase power` and `energy from/to the grid` from the WebSocket API data stream and makes it available for the Shelly Pro 3EM Emulator.
+    - Following power meters are currently supported and implemented in the parser:
+      - **EMH EHZB** (SML message length: 248)
+      - **eBZ DD3** (SML message length: 396)
+    - Support for additional power meters can be easily added. If you can provide your meter's SML sample data and message length and confirm that the parser works with your meter's data stream, then please open an issue or, even better, a PR with the details!
 
-  ### Here are some sample generic HTTP query paths for common devices:
+  #### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>
   - Tasmota devices: <code>http://IP-address/cm?cmnd=status%2010</code>
   - ioBroker datapoints: <code>http://IP-address:8082/getBulk/smartmeter.0.1-0:1_8_0__255.value,smartmeter.0.1-0:2_8_0__255.value,smartmeter.0.1-0:16_7_0__255.value/?json</code>
   
   The Shelly ID defaults to the ESP's MAC address, you may change this if you want to substitute an existing uni-meter configuration without reconnecting the battery to a new shelly device.
   
-  ### How the <code>phase_number</code> option can be used:
+  #### How the <code>phase_number</code> option can be used:
   - If you have a monophase setup, set <code>phase_number</code> to <code>1</code>. This asigns all power and energy data to phase 1.
   - If you have a triphase setup, set <code>phase_number</code> to <code>3</code>. This distributes power and energy data across all three phases.
   
   > [!NOTE]
   > This option controls how energy2shelly firmware outputs energy data, it does not change the input data. So if you have a triphase setup but want to assign all data to phase 1, set <code>phase_number</code> to <code>1</code>. The TRIPAHSE option in JSONPATH settings only controls how the firmware reads the input data, not how it outputs this data.
   
-4) Check if your device is visible in the WLAN. <code>http://IP-address</code><br>
-5) Check the current power data at <code>http://IP-address/status</code><br>
+#### 4. Check if your device is visible in the WLAN. <code>http://IP-address</code><br>
+#### 5. Check the current power data at <code>http://IP-address/status</code><br>
 - [ ] \(Optional) If you want to reset you Wifi-Configuration and/or reconfigure other settings go to <code>http://IP-address/reset</code> and reconnect to the Energy2Shelly hotspot.
 
 # Tested microcontrollers
