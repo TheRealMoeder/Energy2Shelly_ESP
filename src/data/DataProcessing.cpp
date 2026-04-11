@@ -8,12 +8,7 @@ EnergyData PhaseEnergy[3];
 String serJsonResponse;
 
 double round2(double value) {
-  int ivalue = (int) round(value * 100.0);
-
-  // fix Marstek bug: make sure to have decimal numbers
-  if(forcePwrDecimals && (ivalue % 100 == 0)) ivalue++;
-
-  return ivalue / 100.0;
+  return round(value * 100.0) / 100.0;
 }
 
 bool isValidIPAddress(const char* ipString) {
