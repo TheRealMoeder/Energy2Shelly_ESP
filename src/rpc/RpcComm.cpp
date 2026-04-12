@@ -184,7 +184,7 @@ void parseHttpRPC(String requestBody, AsyncWebServerRequest *request) {
         rpcWrapper();
         request->send(200, "application/json", serJsonResponse);
       } else {
-        DEBUG_SERIAL.printf("RPC over HTTP: unknown request: %s\n", requestBody);
+        DEBUG_SERIAL.printf("RPC over HTTP: unknown request: %s\n", requestBody.c_str());
       }
     }
   }

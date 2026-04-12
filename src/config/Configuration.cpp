@@ -41,8 +41,6 @@ char shelly_port[6] = "2220"; // old: 1010; new (FW>=226): 2220; Venus A and E 3
 // Query and protocol settings
 char query_period[10] = "1000";
 char modbus_dev[10] = "71"; // default for KSEM
-char force_pwr_decimals[6] = "true"; // to fix Marstek bug
-bool forcePwrDecimals = true; // to fix Marstek bug
 char sma_id[17] = "";
 
 // Tibber related
@@ -174,7 +172,6 @@ void WifiManagerSetup() {
   strcpy(energy_in_path, preferences.getString("energy_in_path", energy_in_path).c_str());
   strcpy(energy_out_path, preferences.getString("energy_out_path", energy_out_path).c_str());
   strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
-  strcpy(force_pwr_decimals, preferences.getString("force_pwr_decimals", force_pwr_decimals).c_str());
   strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
   // TibberPulse settings
   strcpy(tibber_url, preferences.getString("tibber_url", tibber_url).c_str());
@@ -199,7 +196,6 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
   WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
   WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> or <code>2220</code> depending on Marstek Venus model and firmware version", shelly_port, 6);
-  WiFiManagerParameter custom_force_pwr_decimals("force_pwr_decimals", "<b>Force decimals numbers for Power values</b><br><code>true</code> to fix Marstek bug", force_pwr_decimals, 6);
   WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
   WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
   WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", mqtt_topic, 90);
@@ -248,7 +244,6 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_led_gpio_i);
   wifiManager.addParameter(&custom_shelly_mac);
   wifiManager.addParameter(&custom_shelly_port);
-  wifiManager.addParameter(&custom_force_pwr_decimals);
   wifiManager.addParameter(&custom_sma_id);
   wifiManager.addParameter(&custom_section2);
   wifiManager.addParameter(&custom_mqtt_port);
@@ -305,7 +300,6 @@ void WifiManagerSetup() {
   strcpy(energy_in_path, custom_energy_in_path.getValue());
   strcpy(energy_out_path, custom_energy_out_path.getValue());
   strcpy(shelly_port, custom_shelly_port.getValue());
-  strcpy(force_pwr_decimals, custom_force_pwr_decimals.getValue());
   strcpy(sma_id, custom_sma_id.getValue());
   // TibberPulse
   strcpy(tibber_url, param_tibber_url.getValue());
@@ -336,7 +330,6 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tenergy_in_path : " + String(energy_in_path));
   DEBUG_SERIAL.println("\tenergy_out_path : " + String(energy_out_path));
   DEBUG_SERIAL.println("\tshelly_port : " + String(shelly_port));
-  DEBUG_SERIAL.println("\tforce_pwr_decimals : " + String(force_pwr_decimals));
   DEBUG_SERIAL.println("\tsma_id : " + String(sma_id));
   DEBUG_SERIAL.println("\tTibberPulse options:");
   DEBUG_SERIAL.println("\t - tibber_url: " + String(tibber_url));
@@ -369,12 +362,6 @@ void WifiManagerSetup() {
     led_i = false;
   }
 
-  if (strcmp(force_pwr_decimals, "true") == 0) {
-    forcePwrDecimals = true;
-  } else {
-    forcePwrDecimals = false;
-  }
-
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println("saving config");
     preferences.putString("reset_password", reset_password);
@@ -400,7 +387,6 @@ void WifiManagerSetup() {
     preferences.putString("energy_in_path", energy_in_path);
     preferences.putString("energy_out_path", energy_out_path);
     preferences.putString("shelly_port", shelly_port);
-    preferences.putString("force_pwr_decimals", force_pwr_decimals);
     preferences.putString("sma_id", sma_id);
     preferences.putString("tibber_url", tibber_url);
     preferences.putString("tibber_user", tibber_user);
