@@ -88,7 +88,9 @@ Connect your ESP to your PC using USB and follow the instructions on the [webfla
 #### 5. Check the current power data at <code>http://IP-address/status</code><br>
 - [ ] \(Optional) If you want to reset you Wifi-Configuration and/or reconfigure other settings go to <code>http://IP-address/reset</code> and reconnect to the Energy2Shelly hotspot.
 
-# Tested microcontrollers
+# Currently supported microcontrollers
+* ESP32-C3
+* ESP32-S3
 * ESP32 (ESP32-WROOM-32)
 * ESP8266
 
