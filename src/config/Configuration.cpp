@@ -194,7 +194,7 @@ void WifiManagerSetup() {
   WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
   WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
   WiFiManagerParameter param_phase_number("phase_number", "Number of phases <span title=\"Number of phases (e.g. 1 or 3)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", phase_number, 1);
-  WiFiManagerParameter custom_power_offset("power_offset", "<b>Power Offset</b><br>optional offset value in Watts added to the emulated output ", power_offset, 10);
+  WiFiManagerParameter custom_power_offset("power_offset", "Power offset <span title=\"optional offset value in Watts added to the emulated output\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", power_offset, 10);
   WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
   WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);

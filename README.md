@@ -77,6 +77,9 @@ Connect your ESP to your PC using USB and follow the instructions on the [webfla
   
   The Shelly ID defaults to the ESP's MAC address, you may change this if you want to substitute an existing uni-meter configuration without reconnecting the battery to a new shelly device.
   
+  #### Power offset option:
+  - This option allows a positive or negative value to be added to the emulated Shelly's output data
+  
   #### How the <code>phase_number</code> option can be used:
   - If you have a monophase setup, set <code>phase_number</code> to <code>1</code>. This asigns all power and energy data to phase 1.
   - If you have a triphase setup, set <code>phase_number</code> to <code>3</code>. This distributes power and energy data across all three phases.
