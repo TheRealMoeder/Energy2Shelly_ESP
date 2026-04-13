@@ -1,4 +1,3 @@
-// Energy2Shelly_ESP v0.6.1
 #include <Arduino.h>
 
 // Configuration & setup
