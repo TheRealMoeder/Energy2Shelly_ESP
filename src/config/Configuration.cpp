@@ -231,9 +231,7 @@ void WifiManagerSetup() {
   if (!DEBUG) {
     wifiManager.setDebugOutput(false);
   }
-
-  wifiManager.setDebugOutput(true, WM_DEBUG_DEV);
-  wifiManager.debugPlatformInfo();
+  wifiManager.setShowStaticFields(true);
 
   // Move custom parameters to seperate menu to avoid issues with too many custom parameters and too many results from AP scan
   std::vector<const char *> menu = {"wifi","info","param","sep","restart","exit"};
