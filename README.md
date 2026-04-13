@@ -14,7 +14,7 @@ Configurable power offset to reduce reported power below a threshold.
   (Aditinal option: if you send Akku1=0 as power1 you can triger this always)
 - **Abweichung Grenze:** If Akku1 is out of power or off, Akku2 only deliver if power more than this value is needet.
 
-All feeld below are info boxes. 
+All feelds below are info boxes. 
 
 ### Web Interface
 All settings adjustable via `/offset` without WiFi reset.
@@ -26,6 +26,12 @@ Your Home Automation System (FHEM/Home Assistant or maybe a Shelly script to tra
 Example for FHEM: 
 
 GetFileFromURL("http://192.168.xxx.xxx/setextern?power1=$pwr1&power2=$pwr2", 2)
+
+All Text are only in German.
+If there is a problem, don´t use it (ok write me :-)
+
+Tested only with ESP8266 (ESP12F)
+
 
 #########################################################################################
 
