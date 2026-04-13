@@ -77,14 +77,14 @@ void parseSMA() {
                 // 2.4.0 Total feed-in power in dW - unused
                 break;
               case 21:
-                PhasePower[0].power = round2(data * 0.1);
+                PhasePower[0].power = round2(data * 0.1) - offsetPerPhase;
                 PhasePower[0].frequency = defaultFrequency;
                 break;
               case 22:
                 PhasePower[0].power -= round2(data * 0.1);
                 break;
               case 29:
-                PhasePower[0].apparentPower = round2(data * 0.1);
+                PhasePower[0].apparentPower = round2(data * 0.1) - offsetPerPhase;
                 break;
               case 30:
                 PhasePower[0].apparentPower -= round2(data * 0.1);
@@ -99,14 +99,14 @@ void parseSMA() {
                 PhasePower[0].powerFactor = round2(data * 0.001);
                 break;
               case 41:
-                PhasePower[1].power = round2(data * 0.1);
+                PhasePower[1].power = round2(data * 0.1) - offsetPerPhase;
                 PhasePower[1].frequency = defaultFrequency;
                 break;
               case 42:
                 PhasePower[1].power -= round2(data * 0.1);
                 break;
               case 49:
-                PhasePower[1].apparentPower = round2(data * 0.1);
+                PhasePower[1].apparentPower = round2(data * 0.1) - offsetPerPhase;
                 break;
               case 50:
                 PhasePower[1].apparentPower -= round2(data * 0.1);
@@ -121,14 +121,14 @@ void parseSMA() {
                 PhasePower[1].powerFactor = round2(data * 0.001);
                 break;
               case 61:
-                PhasePower[2].power = round2(data * 0.1);
+                PhasePower[2].power = round2(data * 0.1) - offsetPerPhase;
                 PhasePower[2].frequency = defaultFrequency;
                 break;
               case 62:
                 PhasePower[2].power -= round2(data * 0.1);
                 break;
               case 69:
-                PhasePower[2].apparentPower = round2(data * 0.1);
+                PhasePower[2].apparentPower = round2(data * 0.1) - offsetPerPhase;
                 break;
               case 70:
                 PhasePower[2].apparentPower -= round2(data * 0.1);

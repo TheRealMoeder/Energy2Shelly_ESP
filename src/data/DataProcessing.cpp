@@ -34,7 +34,7 @@ JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
 }
 
 void setPowerData(double totalPower) {
-  double adjustedPower = totalPower + String(power_offset).toDouble();
+  double adjustedPower = totalPower + offsetPerPhase * 3;
 
   switch(phase_number[0]) {
     case '1': // monophase
@@ -61,8 +61,6 @@ void setPowerData(double totalPower) {
 }
 
 void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
-  double offsetPerPhase = String(power_offset).toDouble() / 3.0;  // distribute offset equally across phases
-  
   switch(phase_number[0]) {
     case '1': // monophase
       PhasePower[0].power = round2(phase1Power) + round2(phase2Power) + round2(phase3Power) + offsetPerPhase * 3;

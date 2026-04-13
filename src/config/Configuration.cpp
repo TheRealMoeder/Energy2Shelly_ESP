@@ -67,10 +67,11 @@ IPAddress modbus_ip;
 ModbusIP modbus1;
 int16_t modbus_result[256];
 
-// Default electrical values
+// Default electrical values and offset
 const uint8_t defaultVoltage = 230;
 const uint8_t defaultFrequency = 50;
 const uint8_t defaultPowerFactor = 1;
+double offsetPerPhase = 0;
 
 // RPC and query settings
 unsigned long period = 1000;
@@ -234,6 +235,10 @@ void WifiManagerSetup() {
   wifiManager.setDebugOutput(true, WM_DEBUG_DEV);
   wifiManager.debugPlatformInfo();
 
+  // Move custom parameters to seperate menu to avoid issues with too many custom parameters and too many results from AP scan
+  std::vector<const char *> menu = {"wifi","info","param","sep","restart","exit"};
+  wifiManager.setMenu(menu);
+
   wifiManager.setTitle("Energy2Shelly for ESP");
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
@@ -314,6 +319,8 @@ void WifiManagerSetup() {
   strcpy(tibber_url, param_tibber_url.getValue());
   strcpy(tibber_user, param_tibber_user.getValue());
   strcpy(tibber_password, param_tibber_password.getValue());
+
+  offsetPerPhase = String(power_offset).toDouble() / 3.0;  // distribute offset equally across phases
 
   DEBUG_SERIAL.println("The values in the preferences are: ");
   DEBUG_SERIAL.println("\treset_password: ********");

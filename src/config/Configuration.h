@@ -103,10 +103,11 @@ extern IPAddress modbus_ip;
 extern ModbusIP modbus1;
 extern int16_t modbus_result[256];
 
-// Default electrical values
+// Default electrical values and offset
 extern const uint8_t defaultVoltage;
 extern const uint8_t defaultFrequency;
 extern const uint8_t defaultPowerFactor;
+extern double offsetPerPhase;
 
 // RPC and query settings
 extern unsigned long period;
