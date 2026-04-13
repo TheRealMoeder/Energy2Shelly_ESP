@@ -1,5 +1,9 @@
 # Energy2Shelly_ESP
 
+
+![Offset Settings](screenshots/Screenshot_offset.jpg)
+
+
 [![CI](https://github.com/TheRealMoeder/Energy2Shelly_ESP/actions/workflows/main.yml/badge.svg)](https://github.com/TheRealMoeder/Energy2Shelly_ESP/actions/workflows/main.yml)
 
 ### Getting started
