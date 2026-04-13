@@ -1,30 +1,31 @@
 # Energy2Shelly_ESP
 
-Hi, I am a user of your great project and added some features that might be useful for others too.
+## Additional Features (FHEMUser Fork)
+This is made to use 2 Noah 2000 with own inverter.
+Akku1 is the System that uses Ecotracker and Akku2 is the second system that used Energy2Shelly_ESP
 
-## What was added:
+### Akku2 Steuerung
+Configurable power offset to reduce reported power below a threshold.
+- **Zielwert (W):** Standard output of Akku2.
+  Input -0,99 to -0,01 can be used as an offset. -0,80 = 80% of real needet power.
+- **Timeout:** If connection lost to Home Assistant or similar, the full grid reference is used
+- **Obere Grenze Akku1** : If Akku1 deliver more than this value, Akku2 will help
+- **Untere Grenze Akku1** : If Akku1 deliver lower than this value, Akku2 will help
+  (Aditinal option: if you send Akku1=0 as power1 you can triger this always)
+- **Abweichung Grenze:** If Akku1 is out of power or off, Akku2 only deliver if power more than this value is needet.
 
-### Power Offset
-A configurable power offset to reduce reported power below a threshold.
-- Threshold and reduction value are configurable
-- Reduction can be a factor (0.0 - 1.0) or a fixed watt value (2+)
-- Set threshold to 0 to disable
-
-### Load Balancing
-Dynamic load balancing between two battery systems based on capacity ratio.
-- External power value can be pushed via HTTP: /setextern?power=X
-- Useful for FHEM or other home automation systems
-- Configurable capacity ratio, hysteresis and timeout
-- Set ratio to 0 to disable
+All feeld below are info boxes. 
 
 ### Web Interface
-All settings are adjustable via /offset without WiFi reset.
-- No need to reconnect to the hotspot for configuration changes
-- Settings are stored persistently
-
-Tested on ESP8266 (NodeMCU v2).
+All settings adjustable via `/offset` without WiFi reset.
 
 ![Offset Settings](screenshots/Screenshot_offset.jpg)
+
+### What to do
+Your Home Automation System (FHEM/Home Assistant or maybe a Shelly script to transfer the power values to ESP) send power1 and power2 output values.
+Example for FHEM: 
+
+GetFileFromURL("http://192.168.xxx.xxx/setextern?power1=$pwr1&power2=$pwr2", 2)
 
 #########################################################################################
 
