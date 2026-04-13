@@ -1,8 +1,8 @@
 # Energy2Shelly_ESP
 
 ## Additional Features (FHEMUser Fork)
-This is made to use 2 Noah 2000 with own inverter.
-Akku1 is the System that uses Ecotracker and Akku2 is the second system that used Energy2Shelly_ESP
+It was created to operate two Noah inverters, each with its own inverter.
+Akku1 is the System that uses Ecotracker/Shelly3em ... and Akku2 is the second system that used Energy2Shelly_ESP aka Shelly Pro 3 em
 
 ### Akku2 Steuerung
 Configurable power offset to reduce reported power below a threshold.
