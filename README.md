@@ -32,8 +32,9 @@ If there is a problem, don´t use it (ok write me :-)
 
 Tested only with ESP8266 (ESP12F)
 
-Below thuis line is the original text and Instructions.
+Below this line is the original text and Instructions.
 Webflasher will not use my code ! Please use PlatformIO or the bin file
+
 
 ######################################################################################
 
