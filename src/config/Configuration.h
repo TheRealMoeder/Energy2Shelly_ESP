@@ -53,6 +53,7 @@ extern char input_type[40];
 extern char ntp_server[40];
 extern char timezone[64];
 extern char phase_number[2];
+extern char power_offset[10];
 extern char mqtt_server[160];
 extern char mqtt_port[6];
 extern char mqtt_topic[90];
@@ -102,10 +103,11 @@ extern IPAddress modbus_ip;
 extern ModbusIP modbus1;
 extern int16_t modbus_result[256];
 
-// Default electrical values
+// Default electrical values and offset
 extern const uint8_t defaultVoltage;
 extern const uint8_t defaultFrequency;
 extern const uint8_t defaultPowerFactor;
+extern double offsetPerPhase;
 
 // RPC and query settings
 extern unsigned long period;
