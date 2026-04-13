@@ -61,7 +61,7 @@ const char HTML_HOME[] PROGMEM = R"=====(
   </div>
 
 <script>
-function formatValue(value, unit, decimals = 2) {
+function formatValue(value, unit, decimals = 1) {
   if (value === null || value === undefined) return 'N/A';
   return parseFloat(value).toFixed(decimals) + ' ' + unit;
 }
