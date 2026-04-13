@@ -11,11 +11,9 @@ tm timeinfo;
 // ============================================================================
 
 // Data source and server settings
-char reset_password[33] = "admin-changeMe"; // default reset password
 char input_type[40];
 char ntp_server[40] = "de.pool.ntp.org";
 char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
-char phase_number[2] = "3"; // number of phases: 1 for monophase or 3 for triphase
 char mqtt_server[160];
 char mqtt_port[6] = "1883";
 char mqtt_topic[90] = "tele/meter/SENSOR";
@@ -41,13 +39,37 @@ char shelly_port[6] = "2220"; // old: 1010; new (FW>=226): 2220; Venus A and E 3
 // Query and protocol settings
 char query_period[10] = "1000";
 char modbus_dev[10] = "71"; // default for KSEM
+char force_pwr_decimals[6] = "true"; // to fix Marstek bug
+bool forcePwrDecimals = true; // to fix Marstek bug
 char sma_id[17] = "";
 
-// Tibber related
-char tibber_url[41] = "x.x.x.x[:xxxx]"; // IP of TibberPulse
-char tibber_user[6] = "admin";         // fixed user
-char tibber_password[10] = "xxxx-xxxx"; // replace with password printed on Tibbel-Pulse-Adapter
-char tibber_rpc[21] = "/data.json?node_id=1"; // fixed rpc path
+
+
+char akku2_anteil[6] = "25";
+//char hysterese_watt[10] = "50";
+char extern_timeout[6] = "30";
+double akku2AnteilProzent = 25.0;
+double hysteresWatt = 50.0;
+unsigned long externTimeout = 30;
+double externAkku1Power = 0.0;
+unsigned long externLastUpdate = 0;
+
+double externAkku2Power = 0.0;
+//char einspeisung_schwelle[10] = "-50";
+//double einspeisungSchwelle = -50.0;
+
+char akku2_zielwatt[10] = "100";
+double akku2Zielwatt = 100.0;
+bool korrekturGesendet = false;
+
+char akku1_obere_grenze[10] = "700";
+char akku1_untere_grenze[10] = "15";
+char abweichung_grenze[10] = "10";
+double akku1ObereGrenze = 700.0;
+double akku1UntereGrenze = 15.0;
+double abweichungGrenze = 10.0;
+double echteNetPower = 0.0;
+double korrigierteNetPower = 0.0;
 
 // LED settings
 char led_gpio[3] = "";
@@ -86,7 +108,6 @@ bool dataSMA = false;
 bool dataSHRDZM = false;
 bool dataHTTP = false;
 bool dataSUNSPEC = false;
-bool dataTIBBERPULSE = false;
 
 Preferences preferences;
 
@@ -149,12 +170,10 @@ void WifiManagerSetup() {
   sprintf(shelly_mac, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
   preferences.begin("e2s_config", false);
-  strcpy(reset_password, preferences.getString("reset_password", reset_password).c_str());
   strcpy(input_type, preferences.getString("input_type", input_type).c_str());
   strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
   strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
   strcpy(timezone, preferences.getString("timezone", timezone).c_str());
-  strcpy(phase_number, preferences.getString("phase_number", phase_number).c_str());
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
   strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
   strcpy(led_gpio_i, preferences.getString("led_gpio_i", led_gpio_i).c_str());
@@ -172,56 +191,80 @@ void WifiManagerSetup() {
   strcpy(energy_in_path, preferences.getString("energy_in_path", energy_in_path).c_str());
   strcpy(energy_out_path, preferences.getString("energy_out_path", energy_out_path).c_str());
   strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
+  strcpy(force_pwr_decimals, preferences.getString("force_pwr_decimals", force_pwr_decimals).c_str());
   strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
-  // TibberPulse settings
-  strcpy(tibber_url, preferences.getString("tibber_url", tibber_url).c_str());
-  strcpy(tibber_user, preferences.getString("tibber_user", tibber_user).c_str());
-  strcpy(tibber_password, preferences.getString("tibber_password", tibber_password).c_str());
+  
 
-  const char *show_pwd_str = "<input type=\"checkbox\" onclick=\"t('%s')\">&nbsp;<label>Show password</label><br/>";
+  
+  //strcpy(einspeisung_schwelle, preferences.getString("einspeisung_schwelle", einspeisung_schwelle).c_str());
+  strcpy(akku2_zielwatt, preferences.getString("akku2_zielwatt", akku2_zielwatt).c_str());
 
-  WiFiManagerParameter custom_section1("<h3>General settings</h3><script>function t(s) { var x = document.getElementById(s); x.type === \"password\" ? x.type = \"text\" : x.type = \"password\"; }</script>");
-  WiFiManagerParameter param_reset_password("reset_password", "Reset Password <span title=\"For resetting the WiFi configuration and putting the device in AP / config mode\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", reset_password, 32, "type='password'");
-  char buf_rst_pwd_show_pwd[150];
-  sprintf(buf_rst_pwd_show_pwd, show_pwd_str, "reset_password");
-  WiFiManagerParameter param_reset_password_show_password(buf_rst_pwd_show_pwd);
-  WiFiManagerParameter custom_input_type("type", "<hr><b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data<br><code>TIBBERPULSE</code> for TibberPulse SML data", input_type, 40);
+  strcpy(akku2_anteil, preferences.getString("akku2_anteil", akku2_anteil).c_str());
+  //strcpy(hysterese_watt, preferences.getString("hysterese_watt", hysterese_watt).c_str());
+  strcpy(extern_timeout, preferences.getString("extern_timeout", extern_timeout).c_str());
+
+  strcpy(akku1_obere_grenze, preferences.getString("akku1_og", akku1_obere_grenze).c_str());
+  strcpy(akku1_untere_grenze, preferences.getString("akku1_ug", akku1_untere_grenze).c_str());
+  strcpy(abweichung_grenze, preferences.getString("abweichung_gz", abweichung_grenze).c_str());
+
+  WiFiManagerParameter custom_section1("<h3>General settings</h3>");
+  WiFiManagerParameter custom_input_type("type", "<b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data", input_type, 40);
   WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 160);
   WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
   WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
   WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
-  WiFiManagerParameter param_phase_number("phase_number", "Number of phases <span title=\"Number of phases (e.g. 1 or 3)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", phase_number, 1);
   WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
   WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
   WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
   WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> or <code>2220</code> depending on Marstek Venus model and firmware version", shelly_port, 6);
+  WiFiManagerParameter custom_force_pwr_decimals("force_pwr_decimals", "<b>Force decimals numbers for Power values</b><br><code>true</code> to fix Marstek bug", force_pwr_decimals, 6);
   WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
+  
+    
+  WiFiManagerParameter custom_section6("<hr><h3>Lastverteilung</h3>");
+  WiFiManagerParameter custom_akku2_anteil("akku2_anteil",
+  "<b>Anteil Akku 2 (%)</b><br>z.B. <code>25</code> bei 2kWh vs 6kWh",
+  akku2_anteil, 6);
+
+  //WiFiManagerParameter custom_hysterese_watt("hysterese_watt",
+  //"<b>Hysterese (W)</b><br>Erst eingreifen wenn Abweichung größer als dieser Wert",
+  //hysterese_watt, 10);
+
+  WiFiManagerParameter custom_extern_timeout("extern_timeout",
+  "<b>Timeout (Sekunden)</b><br>Nach dieser Zeit ohne FHEM-Update wird Korrektur deaktiviert",
+  extern_timeout, 6);
+
+  //WiFiManagerParameter custom_einspeisung_schwelle("einspeisung_schwelle",
+  //"<b>Einspeisung Schwellwert (W)</b><br>Bei mehr Einspeisung als dieser Wert wird Akku2 nicht erhoeht",
+  //einspeisung_schwelle, 10);
+  WiFiManagerParameter custom_akku2_zielwatt("akku2_zielwatt",
+  "<b>Zielwert Akku2 (W)</b><br>Akku2 soll immer ca. diesen Wert liefern. 0 = deaktiviert",
+  akku2_zielwatt, 10);
+  WiFiManagerParameter custom_akku1_og("akku1_og",
+    "<b>Obere Grenze Akku1 (W)</b><br>Ueber diesem Wert hilft Akku2 mit",
+    akku1_obere_grenze, 10);
+  WiFiManagerParameter custom_akku1_ug("akku1_ug",
+    "<b>Untere Grenze Akku1 (W)</b><br>Unter diesem Wert uebernimmt Akku2",
+    akku1_untere_grenze, 10);
+  WiFiManagerParameter custom_abweichung_gz("abweichung_gz",
+    "<b>Abweichung Schwelle (W)</b><br>Wenn Akku1 leer und diesem Netzbezug hilft Akku2 mit",
+    abweichung_grenze, 10);
+
   WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
   WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", mqtt_topic, 90);
-  WiFiManagerParameter custom_mqtt_user("user", "<b>MQTT user</b> (optional)", mqtt_user, 40);
-  WiFiManagerParameter custom_mqtt_passwd("passwd", "<b>MQTT password</b> (optional)", mqtt_passwd, 40, "type='password'");
-  char buf_mqtt_pwd_show_pwd[150];
-  sprintf(buf_mqtt_pwd_show_pwd, show_pwd_str, "passwd");
-  WiFiManagerParameter param_mqtt_passwd_show_password(buf_mqtt_pwd_show_pwd);
+  WiFiManagerParameter custom_mqtt_user("user", "<b>MQTT user</b><br>optional", mqtt_user, 40);
+  WiFiManagerParameter custom_mqtt_passwd("passwd", "<b>MQTT password</b><br>optional", mqtt_passwd, 40);
   WiFiManagerParameter custom_section3("<hr><h3>Modbus TCP options</h3>");
   WiFiManagerParameter custom_modbus_dev("modbus_dev", "<b>Modbus device ID</b><br><code>71</code> for Kostal SEM", modbus_dev, 60);
   WiFiManagerParameter custom_section4("<hr><h3>JSON paths for MQTT and generic HTTP</h3>");
   WiFiManagerParameter custom_power_path("power_path", "<b>Total power JSON path</b><br>e.g. <code>ENERGY.Power</code> or <code>TRIPHASE</code> for tri-phase data", power_path, 60);
   WiFiManagerParameter custom_pwr_export_path("pwr_export_path", "<b>Export power JSON path</b><br>Optional, for net calc (e.g. \"i-e\"", pwr_export_path, 60);
   WiFiManagerParameter custom_power_l1_path("power_l1_path", "<b>Phase 1 power JSON path</b><br>optional", power_l1_path, 60);
-  WiFiManagerParameter custom_power_l2_path("power_l2_path", "<b>Phase 2 power JSON path</b><br>optional", power_l2_path, 60);
-  WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>optional", power_l3_path, 60);
+  WiFiManagerParameter custom_power_l2_path("power_l2_path", "<b>Phase 2 power JSON path</b><br>Phase 2 power JSON path<br>optional", power_l2_path, 60);
+  WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>Phase 3 power JSON path<br>optional", power_l3_path, 60);
   WiFiManagerParameter custom_energy_in_path("energy_in_path", "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>", energy_in_path, 60);
   WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
-  // TibberPulse section
-  WiFiManagerParameter param_section_tibberpulse("<hr><h3>TibberPulse options</h3>");
-  WiFiManagerParameter param_tibber_url("tibber_url", "Hostname/IP[:port] <span title=\"e.g.: 192.168.0.1:8080\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_url, 40);
-  WiFiManagerParameter param_tibber_user("tibber_user", "User <span title=\"defaults to: admin\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_user, 5);
-  WiFiManagerParameter param_tibber_password("tibber_password", "Password <span title=\"as printed on bridge device: xxxx-xxxx\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_password, 9, "type='password'");
-  char buf_tibber_pwd_show_pwd[150];
-  sprintf(buf_tibber_pwd_show_pwd, show_pwd_str, "tibber_password");
-  WiFiManagerParameter param_tibber_password_show_password(buf_tibber_pwd_show_pwd);
 
   WiFiManager wifiManager;
   if (!DEBUG) {
@@ -232,25 +275,36 @@ void WifiManagerSetup() {
 
   //add all your parameters here
   wifiManager.addParameter(&custom_section1);
-  wifiManager.addParameter(&param_reset_password);
-  wifiManager.addParameter(&param_reset_password_show_password);
   wifiManager.addParameter(&custom_input_type);
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&param_ntp_server);
   wifiManager.addParameter(&param_timezone);
-  wifiManager.addParameter(&param_phase_number);
   wifiManager.addParameter(&custom_query_period);
   wifiManager.addParameter(&custom_led_gpio);
   wifiManager.addParameter(&custom_led_gpio_i);
   wifiManager.addParameter(&custom_shelly_mac);
   wifiManager.addParameter(&custom_shelly_port);
+  wifiManager.addParameter(&custom_force_pwr_decimals);
   wifiManager.addParameter(&custom_sma_id);
+  
+
+  
+  wifiManager.addParameter(&custom_section6);
+  wifiManager.addParameter(&custom_akku2_anteil);
+  //wifiManager.addParameter(&custom_hysterese_watt);
+  wifiManager.addParameter(&custom_extern_timeout);
+
+  //wifiManager.addParameter(&custom_einspeisung_schwelle);
+  wifiManager.addParameter(&custom_akku2_zielwatt);
+  wifiManager.addParameter(&custom_akku1_og);
+  wifiManager.addParameter(&custom_akku1_ug);
+  wifiManager.addParameter(&custom_abweichung_gz);
+
   wifiManager.addParameter(&custom_section2);
   wifiManager.addParameter(&custom_mqtt_port);
   wifiManager.addParameter(&custom_mqtt_topic);
   wifiManager.addParameter(&custom_mqtt_user);
   wifiManager.addParameter(&custom_mqtt_passwd);
-  wifiManager.addParameter(&param_mqtt_passwd_show_password);
   wifiManager.addParameter(&custom_section3);
   wifiManager.addParameter(&custom_modbus_dev);
   wifiManager.addParameter(&custom_section4);
@@ -261,12 +315,7 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_power_l3_path);
   wifiManager.addParameter(&custom_energy_in_path);
   wifiManager.addParameter(&custom_energy_out_path);
-  // TibberPulse section
-  wifiManager.addParameter(&param_section_tibberpulse);
-  wifiManager.addParameter(&param_tibber_url);
-  wifiManager.addParameter(&param_tibber_user);
-  wifiManager.addParameter(&param_tibber_password);
-  wifiManager.addParameter(&param_tibber_password_show_password);
+  
 
   if (!wifiManager.autoConnect("Energy2Shelly")) {
     DEBUG_SERIAL.println("failed to connect and hit timeout");
@@ -277,13 +326,11 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("connected");
 
   //read updated parameters
-  strcpy(reset_password, param_reset_password.getValue());
   strcpy(input_type, custom_input_type.getValue());
   strcpy(mqtt_server, custom_mqtt_server.getValue());
   strcpy(mqtt_port, custom_mqtt_port.getValue());
   strcpy(ntp_server, param_ntp_server.getValue());
   strcpy(timezone, param_timezone.getValue());
-  strcpy(phase_number, param_phase_number.getValue());
   strcpy(query_period, custom_query_period.getValue());
   strcpy(led_gpio, custom_led_gpio.getValue());
   strcpy(led_gpio_i, custom_led_gpio_i.getValue());
@@ -300,27 +347,34 @@ void WifiManagerSetup() {
   strcpy(energy_in_path, custom_energy_in_path.getValue());
   strcpy(energy_out_path, custom_energy_out_path.getValue());
   strcpy(shelly_port, custom_shelly_port.getValue());
+  strcpy(force_pwr_decimals, custom_force_pwr_decimals.getValue());
   strcpy(sma_id, custom_sma_id.getValue());
-  // TibberPulse
-  strcpy(tibber_url, param_tibber_url.getValue());
-  strcpy(tibber_user, param_tibber_user.getValue());
-  strcpy(tibber_password, param_tibber_password.getValue());
+
+  
+  
+  //strcpy(einspeisung_schwelle, custom_einspeisung_schwelle.getValue());
+
+  strcpy(akku2_anteil, custom_akku2_anteil.getValue());
+  //strcpy(hysterese_watt, custom_hysterese_watt.getValue());
+  strcpy(extern_timeout, custom_extern_timeout.getValue());
+  strcpy(akku2_zielwatt, custom_akku2_zielwatt.getValue());
+  strcpy(akku1_obere_grenze, custom_akku1_og.getValue());
+  strcpy(akku1_untere_grenze, custom_akku1_ug.getValue());
+  strcpy(abweichung_grenze, custom_abweichung_gz.getValue());
 
   DEBUG_SERIAL.println("The values in the preferences are: ");
-  DEBUG_SERIAL.println("\treset_password: ********");
   DEBUG_SERIAL.println("\tinput_type : " + String(input_type));
   DEBUG_SERIAL.println("\tmqtt_server : " + String(mqtt_server));
   DEBUG_SERIAL.println("\tmqtt_port : " + String(mqtt_port));
   DEBUG_SERIAL.println("\tntp_server: " + String(ntp_server));
   DEBUG_SERIAL.println("\ttimezone: " + String(timezone));
-  DEBUG_SERIAL.println("\tphase_number : " + String(phase_number));
   DEBUG_SERIAL.println("\tquery_period : " + String(query_period));
   DEBUG_SERIAL.println("\tled_gpio : " + String(led_gpio));
   DEBUG_SERIAL.println("\tled_gpio_i : " + String(led_gpio_i));
   DEBUG_SERIAL.println("\tshelly_mac : " + String(shelly_mac));
   DEBUG_SERIAL.println("\tmqtt_topic : " + String(mqtt_topic));
   DEBUG_SERIAL.println("\tmqtt_user : " + String(mqtt_user));
-  DEBUG_SERIAL.println("\tmqtt_passwd : ********");
+  DEBUG_SERIAL.println("\tmqtt_passwd : " + String(mqtt_passwd));
   DEBUG_SERIAL.println("\tmodbus_dev : " + String(modbus_dev));
   DEBUG_SERIAL.println("\tpower_path : " + String(power_path));
   DEBUG_SERIAL.println("\tpwr_export_path : " + String(pwr_export_path));
@@ -330,11 +384,10 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tenergy_in_path : " + String(energy_in_path));
   DEBUG_SERIAL.println("\tenergy_out_path : " + String(energy_out_path));
   DEBUG_SERIAL.println("\tshelly_port : " + String(shelly_port));
+  DEBUG_SERIAL.println("\tforce_pwr_decimals : " + String(force_pwr_decimals));
   DEBUG_SERIAL.println("\tsma_id : " + String(sma_id));
-  DEBUG_SERIAL.println("\tTibberPulse options:");
-  DEBUG_SERIAL.println("\t - tibber_url: " + String(tibber_url));
-  DEBUG_SERIAL.println("\t - tibber_user: " + String(tibber_user));
-  DEBUG_SERIAL.println("\t - tibber_password: ********");
+
+  DEBUG_SERIAL.println("\takku2_zielwatt : " + String(akku2_zielwatt));
 
   if (strcmp(input_type, "SMA") == 0) {
     dataSMA = true;
@@ -348,10 +401,8 @@ void WifiManagerSetup() {
   } else if (strcmp(input_type, "SUNSPEC") == 0) {
     dataSUNSPEC = true;
     DEBUG_SERIAL.println("Enabling SUNSPEC data input");
-  } else if (strcmp(input_type, "TIBBERPULSE") == 0) {
-    dataTIBBERPULSE = true;
-    DEBUG_SERIAL.println("Enabling TIBBERPULSE data input");
-  } else {
+  }
+  else {
     dataMQTT = true;
     DEBUG_SERIAL.println("Enabling MQTT data input");
   }
@@ -362,15 +413,28 @@ void WifiManagerSetup() {
     led_i = false;
   }
 
+  if (strcmp(force_pwr_decimals, "true") == 0) {
+    forcePwrDecimals = true;
+  } else {
+    forcePwrDecimals = false;
+  }
+  
+
+   
+  externTimeout = atol(extern_timeout);
+  //einspeisungSchwelle = atof(einspeisung_schwelle);
+  akku2Zielwatt = atof(akku2_zielwatt);
+  akku1ObereGrenze = atof(akku1_obere_grenze);
+  akku1UntereGrenze = atof(akku1_untere_grenze);
+  abweichungGrenze = atof(abweichung_grenze);
+
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println("saving config");
-    preferences.putString("reset_password", reset_password);
     preferences.putString("input_type", input_type);
     preferences.putString("mqtt_server", mqtt_server);
     preferences.putString("mqtt_port", mqtt_port);
     preferences.putString("ntp_server", ntp_server);
     preferences.putString("timezone", timezone);
-    preferences.putString("phase_number", phase_number);
     preferences.putString("query_period", query_period);
     preferences.putString("led_gpio", led_gpio);
     preferences.putString("led_gpio_i", led_gpio_i);
@@ -387,11 +451,20 @@ void WifiManagerSetup() {
     preferences.putString("energy_in_path", energy_in_path);
     preferences.putString("energy_out_path", energy_out_path);
     preferences.putString("shelly_port", shelly_port);
+    preferences.putString("force_pwr_decimals", force_pwr_decimals);
     preferences.putString("sma_id", sma_id);
-    preferences.putString("tibber_url", tibber_url);
-    preferences.putString("tibber_user", tibber_user);
-    preferences.putString("tibber_password", tibber_password);
-    wifiManager.reboot();
+	
+	  
+    preferences.putString("akku2_anteil", akku2_anteil);
+    //preferences.putString("hysterese_watt", hysterese_watt);
+    preferences.putString("extern_timeout", extern_timeout);
+    //preferences.putString("einspeisung_schwelle", einspeisung_schwelle);
+    preferences.putString("akku2_zielwatt", akku2_zielwatt);
+    preferences.putString("akku1_og", akku1_obere_grenze);
+    preferences.putString("akku1_ug", akku1_untere_grenze);
+    preferences.putString("abweichung_gz", abweichung_grenze);
+
+	wifiManager.reboot();
   }
   DEBUG_SERIAL.println("local ip");
   DEBUG_SERIAL.println(WiFi.localIP());
