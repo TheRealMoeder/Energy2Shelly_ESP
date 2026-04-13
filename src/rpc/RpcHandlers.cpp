@@ -32,7 +32,7 @@ void shellyGetDeviceInfo() {
   jsonResponse["auth_domain"] = nullptr;
   jsonResponse["profile"] = "triphase";
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.print("shellyGetDeviceInfo: ");
+  DEBUG_SERIAL.print(F("shellyGetDeviceInfo: "));
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
@@ -59,7 +59,7 @@ void sysGetConfig() {
   jsonResponse["sntp"]["server"] = nullptr;
   jsonResponse["cfg_rev"] = 10;
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.print("sysGetConfig: ");
+  DEBUG_SERIAL.print(F("sysGetConfig: "));
   DEBUG_SERIAL.println(serJsonResponse);
 }
 
@@ -99,7 +99,7 @@ void sysGetStatus() {
   jsonResponse["btrelay_rev"] = 0;
   jsonResponse["available_updates"]["beta"]["version"] = "1.7.5-beta1";
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.print("sysGetStatus: ");
+  DEBUG_SERIAL.print(F("sysGetStatus: "));
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
@@ -133,7 +133,7 @@ void EMGetStatus() {
   jsonResponse["total_aprt_power"] = serialized(String(PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower, 2));
   jsonResponse["user_calibrated_phase"] = JsonArray();
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.print("EMGetStatus: ");
+  DEBUG_SERIAL.print(F("EMGetStatus: "));
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
@@ -152,7 +152,7 @@ void EMDataGetStatus() {
   jsonResponse["total_act"] = serialized(String(PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption, 2));
   jsonResponse["total_act_ret"] = serialized(String(PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin, 2));
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.print("EMDataGetStatus: ");
+  DEBUG_SERIAL.print(F("EMDataGetStatus: "));
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
@@ -169,7 +169,7 @@ void EMGetConfig() {
   jsonResponse["reverse"].to<JsonObject>();
   jsonResponse["ct_type"] = "120A";
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.print("EMGetConfig: ");
+  DEBUG_SERIAL.print(F("EMGetConfig: "));
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
@@ -197,7 +197,7 @@ void shellyGetConfig() {
   jsonResponse["wifi"]["ws"]["server"] = nullptr;
   jsonResponse["wifi"]["ws"]["ssl_ca"] = "ca.pem";
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.print("shellyGetConfig: ");
+  DEBUG_SERIAL.print(F("shellyGetConfig: "));
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
@@ -222,7 +222,7 @@ void shellyGetComponents() {
   jsonResponse["offset"] = 0;
   jsonResponse["total"] = 2;
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.print("shellyGetComponents: ");
+  DEBUG_SERIAL.print(F("shellyGetComponents: "));
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
@@ -264,7 +264,7 @@ void shellyGetStatus() {
   jsonResponse["wifi"]["sta_ip6"].to<JsonArray>();
   jsonResponse["ws"]["connected"] = false;
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.print("shellyGetStatus: ");
+  DEBUG_SERIAL.print(F("shellyGetStatus: "));
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }
@@ -281,7 +281,7 @@ void wifiGetStatus() {
   jsonResponse["rssi"] = wifiConnected ? WiFi.RSSI() : 0;
   jsonResponse["ap_client_count"] = 0; // not really relevant, as we are not in AP mode, but included for completeness
   serializeJson(jsonResponse, serJsonResponse);
-  DEBUG_SERIAL.print("wifiGetStatus: ");
+  DEBUG_SERIAL.print(F("wifiGetStatus: "));
   DEBUG_SERIAL.println(serJsonResponse);
   blinkled(ledblinkduration);
 }

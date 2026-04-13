@@ -32,10 +32,10 @@ void setup(void) {
 #endif
   while (!getLocalTime(&timeinfo))
   {
-    DEBUG_SERIAL.println("Waiting for NTP time...");
+    DEBUG_SERIAL.println(F("Waiting for NTP time..."));
     delay(500);
   }
-  DEBUG_SERIAL.print("Current time: ");
+  DEBUG_SERIAL.print(F("Current time: "));
   char time_buffer[20];
   strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
   DEBUG_SERIAL.println(time_buffer);
@@ -208,7 +208,7 @@ void setup(void) {
     modbus1.client();
     modbus_ip.fromString(mqtt_server);
     if (!modbus1.isConnected(modbus_ip)) {  // reuse mqtt server adresss for modbus adress
-      Serial.println("Trying to connect SUNSPEC powermeter data");
+      Serial.println(F("Trying to connect SUNSPEC powermeter data"));
       modbus1.connect(modbus_ip, String(mqtt_port).toInt());
     }
   }
