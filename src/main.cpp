@@ -75,11 +75,8 @@ void setup(void) {
     html += ".btn-yes{background-color:#d9534f;color:white;border:none;}";
     html += ".btn-no{background-color:#5bc0de;color:white;border:none;}</style></head><body>";
     html += "<h2>Reset Configuration?</h2>";
-    html += "<p>Are you sure you want to reset the WiFi configuration? This will clear current WiFi settings and restart the device in AP mode.</p>";
-    html += "<form method='POST' style='display:inline;' accept-charset='UTF-8'>";
-    if (reset_password != nullptr && strlen(reset_password) > 0) {
-      html += "<input type='password' name='reset_password' placeholder='Enter reset password' required><br/>";
-    }
+    html += "<p>Are you sure you want to reset the WiFi configuration? This will clear all settings and restart the device.</p>";
+    html += "<form method='POST' action='/reset' style='display:inline;'>";
     html += "<button type='submit' class='btn btn-yes'>Yes, Reset</button>";
     html += "</form>";
     html += "<a href='/' class='btn btn-no'>Cancel</a>";
@@ -88,23 +85,161 @@ void setup(void) {
   });
 
   server.on("/reset", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (reset_password != nullptr && strlen(reset_password) > 0) {
-       if (request->hasParam("reset_password", true)) {
-        if (String(reset_password) == request->getParam("reset_password", true)->value()) {
-          shouldResetConfig = true;
-          request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
-        } else {
-          request->send(403, "text/plain", "Unauthorized: Invalid reset password.\r\n");
-        }
-      } else {
-        request->send(400, "text/plain", "Reset password missing.\r\n");
-      }
-    } else {
-      shouldResetConfig = true;
-      request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
-    }
+    shouldResetConfig = true;
+    request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
   });
 
+// Offset settings page
+server.on("/offset", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+  String html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Offset & Lastverteilung</title>";
+  html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+  html += "<meta http-equiv='refresh' content='5'>";
+  html += "<style>body{font-family:Arial,sans-serif;text-align:center;padding:20px;}";
+  html += "input{padding:8px;margin:5px;width:200px;font-size:16px;border-radius:5px;border:1px solid #ccc;}";
+  html += "label{display:block;font-weight:bold;margin-top:15px;text-align:left;}";
+  html += ".info{font-size:12px;color:#888;margin-bottom:5px;text-align:left;}";
+  html += "h3{border-bottom:1px solid #ccc;padding-bottom:5px;}";
+  html += ".btn{padding:10px 30px;margin-top:20px;cursor:pointer;background-color:#5bc0de;color:white;border:none;border-radius:5px;font-size:16px;}";
+  html += ".box{background:#f9f9f9;border:1px solid #ddd;border-radius:8px;padding:15px;margin:15px auto;max-width:400px;text-align:left;}";
+  html += "</style></head><body>";
+  html += "<h2>Energy2Shelly Einstellungen</h2>";
+  html += "<form method='POST' action='/offset'>";
+
+  
+  
+  // Lastverteilung Sektion
+  html += "<div class='box'><h3>🔋 Akku2 Steuerung</h3>";
+  //html += "<label>Anteil dieser Akku (%)</label>";
+  //html += "<div class='info'>z.B. 25 bei 2kWh Akku2 vs 6kWh Akku1 (0 = deaktiviert)</div>";
+  //html += "<input type='number' step='1' min='0' max='100' name='akku2_anteil' value='" + String(akku2AnteilProzent) + "'>";
+  //html += "<label>Hysterese (W)</label>";
+  //html += "<div class='info'>Erst eingreifen wenn Abweichung größer als dieser Wert</div>";
+  //html += "<input type='number' step='1' name='hysterese_watt' value='" + String(hysteresWatt) + "'>";
+    
+  html += "<label>Zielwert Akku2 (W)</label>";
+  html += "<div class='info'>Akku2 soll immer diesen Wert liefern. 0 = wie Netzbezug</div>";
+  html += "<div class='info'>-0.99 bis -0.01 = Anteilsmässige Ausgabe des Netzbezugs. -0,80 = 80% des Netzbezuges</div>";
+  html += "<input type='number' step='0.01' min='-0.99' max='900' name='akku2_zielwatt' value='" + String(akku2Zielwatt) + "'>";
+  
+  html += "<label>Timeout (Sekunden)</label>";
+  html += "<div class='info'>Nach dieser Zeit ohne /setextern Update wird Korrektur deaktiviert</div>";
+  html += "<input type='number' step='1' name='extern_timeout' value='" + String(externTimeout) + "'>";
+  html += "<div class='info'>ℹ️ Wenn Akku1 = 0 emfangen wird, bekomt Akku2 den vollen Netzbezug/Zählerwert zugewiesen (z.B. bei leerem Akku1 oder Sonderfälle)</div>";
+  
+  html += "<label>Obere Grenze Akku1 (W)</label>";
+  html += "<div class='info'>Ueber diesem Wert hilft Akku2 mit (z.B. 700W)</div>";
+  html += "<input type='number' step='1' min='0' name='akku1_og' value='" + String(akku1ObereGrenze) + "'>";
+
+  html += "<label>Untere Grenze Akku1 (W)</label>";
+  html += "<div class='info'>Unter diesem Wert uebernimmt Akku2 (z.B. 15W)</div>";
+  html += "<input type='number' step='1' min='0' name='akku1_ug' value='" + String(akku1UntereGrenze) + "'>";
+
+  html += "<label>Abweichung Grenze (W)</label>";
+  html += "<div class='info'>Wenn Akku1 leer (oder Akku1 = 0 emfängt) und Netzbezug größer ist als dieser Wert liefert Akku2 vollen Netzbezug (Standard: 10W)</div>";
+  html += "<input type='number' step='1' min='0' name='abweichung_gz' value='" + String(abweichungGrenze) + "'>";
+
+  //html += "<label>Einspeisung Schwellwert (W)</label>";
+  //html += "<div class='info'>Bei mehr Einspeisung als dieser Wert wird Akku2 nicht erhöht (z.B. -50)</div>";
+  //html += "<input type='number' step='1' name='einspeisung_schwelle' value='" + String(einspeisungSchwelle) + "'>";
+  html += "<label>Akku1 Leistung aktuell (W)</label>";
+  html += "<div class='info'>Zuletzt von /setextern power1 empfangen (nur Anzeige)</div>";
+  html += "<input type='number' disabled value='" + String(externAkku1Power) + "'>";
+  html += "<label>Akku2 Leistung aktuell (W)</label>";
+  html += "<div class='info'>Zuletzt von /setextern power2 empfangen (nur Anzeige)</div>";
+  html += "<input type='number' disabled value='" + String(externAkku2Power) + "'>";
+  html += "<label>Echter Netzbezug (W)</label>";
+  html += "<div class='info'>Aktueller Wert vom Stromzähler (nur Anzeige)</div>";
+  html += "<input type='number' disabled value='" + String(echteNetPower) + "'>";
+
+  html += "<label>Korrigierter Netzbezug (W) (+5W Puffer)</label>";
+  html += "<div class='info'>Berechneter Wert der an Akku2 gesendet wird (nur Anzeige)</div>";
+  html += "<input type='number' disabled value='" + String(korrigierteNetPower) + "'>";
+  html += "</div>";
+
+  html += "<button type='submit' class='btn'>Speichern</button>";
+  html += "</form>";
+  html += "<br><a href='/status'>Status</a> | <a href='/'>Home</a>";
+  html += "</body></html>";
+  request->send(200, "text/html", html);
+});
+
+// Externer Leistungswerte von FHEM
+server.on("/setextern", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+  if (request->hasParam("power1")) {
+    externAkku1Power = request->getParam("power1")->value().toDouble();
+    externLastUpdate = millis();
+    DEBUG_SERIAL.print("Extern Akku1 Power: ");
+    DEBUG_SERIAL.println(externAkku1Power);
+    korrekturGesendet = false;
+  }
+  if (request->hasParam("power2")) {
+    externAkku2Power = request->getParam("power2")->value().toDouble();
+    DEBUG_SERIAL.print("Extern Akku2 Power: ");
+    DEBUG_SERIAL.println(externAkku2Power);
+  }
+  if (request->hasParam("power1") || request->hasParam("power2")) {
+    request->send(200, "text/plain", "OK");
+  } else {
+    request->send(400, "text/plain", "Parameter 'power1' oder 'power2' fehlt");
+  }
+});
+
+server.on("/offset", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {
+  preferences.begin("e2s_config", false);
+  
+  if (request->hasParam("akku2_anteil", true)) {
+    String val = request->getParam("akku2_anteil", true)->value();
+    strncpy(akku2_anteil, val.c_str(), sizeof(akku2_anteil));
+    akku2AnteilProzent = atof(akku2_anteil);
+    preferences.putString("akku2_anteil", akku2_anteil);
+  }
+  //if (request->hasParam("hysterese_watt", true)) {
+  //  String val = request->getParam("hysterese_watt", true)->value();
+  //  strncpy(hysterese_watt, val.c_str(), sizeof(hysterese_watt));
+  //  hysteresWatt = atof(hysterese_watt);
+  //  preferences.putString("hysterese_watt", hysterese_watt);
+  //}
+  if (request->hasParam("extern_timeout", true)) {
+    String val = request->getParam("extern_timeout", true)->value();
+    strncpy(extern_timeout, val.c_str(), sizeof(extern_timeout));
+    externTimeout = atol(extern_timeout);
+    preferences.putString("extern_timeout", extern_timeout);
+  }
+  //if (request->hasParam("einspeisung_schwelle", true)) {
+  //  String val = request->getParam("einspeisung_schwelle", true)->value();
+  //  strncpy(einspeisung_schwelle, val.c_str(), sizeof(einspeisung_schwelle));
+  //  einspeisungSchwelle = atof(einspeisung_schwelle);
+  //  preferences.putString("einspeisung_schwelle", einspeisung_schwelle);
+  //}
+  if (request->hasParam("akku2_zielwatt", true)) {
+    String val = request->getParam("akku2_zielwatt", true)->value();
+    strncpy(akku2_zielwatt, val.c_str(), sizeof(akku2_zielwatt));
+    akku2Zielwatt = atof(akku2_zielwatt);
+    preferences.putString("akku2_zielwatt", akku2_zielwatt);
+  }
+if (request->hasParam("akku1_og", true)) {
+    String val = request->getParam("akku1_og", true)->value();
+    strncpy(akku1_obere_grenze, val.c_str(), sizeof(akku1_obere_grenze));
+    akku1ObereGrenze = atof(akku1_obere_grenze);
+    preferences.putString("akku1_og", akku1_obere_grenze);
+}
+if (request->hasParam("akku1_ug", true)) {
+    String val = request->getParam("akku1_ug", true)->value();
+    strncpy(akku1_untere_grenze, val.c_str(), sizeof(akku1_untere_grenze));
+    akku1UntereGrenze = atof(akku1_untere_grenze);
+    preferences.putString("akku1_ug", akku1_untere_grenze);
+}
+if (request->hasParam("abweichung_gz", true)) {
+    String val = request->getParam("abweichung_gz", true)->value();
+    strncpy(abweichung_grenze, val.c_str(), sizeof(abweichung_grenze));
+    abweichungGrenze = atof(abweichung_grenze);
+    preferences.putString("abweichung_gz", abweichung_grenze);
+}
+  preferences.end();
+  request->redirect("/offset");
+});
+
+  
   // Shelly RPC endpoints called via HTTP GET method
   server.on("/rpc/EM.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     EMGetConfig();
@@ -255,16 +390,11 @@ void loop() {
       parseSUNSPEC();
       startMillis = currentMillis;
     }
+   
   }
   if (dataHTTP) {
     if (currentMillis - startMillis >= period) {
       queryHTTP();
-      startMillis = currentMillis;
-    }
-  }
-  if (dataTIBBERPULSE) {
-    if (currentMillis - startMillis >= period) {
-      parseTibberPulse();
       startMillis = currentMillis;
     }
   }
