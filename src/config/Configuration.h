@@ -53,6 +53,7 @@ extern char input_type[40];
 extern char ntp_server[40];
 extern char timezone[64];
 extern char phase_number[2];
+extern char power_offset[10];
 extern char mqtt_server[160];
 extern char mqtt_port[6];
 extern char mqtt_topic[90];

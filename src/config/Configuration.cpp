@@ -16,6 +16,7 @@ char input_type[40];
 char ntp_server[40] = "de.pool.ntp.org";
 char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
 char phase_number[2] = "3"; // number of phases: 1 for monophase or 3 for triphase
+char power_offset[10] = "0";  // Default: no offset
 char mqtt_server[160];
 char mqtt_port[6] = "1883";
 char mqtt_topic[90] = "tele/meter/SENSOR";
@@ -155,6 +156,7 @@ void WifiManagerSetup() {
   strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
   strcpy(timezone, preferences.getString("timezone", timezone).c_str());
   strcpy(phase_number, preferences.getString("phase_number", phase_number).c_str());
+  strcpy(power_offset, preferences.getString("power_offset", power_offset).c_str());
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
   strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
   strcpy(led_gpio_i, preferences.getString("led_gpio_i", led_gpio_i).c_str());
@@ -191,6 +193,7 @@ void WifiManagerSetup() {
   WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
   WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
   WiFiManagerParameter param_phase_number("phase_number", "Number of phases <span title=\"Number of phases (e.g. 1 or 3)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", phase_number, 1);
+  WiFiManagerParameter custom_power_offset("power_offset", "<b>Power Offset</b><br>optional offset value in Watts added to the emulated output ", power_offset, 10);
   WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
   WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
@@ -227,6 +230,10 @@ void WifiManagerSetup() {
   if (!DEBUG) {
     wifiManager.setDebugOutput(false);
   }
+
+  wifiManager.setDebugOutput(true, WM_DEBUG_DEV);
+  wifiManager.debugPlatformInfo();
+
   wifiManager.setTitle("Energy2Shelly for ESP");
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
@@ -239,6 +246,7 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&param_ntp_server);
   wifiManager.addParameter(&param_timezone);
   wifiManager.addParameter(&param_phase_number);
+  wifiManager.addParameter(&custom_power_offset);
   wifiManager.addParameter(&custom_query_period);
   wifiManager.addParameter(&custom_led_gpio);
   wifiManager.addParameter(&custom_led_gpio_i);
@@ -284,6 +292,7 @@ void WifiManagerSetup() {
   strcpy(ntp_server, param_ntp_server.getValue());
   strcpy(timezone, param_timezone.getValue());
   strcpy(phase_number, param_phase_number.getValue());
+  strcpy(power_offset, custom_power_offset.getValue());
   strcpy(query_period, custom_query_period.getValue());
   strcpy(led_gpio, custom_led_gpio.getValue());
   strcpy(led_gpio_i, custom_led_gpio_i.getValue());
@@ -314,6 +323,7 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tntp_server: " + String(ntp_server));
   DEBUG_SERIAL.println("\ttimezone: " + String(timezone));
   DEBUG_SERIAL.println("\tphase_number : " + String(phase_number));
+  DEBUG_SERIAL.println("\tpower_offset : " + String(power_offset));
   DEBUG_SERIAL.println("\tquery_period : " + String(query_period));
   DEBUG_SERIAL.println("\tled_gpio : " + String(led_gpio));
   DEBUG_SERIAL.println("\tled_gpio_i : " + String(led_gpio_i));
@@ -371,6 +381,7 @@ void WifiManagerSetup() {
     preferences.putString("ntp_server", ntp_server);
     preferences.putString("timezone", timezone);
     preferences.putString("phase_number", phase_number);
+    preferences.putString("power_offset", power_offset);
     preferences.putString("query_period", query_period);
     preferences.putString("led_gpio", led_gpio);
     preferences.putString("led_gpio_i", led_gpio_i);
