@@ -234,9 +234,8 @@ void WifiManagerSetup() {
   wifiManager.setShowStaticFields(true);
 
   // Move custom parameters to seperate menu to avoid issues with too many custom parameters and too many results from AP scan
-  std::vector<const char *> menu = {"wifi","info","param","sep","restart","exit"};
-  wifiManager.setMenu(menu);
-
+  wifiManager.setParamsPage(true);
+  
   wifiManager.setTitle("Energy2Shelly for ESP");
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
