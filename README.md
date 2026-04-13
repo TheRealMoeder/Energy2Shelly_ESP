@@ -1,7 +1,33 @@
 # Energy2Shelly_ESP
 
+Hi, I am a user of your great project and added some features that might be useful for others too.
+
+## What was added:
+
+### Power Offset
+A configurable power offset to reduce reported power below a threshold.
+- Threshold and reduction value are configurable
+- Reduction can be a factor (0.0 - 1.0) or a fixed watt value (2+)
+- Set threshold to 0 to disable
+
+### Load Balancing
+Dynamic load balancing between two battery systems based on capacity ratio.
+- External power value can be pushed via HTTP: /setextern?power=X
+- Useful for FHEM or other home automation systems
+- Configurable capacity ratio, hysteresis and timeout
+- Set ratio to 0 to disable
+
+### Web Interface
+All settings are adjustable via /offset without WiFi reset.
+- No need to reconnect to the hotspot for configuration changes
+- Settings are stored persistently
+
+Tested on ESP8266 (NodeMCU v2).
 
 ![Offset Settings](screenshots/Screenshot_offset.jpg)
+
+#########################################################################################
+
 
 
 [![CI](https://github.com/TheRealMoeder/Energy2Shelly_ESP/actions/workflows/main.yml/badge.svg)](https://github.com/TheRealMoeder/Energy2Shelly_ESP/actions/workflows/main.yml)
