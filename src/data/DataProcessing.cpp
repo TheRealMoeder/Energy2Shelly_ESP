@@ -8,8 +8,44 @@ EnergyData PhaseEnergy[3];
 String serJsonResponse;
 
 double round2(double value) {
-  return round(value * 100.0) / 100.0;
+  int ivalue = (int)(value * 100.0 + (value > 0.0 ? 0.5 : -0.5));
+
+  // fix Marstek bug: make sure to have decimal numbers
+  if(forcePwrDecimals && (ivalue % 100 == 0)) ivalue++;
+  
+  return ivalue / 100.0;
 }
+
+double applyLastverteilung(double netPower) {
+  if (akku2Zielwatt == 0.0) return netPower;
+  if (akku2Zielwatt <= 0.0) {
+  //return netPower * (1.0 + akku2Zielwatt); // negative Zielwatt treated as percentage reduction
+  return netPower * -akku2Zielwatt; // negative Zielwatt treated as percentage reduction
+  }
+
+  if (externLastUpdate == 0) return netPower;
+  if ((millis() - externLastUpdate) > (externTimeout * 1000)) {
+    DEBUG_SERIAL.println("Lastverteilung: Timeout");
+    return netPower / 2.0;  // bei Timeout nur 1/2 Wert
+  }
+
+  // Sonderfaelle Akku1
+  if ((externAkku1Power > akku1ObereGrenze ||
+      (externAkku1Power == 0.0 && netPower > abweichungGrenze)) ||
+      (externAkku1Power < akku1UntereGrenze && externAkku1Power > 0.0)) {
+    netPower += 5.0;  // +5W Puffer
+    DEBUG_SERIAL.print("Lastverteilung: Sonderfall Akku1, sende echten netPower=");
+    DEBUG_SERIAL.println(netPower);
+    return netPower;
+  }
+
+  // Standardfall: Zielwert einhalten
+  netPower = akku2Zielwatt - externAkku2Power;
+  DEBUG_SERIAL.print("Lastverteilung: Standard, sende=");
+  DEBUG_SERIAL.println(netPower);
+  return netPower;
+}
+
 
 bool isValidIPAddress(const char* ipString) {
   IPAddress ip;
@@ -34,20 +70,14 @@ JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
 }
 
 void setPowerData(double totalPower) {
-  switch(phase_number[0]) {
-    case '1': // monophase
-      PhasePower[0].power = round2(totalPower);
-      PhasePower[1].power = 0.0;
-      PhasePower[2].power = 0.0;
-      break;
-    case '3': // triphase
-    default:
-      PhasePower[0].power = round2(totalPower * 0.3333);
-      PhasePower[1].power = round2(totalPower * 0.3333);
-      PhasePower[2].power = round2(totalPower * 0.3333);
-      break;
-  }
+  echteNetPower = totalPower;
+  totalPower = applyLastverteilung(totalPower);
+  korrigierteNetPower = totalPower;  
+  PhasePower[0].power = round2(totalPower * 0.334);
+  PhasePower[1].power = round2(totalPower * 0.3333);
+  PhasePower[2].power = round2(totalPower * 0.335);
   for (int i = 0; i <= 2; i++) {
+    //PhasePower[i].power = round2(totalPower * 0.3333);
     PhasePower[i].voltage = round2(defaultVoltage);
     PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
     PhasePower[i].apparentPower = round2(PhasePower[i].power);
@@ -59,19 +89,18 @@ void setPowerData(double totalPower) {
 }
 
 void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
-  switch(phase_number[0]) {
-    case '1': // monophase
-      PhasePower[0].power = round2(phase1Power) + round2(phase2Power) + round2(phase3Power);
-      PhasePower[1].power = 0.0;
-      PhasePower[2].power = 0.0;
-      break;
-    case '3': // triphase
-    default:
-      PhasePower[0].power = round2(phase1Power);
-      PhasePower[1].power = round2(phase2Power);
-      PhasePower[2].power = round2(phase3Power);
-      break;
-  }
+  // NEU
+  double totalPower = phase1Power + phase2Power + phase3Power;
+  
+  double adjustedTotal = applyLastverteilung(totalPower);
+  double factor = (totalPower != 0.0) ? (adjustedTotal / totalPower) : 1.0;
+  phase1Power *= factor * 1.002;  // leicht unterschiedlich
+  phase2Power *= factor * 1.0000;
+  phase3Power *= factor * 0.998;
+  
+  PhasePower[0].power = round2(phase1Power);
+  PhasePower[1].power = round2(phase2Power);
+  PhasePower[2].power = round2(phase3Power);
   for (int i = 0; i <= 2; i++) {
     PhasePower[i].voltage = round2(defaultVoltage);
     PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
@@ -88,24 +117,13 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
 }
 
 void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
-  switch (phase_number[0]) {
-  case '1': // monophase
-    for (int i = 0; i <= 2; i++) {
-      PhaseEnergy[i].consumption = (i == 0) ? round2(totalEnergyGridSupply) : 0.0;
-      PhaseEnergy[i].gridfeedin = (i == 0) ? round2(totalEnergyGridFeedIn) : 0.0;
-    }
-    break;
-  case '3': // triphase
-  default:
-    for (int i = 0; i <= 2; i++){
-      PhaseEnergy[i].consumption = round2(totalEnergyGridSupply * 0.3333);
-      PhaseEnergy[i].gridfeedin = round2(totalEnergyGridFeedIn * 0.3333);
-    }
-    break;
+  for (int i = 0; i <= 2; i++) {
+    PhaseEnergy[i].consumption = round2(totalEnergyGridSupply * 0.3333);
+    PhaseEnergy[i].gridfeedin = round2(totalEnergyGridFeedIn * 0.3333);
   }
-  DEBUG_SERIAL.print("Total Consumption (Grid Supply): ");
+  DEBUG_SERIAL.print("Total consumption: ");
   DEBUG_SERIAL.print(totalEnergyGridSupply);
-  DEBUG_SERIAL.print(" - Total Production (Grid Feed-In): ");
+  DEBUG_SERIAL.print(" - Total Grid Feed-In: ");
   DEBUG_SERIAL.println(totalEnergyGridFeedIn);
 }
 
