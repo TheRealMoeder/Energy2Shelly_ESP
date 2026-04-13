@@ -48,11 +48,9 @@ extern tm timeinfo;
 // ============================================================================
 
 // Data source and server settings
-extern char reset_password[33];
 extern char input_type[40];
 extern char ntp_server[40];
 extern char timezone[64];
-extern char phase_number[2];
 extern char mqtt_server[160];
 extern char mqtt_port[6];
 extern char mqtt_topic[90];
@@ -78,12 +76,36 @@ extern char shelly_port[6];
 // Query and protocol settings
 extern char query_period[10];
 extern char modbus_dev[10];
+extern char force_pwr_decimals[6];
+extern bool forcePwrDecimals;
 extern char sma_id[17];
 
-extern char tibber_url[41];
-extern char tibber_user[6];
-extern char tibber_password[10];
-extern char tibber_rpc[21];
+
+extern char akku2_anteil[6];
+//extern char hysterese_watt[10];
+extern char extern_timeout[6];
+extern double akku2AnteilProzent;
+//extern double hysteresWatt;
+extern unsigned long externTimeout;
+extern double externAkku1Power;
+extern unsigned long externLastUpdate;
+
+extern double externAkku2Power;
+//extern char einspeisung_schwelle[10];
+extern double einspeisungSchwelle;
+extern char akku2_zielwatt[10];
+extern double akku2Zielwatt;
+extern bool korrekturGesendet;
+
+extern char akku1_obere_grenze[10];
+extern char akku1_untere_grenze[10];
+extern char abweichung_grenze[10];
+extern double akku1ObereGrenze;
+extern double akku1UntereGrenze;
+extern double abweichungGrenze;
+
+extern double echteNetPower;
+extern double korrigierteNetPower;
 
 // LED settings
 extern char led_gpio[3];
@@ -122,7 +144,6 @@ extern bool dataSMA;
 extern bool dataSHRDZM;
 extern bool dataHTTP;
 extern bool dataSUNSPEC;
-extern bool dataTIBBERPULSE;
 
 extern Preferences preferences;
 
