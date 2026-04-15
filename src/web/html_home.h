@@ -61,9 +61,13 @@ const char HTML_HOME[] PROGMEM = R"=====(
   </div>
 
 <script>
-function formatValue(value, unit, decimals = 1) {
-  if (value === null || value === undefined) return 'N/A';
-  return parseFloat(value).toFixed(decimals) + ' ' + unit;
+function formatValue(value, unit = '', decimals = 1, scale = 1) {
+  if (value === null || value === undefined || isNaN(value)) return 'N/A';
+
+  const num = Number(value) * scale;
+  const formatted = num.toFixed(decimals);
+
+  return unit ? `${formatted} ${unit}` : formatted;
 }
 
 function updatePowerData() {
@@ -117,15 +121,15 @@ function updateEnergyData() {
       phases.forEach(phase => {
         html += `<div class="phase-card ${phase.class}">
           <h3>${phase.name}</h3>
-          <div class="data-row"><span class="data-label">Consumption:</span><span class="data-value">${formatValue(data[phase.prefix + '_total_act_energy'], 'Wh')}</span></div>
-          <div class="data-row"><span class="data-label">Grid Feed-in:</span><span class="data-value">${formatValue(data[phase.prefix + '_total_act_ret_energy'], 'Wh')}</span></div>
+          <div class="data-row"><span class="data-label">Consumption:</span><span class="data-value">${formatValue(data[phase.prefix + '_total_act_energy'], 'kWh', 2, 0.001)}</span></div>
+          <div class="data-row"><span class="data-label">Grid Feed-in:</span><span class="data-value">${formatValue(data[phase.prefix + '_total_act_ret_energy'], 'kWh', 2, 0.001)}</span></div>
         </div>`;
       });
       html += '</div>';
 
       html += '<div class="totals"><h3 style="margin-top:0;">Totals</h3>';
-      html += `<div class="data-row"><span class="data-label">Total Consumption:</span><span class="data-value">${formatValue(data.total_act, 'Wh')}</span></div>`;
-      html += `<div class="data-row"><span class="data-label">Total Grid Feed-in:</span><span class="data-value">${formatValue(data.total_act_ret, 'Wh')}</span></div>`;
+      html += `<div class="data-row"><span class="data-label">Total Consumption:</span><span class="data-value">${formatValue(data.total_act, 'kWh', 2, 0.001)}</span></div>`;
+      html += `<div class="data-row"><span class="data-label">Total Grid Feed-in:</span><span class="data-value">${formatValue(data.total_act_ret, 'kWh', 2, 0.001)}</span></div>`;
       html += '</div>';
 
       document.getElementById('energy-data').innerHTML = html;
