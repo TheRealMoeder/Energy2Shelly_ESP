@@ -48,22 +48,22 @@ void parseSMA() {
             offset += 8;
             switch (index) {
               case 21:
-                PhaseEnergy[0].consumption = data / 3600000;
+                PhaseEnergy[0].consumption = data / 3600;
                 break;
               case 22:
-                PhaseEnergy[0].gridfeedin = data / 3600000;
+                PhaseEnergy[0].gridfeedin = data / 3600;
                 break;
               case 41:
-                PhaseEnergy[1].consumption = data / 3600000;
+                PhaseEnergy[1].consumption = data / 3600;
                 break;
               case 42:
-                PhaseEnergy[1].gridfeedin = data / 3600000;
+                PhaseEnergy[1].gridfeedin = data / 3600;
                 break;
               case 61:
-                PhaseEnergy[2].consumption = data / 3600000;
+                PhaseEnergy[2].consumption = data / 3600;
                 break;
               case 62:
-                PhaseEnergy[2].gridfeedin = data / 3600000;
+                PhaseEnergy[2].gridfeedin = data / 3600;
                 break;
             }
           } else if (type == 4) {

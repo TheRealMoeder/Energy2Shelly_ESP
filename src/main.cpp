@@ -14,6 +14,9 @@
 #include "rpc/RpcHandlers.h"
 #include "rpc/RpcComm.h"
 
+// Web content
+#include "web/html_home.h"
+
 void setup(void) {
   DEBUG_SERIAL.begin(115200);
   WifiManagerSetup();
@@ -53,7 +56,7 @@ void setup(void) {
   // Set up web server and endpoints
 
   server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "This is the Energy2Shelly for ESP converter!\r\nDevice and Energy status is available under /status\r\nTo reset configuration, goto /reset\r\n");
+    request->send(200, "text/html", FPSTR(HTML_HOME));
   });
 
   server.on("/shelly", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
