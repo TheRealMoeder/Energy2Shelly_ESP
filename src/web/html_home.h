@@ -18,7 +18,7 @@ const char HTML_HOME[] PROGMEM = R"=====(
   .nav a:hover { background-color: #0056b3; }
   .nav a.reset { background-color: #d9534f; }
   .nav a.reset:hover { background-color: #c9302c; }
-  .data-container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  .data-container { max-width: 1300px; margin: 0 auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
   .data-section { margin: 20px 0; }
   .data-section h2 { color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 15px; font-size: 1.3em; }
   .phase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
@@ -26,15 +26,14 @@ const char HTML_HOME[] PROGMEM = R"=====(
   .phase-card.phase-a { border-left-color: #dc3545; }
   .phase-card.phase-b { border-left-color: #ffc107; }
   .phase-card.phase-c { border-left-color: #28a745; }
+  .phase-card.total { background: #e7f3ff; }
   .phase-card h3 { margin: 0 0 10px 0; font-size: 1.1em; }
   .data-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #dee2e6; }
   .data-row:last-child { border-bottom: none; }
   .data-label { font-weight: 600; color: #555; }
   .data-value { color: #007bff; font-weight: bold; }
-  .totals { background: #e7f3ff; padding: 15px; border-radius: 8px; margin-top: 15px; }
-  .totals .data-row { border-bottom: 1px solid #b3d9ff; }
   .timestamp { text-align: center; color: #6c757d; font-size: 0.9em; margin-top: 15px; font-style: italic; }
-  .loading { color: #6c757d; font-style: italic; }
+  .loading { color: #6c757d; }
   .error { color: #dc3545; padding: 10px; background: #f8d7da; border-radius: 5px; }
 </style>
 </head>
@@ -92,12 +91,12 @@ function updatePowerData() {
           <div class="data-row"><span class="data-label">Frequency:</span><span class="data-value">${formatValue(data[phase.prefix + '_freq'], 'Hz')}</span></div>
         </div>`;
       });
-      html += '</div>';
 
-      html += '<div class="totals"><h3 style="margin-top:0;">Totals</h3>';
+      html += '<div class="phase-card total"><h3 style="margin-top:0;">Totals</h3>';
       html += `<div class="data-row"><span class="data-label">Total Current:</span><span class="data-value">${formatValue(data.total_current, 'A')}</span></div>`;
       html += `<div class="data-row"><span class="data-label">Total Power:</span><span class="data-value">${formatValue(data.total_act_power, 'W')}</span></div>`;
       html += `<div class="data-row"><span class="data-label">Total Apparent:</span><span class="data-value">${formatValue(data.total_aprt_power, 'VA')}</span></div>`;
+      html += '</div>';
       html += '</div>';
 
       document.getElementById('power-data').innerHTML = html;
@@ -125,11 +124,11 @@ function updateEnergyData() {
           <div class="data-row"><span class="data-label">Grid Feed-in:</span><span class="data-value">${formatValue(data[phase.prefix + '_total_act_ret_energy'], 'kWh', 2, 0.001)}</span></div>
         </div>`;
       });
-      html += '</div>';
 
-      html += '<div class="totals"><h3 style="margin-top:0;">Totals</h3>';
+      html += '<div class="phase-card total"><h3 style="margin-top:0;">Totals</h3>';
       html += `<div class="data-row"><span class="data-label">Total Consumption:</span><span class="data-value">${formatValue(data.total_act, 'kWh', 2, 0.001)}</span></div>`;
       html += `<div class="data-row"><span class="data-label">Total Grid Feed-in:</span><span class="data-value">${formatValue(data.total_act_ret, 'kWh', 2, 0.001)}</span></div>`;
+      html += '</div>';
       html += '</div>';
 
       document.getElementById('energy-data').innerHTML = html;
