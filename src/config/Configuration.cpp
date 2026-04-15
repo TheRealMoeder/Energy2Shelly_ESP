@@ -140,7 +140,7 @@ void handleblinkled() {
 
 //callback notifying us of the need to save WifiManager config
 void saveConfigCallback() {
-  DEBUG_SERIAL.println("Should save config");
+  DEBUG_SERIAL.println(F("Should save config"));
   shouldSaveConfig = true;
 }
 
@@ -279,12 +279,12 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&param_tibber_password_show_password);
 
   if (!wifiManager.autoConnect("Energy2Shelly")) {
-    DEBUG_SERIAL.println("failed to connect and hit timeout");
+    DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
     delay(3000);
     ESP.restart();
     delay(5000);
   }
-  DEBUG_SERIAL.println("connected");
+  DEBUG_SERIAL.println(F("connected"));
 
   //read updated parameters
   strcpy(reset_password, param_reset_password.getValue());
@@ -319,55 +319,80 @@ void WifiManagerSetup() {
 
   offsetPerPhase = String(power_offset).toDouble() / 3.0;  // distribute offset equally across phases
 
-  DEBUG_SERIAL.println("The values in the preferences are: ");
-  DEBUG_SERIAL.println("\treset_password: ********");
-  DEBUG_SERIAL.println("\tinput_type : " + String(input_type));
-  DEBUG_SERIAL.println("\tmqtt_server : " + String(mqtt_server));
-  DEBUG_SERIAL.println("\tmqtt_port : " + String(mqtt_port));
-  DEBUG_SERIAL.println("\tntp_server: " + String(ntp_server));
-  DEBUG_SERIAL.println("\ttimezone: " + String(timezone));
-  DEBUG_SERIAL.println("\tphase_number : " + String(phase_number));
-  DEBUG_SERIAL.println("\tpower_offset : " + String(power_offset));
-  DEBUG_SERIAL.println("\tquery_period : " + String(query_period));
-  DEBUG_SERIAL.println("\tled_gpio : " + String(led_gpio));
-  DEBUG_SERIAL.println("\tled_gpio_i : " + String(led_gpio_i));
-  DEBUG_SERIAL.println("\tshelly_mac : " + String(shelly_mac));
-  DEBUG_SERIAL.println("\tmqtt_topic : " + String(mqtt_topic));
-  DEBUG_SERIAL.println("\tmqtt_user : " + String(mqtt_user));
-  DEBUG_SERIAL.println("\tmqtt_passwd : ********");
-  DEBUG_SERIAL.println("\tmodbus_dev : " + String(modbus_dev));
-  DEBUG_SERIAL.println("\tpower_path : " + String(power_path));
-  DEBUG_SERIAL.println("\tpwr_export_path : " + String(pwr_export_path));
-  DEBUG_SERIAL.println("\tpower_l1_path : " + String(power_l1_path));
-  DEBUG_SERIAL.println("\tpower_l2_path : " + String(power_l2_path));
-  DEBUG_SERIAL.println("\tpower_l3_path : " + String(power_l3_path));
-  DEBUG_SERIAL.println("\tenergy_in_path : " + String(energy_in_path));
-  DEBUG_SERIAL.println("\tenergy_out_path : " + String(energy_out_path));
-  DEBUG_SERIAL.println("\tshelly_port : " + String(shelly_port));
-  DEBUG_SERIAL.println("\tsma_id : " + String(sma_id));
-  DEBUG_SERIAL.println("\tTibberPulse options:");
-  DEBUG_SERIAL.println("\t - tibber_url: " + String(tibber_url));
-  DEBUG_SERIAL.println("\t - tibber_user: " + String(tibber_user));
-  DEBUG_SERIAL.println("\t - tibber_password: ********");
+  DEBUG_SERIAL.println(F("The values in the preferences are: "));
+  DEBUG_SERIAL.println(F("\treset_password: ********"));
+  DEBUG_SERIAL.print(F("\tinput_type : "));
+  DEBUG_SERIAL.println(String(input_type));
+  DEBUG_SERIAL.print(F("\tmqtt_server : "));
+  DEBUG_SERIAL.println(String(mqtt_server));
+  DEBUG_SERIAL.print(F("\tmqtt_port : "));
+  DEBUG_SERIAL.println(String(mqtt_port));
+  DEBUG_SERIAL.print(F("\tntp_server: "));
+  DEBUG_SERIAL.println(String(ntp_server));
+  DEBUG_SERIAL.print(F("\ttimezone: "));
+  DEBUG_SERIAL.println(String(timezone));
+  DEBUG_SERIAL.print(F("\tphase_number : "));
+  DEBUG_SERIAL.println(String(phase_number));
+  DEBUG_SERIAL.print(F("\tpower_offset : "));
+  DEBUG_SERIAL.println(String(power_offset));
+  DEBUG_SERIAL.print(F("\tquery_period : "));
+  DEBUG_SERIAL.println(String(query_period));
+  DEBUG_SERIAL.print(F("\tled_gpio : "));
+  DEBUG_SERIAL.println(String(led_gpio));
+  DEBUG_SERIAL.print(F("\tled_gpio_i : "));
+  DEBUG_SERIAL.println(String(led_gpio_i));
+  DEBUG_SERIAL.print(F("\tshelly_mac : "));
+  DEBUG_SERIAL.println(String(shelly_mac));
+  DEBUG_SERIAL.print(F("\tmqtt_topic : "));
+  DEBUG_SERIAL.println(String(mqtt_topic));
+  DEBUG_SERIAL.print(F("\tmqtt_user : "));
+  DEBUG_SERIAL.println(String(mqtt_user));
+  DEBUG_SERIAL.println(F("\tmqtt_passwd : ********"));
+  DEBUG_SERIAL.print(F("\tmodbus_dev : "));
+  DEBUG_SERIAL.println(String(modbus_dev));
+  DEBUG_SERIAL.print(F("\tpower_path : "));
+  DEBUG_SERIAL.println(String(power_path));
+  DEBUG_SERIAL.print(F("\tpwr_export_path : "));
+  DEBUG_SERIAL.println(String(pwr_export_path));
+  DEBUG_SERIAL.print(F("\tpower_l1_path : "));
+  DEBUG_SERIAL.println(String(power_l1_path));
+  DEBUG_SERIAL.print(F("\tpower_l2_path : "));
+  DEBUG_SERIAL.println(String(power_l2_path));
+  DEBUG_SERIAL.print(F("\tpower_l3_path : "));
+  DEBUG_SERIAL.println(String(power_l3_path));
+  DEBUG_SERIAL.print(F("\tenergy_in_path : "));
+  DEBUG_SERIAL.println(String(energy_in_path));
+  DEBUG_SERIAL.print(F("\tenergy_out_path : "));
+  DEBUG_SERIAL.println(String(energy_out_path));
+  DEBUG_SERIAL.print(F("\tshelly_port : "));
+  DEBUG_SERIAL.println(String(shelly_port));
+  DEBUG_SERIAL.print(F("\tsma_id : "));
+  DEBUG_SERIAL.println(String(sma_id));
+  DEBUG_SERIAL.println(F("\tTibberPulse options:"));
+  DEBUG_SERIAL.print(F("\t - tibber_url: "));
+  DEBUG_SERIAL.println(String(tibber_url));
+  DEBUG_SERIAL.print(F("\t - tibber_user: "));
+  DEBUG_SERIAL.println(String(tibber_user));
+  DEBUG_SERIAL.print(F("\t - tibber_password: ********"));
 
   if (strcmp(input_type, "SMA") == 0) {
     dataSMA = true;
-    DEBUG_SERIAL.println("Enabling SMA Multicast data input");
+    DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
   } else if (strcmp(input_type, "SHRDZM") == 0) {
     dataSHRDZM = true;
-    DEBUG_SERIAL.println("Enabling SHRDZM UDP data input");
+    DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
   } else if (strcmp(input_type, "HTTP") == 0) {
     dataHTTP = true;
-    DEBUG_SERIAL.println("Enabling generic HTTP data input");
+    DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
   } else if (strcmp(input_type, "SUNSPEC") == 0) {
     dataSUNSPEC = true;
-    DEBUG_SERIAL.println("Enabling SUNSPEC data input");
+    DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
   } else if (strcmp(input_type, "TIBBERPULSE") == 0) {
     dataTIBBERPULSE = true;
-    DEBUG_SERIAL.println("Enabling TIBBERPULSE data input");
+    DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
   } else {
     dataMQTT = true;
-    DEBUG_SERIAL.println("Enabling MQTT data input");
+    DEBUG_SERIAL.println(F("Enabling MQTT data input"));
   }
 
   if (strcmp(led_gpio_i, "true") == 0) {
@@ -377,7 +402,7 @@ void WifiManagerSetup() {
   }
 
   if (shouldSaveConfig) {
-    DEBUG_SERIAL.println("saving config");
+    DEBUG_SERIAL.println(F("saving config"));
     preferences.putString("reset_password", reset_password);
     preferences.putString("input_type", input_type);
     preferences.putString("mqtt_server", mqtt_server);
@@ -408,7 +433,7 @@ void WifiManagerSetup() {
     preferences.putString("tibber_password", tibber_password);
     wifiManager.reboot();
   }
-  DEBUG_SERIAL.println("local ip");
+  DEBUG_SERIAL.println(F("local ip"));
   DEBUG_SERIAL.println(WiFi.localIP());
 }
 
@@ -417,7 +442,7 @@ void setupMdns() {
   strncat(shelly_name, shelly_mac, sizeof(shelly_name) - strlen(shelly_name) - 1);
 
   if (!MDNS.begin(shelly_name)) {
-    DEBUG_SERIAL.println("Error setting up MDNS responder!");
+    DEBUG_SERIAL.println(F("Error setting up MDNS responder!"));
   }
 
 #ifdef ESP32
@@ -451,5 +476,5 @@ void setupMdns() {
     MDNS.addServiceTxt(hMDNSService2, "id", shelly_name);
   }
 #endif
-  DEBUG_SERIAL.println("mDNS responder started");
+  DEBUG_SERIAL.println(F("mDNS responder started"));
 }

@@ -46,7 +46,7 @@ void parseSUNSPEC() {
       delay(10);
       t++;
       if (t > 50) {
-        DEBUG_SERIAL.println("Timeout SUNSPEC");
+        DEBUG_SERIAL.println(F("Timeout SUNSPEC"));
         //prolong=10;
         modbus1.disconnect(modbus_ip);
         break;
@@ -92,6 +92,7 @@ void parseSUNSPEC() {
           PhaseEnergy[n].gridfeedin = -p/1000.0*scale_real_energy;
         }
     }
-    DEBUG_SERIAL.printf("SUNSPEC power: %d,%d\n\r", t, power);
+    DEBUG_SERIAL.print(F("SUNSPEC power: "));
+    DEBUG_SERIAL.printf("%d,%d\n\r", t, power);
   }
 }
