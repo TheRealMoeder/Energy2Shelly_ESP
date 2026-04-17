@@ -45,10 +45,11 @@ char modbus_dev[10] = "71"; // default for KSEM
 char sma_id[17] = "";
 
 // Tibber related
-char tibber_url[41] = "x.x.x.x[:xxxx]"; // IP of TibberPulse
-char tibber_user[6] = "admin";         // fixed user
-char tibber_password[10] = "xxxx-xxxx"; // replace with password printed on Tibbel-Pulse-Adapter
-char tibber_rpc[21] = "/data.json?node_id=1"; // fixed rpc path
+char tibber_host[41] = "x.x.x.x[:xxxx]"; // IP / HOSTNAME [and PORT] of Tibber Pulse Bridge
+char tibber_user[11] = "admin"; // fixed user
+char tibber_password[10] = "xxxx-xxxx"; // replace with password printed on Tibber Pulse Bridge device
+char tibber_rpc[21] = "/data.json?node_id="; // fixed rpc path
+char tibber_nodeid[2] = "1"; // node id of the Pulse IR device, defaults to 1. if reparing this might change, check the node id in the web interface of the Tibber Pulse Bridge device
 
 // LED settings
 char led_gpio[3] = "";
@@ -177,7 +178,8 @@ void WifiManagerSetup() {
   strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
   strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
   // TibberPulse settings
-  strcpy(tibber_url, preferences.getString("tibber_url", tibber_url).c_str());
+  strcpy(tibber_host, preferences.getString("tibber_host", tibber_host).c_str());
+  strcpy(tibber_nodeid, preferences.getString("tibber_nodeid", tibber_nodeid).c_str());
   strcpy(tibber_user, preferences.getString("tibber_user", tibber_user).c_str());
   strcpy(tibber_password, preferences.getString("tibber_password", tibber_password).c_str());
 
@@ -220,9 +222,10 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
   // TibberPulse section
   WiFiManagerParameter param_section_tibberpulse("<hr><h3>TibberPulse options</h3>");
-  WiFiManagerParameter param_tibber_url("tibber_url", "Hostname/IP[:port] <span title=\"e.g.: 192.168.0.1:8080\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_url, 40);
-  WiFiManagerParameter param_tibber_user("tibber_user", "User <span title=\"defaults to: admin\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_user, 5);
-  WiFiManagerParameter param_tibber_password("tibber_password", "Password <span title=\"as printed on bridge device: xxxx-xxxx\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_password, 9, "type='password'");
+  WiFiManagerParameter param_tibber_host_port("tibber_host_port", "Hostname/IP[:port] <span title=\"e.g.: 192.168.0.1:8080\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_host, 40);
+  WiFiManagerParameter param_tibber_node_id("tibber_node_id", "Node ID <span title=\"defaults to: 1, check the bridge web interface for the right nodeId\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_nodeid, 1);
+  WiFiManagerParameter param_tibber_user("tibber_user", "User <span title=\"defaults to: admin\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_user, 10);
+  WiFiManagerParameter param_tibber_password("tibber_password", "Password <span title=\"as printed on bridge device: xxxx-xxxx\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_password, 10, "type='password'");
   char buf_tibber_pwd_show_pwd[150];
   sprintf(buf_tibber_pwd_show_pwd, show_pwd_str, "tibber_password");
   WiFiManagerParameter param_tibber_password_show_password(buf_tibber_pwd_show_pwd);
@@ -273,7 +276,8 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_energy_out_path);
   // TibberPulse section
   wifiManager.addParameter(&param_section_tibberpulse);
-  wifiManager.addParameter(&param_tibber_url);
+  wifiManager.addParameter(&param_tibber_host_port);
+  wifiManager.addParameter(&param_tibber_node_id);
   wifiManager.addParameter(&param_tibber_user);
   wifiManager.addParameter(&param_tibber_password);
   wifiManager.addParameter(&param_tibber_password_show_password);
@@ -313,7 +317,8 @@ void WifiManagerSetup() {
   strcpy(shelly_port, custom_shelly_port.getValue());
   strcpy(sma_id, custom_sma_id.getValue());
   // TibberPulse
-  strcpy(tibber_url, param_tibber_url.getValue());
+  strcpy(tibber_host, param_tibber_host_port.getValue());
+  strcpy(tibber_nodeid, param_tibber_node_id.getValue());
   strcpy(tibber_user, param_tibber_user.getValue());
   strcpy(tibber_password, param_tibber_password.getValue());
 
@@ -369,8 +374,10 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.print(F("\tsma_id : "));
   DEBUG_SERIAL.println(String(sma_id));
   DEBUG_SERIAL.println(F("\tTibberPulse options:"));
-  DEBUG_SERIAL.print(F("\t - tibber_url: "));
-  DEBUG_SERIAL.println(String(tibber_url));
+  DEBUG_SERIAL.print(F("\t - tibber_host: "));
+  DEBUG_SERIAL.println(String(tibber_host));
+  DEBUG_SERIAL.print(F("\t - tibber_nodeid: "));
+  DEBUG_SERIAL.println(String(tibber_nodeid));
   DEBUG_SERIAL.print(F("\t - tibber_user: "));
   DEBUG_SERIAL.println(String(tibber_user));
   DEBUG_SERIAL.print(F("\t - tibber_password: ********"));
@@ -428,7 +435,8 @@ void WifiManagerSetup() {
     preferences.putString("energy_out_path", energy_out_path);
     preferences.putString("shelly_port", shelly_port);
     preferences.putString("sma_id", sma_id);
-    preferences.putString("tibber_url", tibber_url);
+    preferences.putString("tibber_host", tibber_host);
+    preferences.putString("tibber_nodeid", tibber_nodeid);
     preferences.putString("tibber_user", tibber_user);
     preferences.putString("tibber_password", tibber_password);
     wifiManager.reboot();

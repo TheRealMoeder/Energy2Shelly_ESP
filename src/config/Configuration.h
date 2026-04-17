@@ -81,10 +81,11 @@ extern char query_period[10];
 extern char modbus_dev[10];
 extern char sma_id[17];
 
-extern char tibber_url[41];
-extern char tibber_user[6];
+extern char tibber_host[41];
+extern char tibber_user[11];
 extern char tibber_password[10];
 extern char tibber_rpc[21];
+extern char tibber_nodeid[2];
 
 // LED settings
 extern char led_gpio[3];
