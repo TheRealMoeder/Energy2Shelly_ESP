@@ -46,11 +46,10 @@ bool forcePwrDecimals = true; // to fix Marstek bug
 char sma_id[17] = "";
 
 // Tibber related
-char tibber_host_port[41] = "x.x.x.x[:xxxx]"; // IP/FQDN (and PORT) of Tibber Pulse Bridge device
-char tibber_user[11] = "admin"; // fixed user
-char tibber_password[10] = "xxxx-xxxx"; // replace with password printed on your Tibber Pulse Bridge device
-char tibber_rpc[25] = "/data.json?node_id="; // fixed rpc path
-char tibber_nodeid[2] = "1"; // node id, defaults to "1", can be changed in the config portal
+char tibber_url[41] = "x.x.x.x[:xxxx]"; // IP of TibberPulse
+char tibber_user[6] = "admin";         // fixed user
+char tibber_password[10] = "xxxx-xxxx"; // replace with password printed on Tibbel-Pulse-Adapter
+char tibber_rpc[21] = "/data.json?node_id=1"; // fixed rpc path
 
 // LED settings
 char led_gpio[3] = "";
@@ -178,10 +177,9 @@ void WifiManagerSetup() {
   strcpy(force_pwr_decimals, preferences.getString("force_pwr_decimals", force_pwr_decimals).c_str());
   strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
   // TibberPulse settings
-  strcpy(tibber_host_port, preferences.getString("tibber_host_port", tibber_host_port).c_str());
+  strcpy(tibber_url, preferences.getString("tibber_url", tibber_url).c_str());
   strcpy(tibber_user, preferences.getString("tibber_user", tibber_user).c_str());
   strcpy(tibber_password, preferences.getString("tibber_password", tibber_password).c_str());
-  strcpy(tibber_nodeid, preferences.getString("tibber_nodeid", tibber_nodeid).c_str());
 
   const char *show_pwd_str = "<input type=\"checkbox\" onclick=\"t('%s')\">&nbsp;<label>Show password</label><br/>";
 
@@ -222,13 +220,12 @@ void WifiManagerSetup() {
   WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
   // TibberPulse section
   WiFiManagerParameter param_section_tibberpulse("<hr><h3>TibberPulse options</h3>");
-  WiFiManagerParameter param_tibber_host_port("tibber_host_port", "Hostname/IP[:port] <span title=\"e.g.: 192.168.0.1:8080\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_host_port, 40);
-  WiFiManagerParameter param_tibber_user("tibber_user", "User <span title=\"defaults to: admin\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_user, 10);
+  WiFiManagerParameter param_tibber_url("tibber_url", "Hostname/IP[:port] <span title=\"e.g.: 192.168.0.1:8080\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_url, 40);
+  WiFiManagerParameter param_tibber_user("tibber_user", "User <span title=\"defaults to: admin\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_user, 5);
   WiFiManagerParameter param_tibber_password("tibber_password", "Password <span title=\"as printed on bridge device: xxxx-xxxx\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_password, 9, "type='password'");
   char buf_tibber_pwd_show_pwd[150];
   sprintf(buf_tibber_pwd_show_pwd, show_pwd_str, "tibber_password");
   WiFiManagerParameter param_tibber_password_show_password(buf_tibber_pwd_show_pwd);
-  WiFiManagerParameter param_tibber_nodeid("tibber_nodeid", "Node ID <span title=\"defaults to: 1, up to 9 node ID supported.\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_nodeid, 1);
 
   WiFiManager wifiManager;
   if (!DEBUG) {
@@ -271,11 +268,10 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_energy_out_path);
   // TibberPulse section
   wifiManager.addParameter(&param_section_tibberpulse);
-  wifiManager.addParameter(&param_tibber_host_port);
+  wifiManager.addParameter(&param_tibber_url);
   wifiManager.addParameter(&param_tibber_user);
   wifiManager.addParameter(&param_tibber_password);
   wifiManager.addParameter(&param_tibber_password_show_password);
-  wifiManager.addParameter(&param_tibber_nodeid);
 
   if (!wifiManager.autoConnect("Energy2Shelly")) {
     DEBUG_SERIAL.println("failed to connect and hit timeout");
@@ -312,8 +308,7 @@ void WifiManagerSetup() {
   strcpy(force_pwr_decimals, custom_force_pwr_decimals.getValue());
   strcpy(sma_id, custom_sma_id.getValue());
   // TibberPulse
-  strcpy(tibber_host_port, param_tibber_host_port.getValue());
-  strcpy(tibber_nodeid, param_tibber_nodeid.getValue());
+  strcpy(tibber_url, param_tibber_url.getValue());
   strcpy(tibber_user, param_tibber_user.getValue());
   strcpy(tibber_password, param_tibber_password.getValue());
 
@@ -344,10 +339,9 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println("\tforce_pwr_decimals : " + String(force_pwr_decimals));
   DEBUG_SERIAL.println("\tsma_id : " + String(sma_id));
   DEBUG_SERIAL.println("\tTibberPulse options:");
-  DEBUG_SERIAL.println("\t - tibber_host_port: " + String(tibber_host_port));
+  DEBUG_SERIAL.println("\t - tibber_url: " + String(tibber_url));
   DEBUG_SERIAL.println("\t - tibber_user: " + String(tibber_user));
   DEBUG_SERIAL.println("\t - tibber_password: ********");
-  DEBUG_SERIAL.println("\t - tibber_nodeid: " + String(tibber_nodeid));
 
   if (strcmp(input_type, "SMA") == 0) {
     dataSMA = true;
@@ -408,10 +402,9 @@ void WifiManagerSetup() {
     preferences.putString("shelly_port", shelly_port);
     preferences.putString("force_pwr_decimals", force_pwr_decimals);
     preferences.putString("sma_id", sma_id);
-    preferences.putString("tibber_host_port", tibber_host_port);
+    preferences.putString("tibber_url", tibber_url);
     preferences.putString("tibber_user", tibber_user);
     preferences.putString("tibber_password", tibber_password);
-    preferences.putString("tibber_nodeid", tibber_nodeid);
     wifiManager.reboot();
   }
   DEBUG_SERIAL.println("local ip");

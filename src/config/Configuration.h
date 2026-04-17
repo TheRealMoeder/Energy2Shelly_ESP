@@ -82,11 +82,10 @@ extern char force_pwr_decimals[6];
 extern bool forcePwrDecimals;
 extern char sma_id[17];
 
-extern char tibber_host_port[41];
-extern char tibber_user[11];
+extern char tibber_url[41];
+extern char tibber_user[6];
 extern char tibber_password[10];
-extern char tibber_rpc[25];
-extern char tibber_nodeid[2];
+extern char tibber_rpc[21];
 
 // LED settings
 extern char led_gpio[3];
