@@ -41,8 +41,9 @@ bool parseTibberPulse() {
   int getlength = 0;
   DEBUG_SERIAL.print("Querying TibberPulse raw SML: ");
   String url = "http://";
-  url += String(tibber_url);
+  url += String(tibber_host_port);
   url += String(tibber_rpc);
+  url += String(tibber_nodeid);
   DEBUG_SERIAL.printf("URL:%s, user:%s\r\n", url.c_str(), tibber_user);
   http.begin(wifi_client, url);
   http.setAuthorization(tibber_user, tibber_password);
