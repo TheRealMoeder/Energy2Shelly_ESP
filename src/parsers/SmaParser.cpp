@@ -8,7 +8,7 @@ void parseSMA() {
   if (packetSize) {
     int rSize = Udp.read(buffer, 1024);
     if (buffer[0] != 'S' || buffer[1] != 'M' || buffer[2] != 'A') {
-      DEBUG_SERIAL.println("Not an SMA packet?");
+      DEBUG_SERIAL.println(F("Not an SMA packet?"));
       return;
     }
     uint16_t grouplen;
@@ -28,10 +28,10 @@ void parseSMA() {
         // uint16_t susyID = (offset[0] << 8) + offset[1];
         offset += 2;
         uint32_t serial = (offset[0] << 24) + (offset[1] << 16) + (offset[2] << 8) + offset[3];
-        DEBUG_SERIAL.print("Received SMA multicast from ");
+        DEBUG_SERIAL.print(F("Received SMA multicast from "));
         DEBUG_SERIAL.println(serial);
         if (sma_id[0] != '\0' && strtoul(sma_id, nullptr, 10) != serial) {
-          DEBUG_SERIAL.println("SMA serial not matching - ignoring packet");
+          DEBUG_SERIAL.println(F("SMA serial not matching - ignoring packet"));
           break;
         }
         offset += 4;
@@ -48,22 +48,22 @@ void parseSMA() {
             offset += 8;
             switch (index) {
               case 21:
-                PhaseEnergy[0].consumption = data / 3600000;
+                PhaseEnergy[0].consumption = data / 3600;
                 break;
               case 22:
-                PhaseEnergy[0].gridfeedin = data / 3600000;
+                PhaseEnergy[0].gridfeedin = data / 3600;
                 break;
               case 41:
-                PhaseEnergy[1].consumption = data / 3600000;
+                PhaseEnergy[1].consumption = data / 3600;
                 break;
               case 42:
-                PhaseEnergy[1].gridfeedin = data / 3600000;
+                PhaseEnergy[1].gridfeedin = data / 3600;
                 break;
               case 61:
-                PhaseEnergy[2].consumption = data / 3600000;
+                PhaseEnergy[2].consumption = data / 3600;
                 break;
               case 62:
-                PhaseEnergy[2].gridfeedin = data / 3600000;
+                PhaseEnergy[2].gridfeedin = data / 3600;
                 break;
             }
           } else if (type == 4) {
@@ -77,14 +77,14 @@ void parseSMA() {
                 // 2.4.0 Total feed-in power in dW - unused
                 break;
               case 21:
-                PhasePower[0].power = round2(data * 0.1);
+                PhasePower[0].power = round2(data * 0.1) - offsetPerPhase;
                 PhasePower[0].frequency = defaultFrequency;
                 break;
               case 22:
                 PhasePower[0].power -= round2(data * 0.1);
                 break;
               case 29:
-                PhasePower[0].apparentPower = round2(data * 0.1);
+                PhasePower[0].apparentPower = round2(data * 0.1) - offsetPerPhase;
                 break;
               case 30:
                 PhasePower[0].apparentPower -= round2(data * 0.1);
@@ -99,14 +99,14 @@ void parseSMA() {
                 PhasePower[0].powerFactor = round2(data * 0.001);
                 break;
               case 41:
-                PhasePower[1].power = round2(data * 0.1);
+                PhasePower[1].power = round2(data * 0.1) - offsetPerPhase;
                 PhasePower[1].frequency = defaultFrequency;
                 break;
               case 42:
                 PhasePower[1].power -= round2(data * 0.1);
                 break;
               case 49:
-                PhasePower[1].apparentPower = round2(data * 0.1);
+                PhasePower[1].apparentPower = round2(data * 0.1) - offsetPerPhase;
                 break;
               case 50:
                 PhasePower[1].apparentPower -= round2(data * 0.1);
@@ -121,14 +121,14 @@ void parseSMA() {
                 PhasePower[1].powerFactor = round2(data * 0.001);
                 break;
               case 61:
-                PhasePower[2].power = round2(data * 0.1);
+                PhasePower[2].power = round2(data * 0.1) - offsetPerPhase;
                 PhasePower[2].frequency = defaultFrequency;
                 break;
               case 62:
                 PhasePower[2].power -= round2(data * 0.1);
                 break;
               case 69:
-                PhasePower[2].apparentPower = round2(data * 0.1);
+                PhasePower[2].apparentPower = round2(data * 0.1) - offsetPerPhase;
                 break;
               case 70:
                 PhasePower[2].apparentPower -= round2(data * 0.1);
@@ -150,16 +150,16 @@ void parseSMA() {
             offset += 4;
           } else {
             offset += type;
-            DEBUG_SERIAL.println("Unknown measurement");
+            DEBUG_SERIAL.println(F("Unknown measurement"));
           }
         }
       } else if (grouptag == 0) {
         // end marker
         offset += grouplen;
       } else {
-        DEBUG_SERIAL.print("unhandled group ");
+        DEBUG_SERIAL.print(F("unhandled group "));
         DEBUG_SERIAL.print(grouptag);
-        DEBUG_SERIAL.print(" with len=");
+        DEBUG_SERIAL.print(F(" with len="));
         DEBUG_SERIAL.println(grouplen);
         offset += grouplen;
       }

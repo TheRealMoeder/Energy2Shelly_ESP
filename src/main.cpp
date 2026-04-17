@@ -1,4 +1,3 @@
-// Energy2Shelly_ESP v0.6.1
 #include <Arduino.h>
 
 // Configuration & setup
@@ -15,6 +14,9 @@
 #include "rpc/RpcHandlers.h"
 #include "rpc/RpcComm.h"
 
+// Web content
+#include "web/html_home.h"
+
 void setup(void) {
   DEBUG_SERIAL.begin(115200);
   WifiManagerSetup();
@@ -30,10 +32,10 @@ void setup(void) {
 #endif
   while (!getLocalTime(&timeinfo))
   {
-    DEBUG_SERIAL.println("Waiting for NTP time...");
+    DEBUG_SERIAL.println(F("Waiting for NTP time..."));
     delay(500);
   }
-  DEBUG_SERIAL.print("Current time: ");
+  DEBUG_SERIAL.print(F("Current time: "));
   char time_buffer[20];
   strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
   DEBUG_SERIAL.println(time_buffer);
@@ -54,7 +56,7 @@ void setup(void) {
   // Set up web server and endpoints
 
   server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "This is the Energy2Shelly for ESP converter!\r\nDevice and Energy status is available under /status\r\nTo reset configuration, goto /reset\r\n");
+    request->send(200, "text/html", FPSTR(HTML_HOME));
   });
 
   server.on("/shelly", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -206,7 +208,7 @@ void setup(void) {
     modbus1.client();
     modbus_ip.fromString(mqtt_server);
     if (!modbus1.isConnected(modbus_ip)) {  // reuse mqtt server adresss for modbus adress
-      Serial.println("Trying to connect SUNSPEC powermeter data");
+      Serial.println(F("Trying to connect SUNSPEC powermeter data"));
       modbus1.connect(modbus_ip, String(mqtt_port).toInt());
     }
   }

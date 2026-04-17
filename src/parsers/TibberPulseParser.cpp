@@ -39,7 +39,7 @@ byte smlpayload[SMLPAYLOADMAXSIZE]{0};
 bool parseTibberPulse() {
   bool ret = true;
   int getlength = 0;
-  DEBUG_SERIAL.print("Querying TibberPulse raw SML: ");
+  DEBUG_SERIAL.print(F("Querying TibberPulse raw SML: "));
   String url = "http://";
   url += String(tibber_url);
   url += String(tibber_rpc);

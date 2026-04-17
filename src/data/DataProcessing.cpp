@@ -8,12 +8,7 @@ EnergyData PhaseEnergy[3];
 String serJsonResponse;
 
 double round2(double value) {
-  int ivalue = (int)(value * 100.0 + (value > 0.0 ? 0.5 : -0.5));
-
-  // fix Marstek bug: make sure to have decimal numbers
-  if(forcePwrDecimals && (ivalue % 100 == 0)) ivalue++;
-  
-  return ivalue / 100.0;
+  return round(value * 100.0) / 100.0;
 }
 
 bool isValidIPAddress(const char* ipString) {
@@ -39,17 +34,19 @@ JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
 }
 
 void setPowerData(double totalPower) {
+  double adjustedPower = totalPower + offsetPerPhase * 3;
+
   switch(phase_number[0]) {
     case '1': // monophase
-      PhasePower[0].power = round2(totalPower);
+      PhasePower[0].power = round2(adjustedPower);
       PhasePower[1].power = 0.0;
       PhasePower[2].power = 0.0;
       break;
     case '3': // triphase
     default:
-      PhasePower[0].power = round2(totalPower * 0.3333);
-      PhasePower[1].power = round2(totalPower * 0.3333);
-      PhasePower[2].power = round2(totalPower * 0.3333);
+      PhasePower[0].power = round2(adjustedPower * 0.3333);
+      PhasePower[1].power = round2(adjustedPower * 0.3333);
+      PhasePower[2].power = round2(adjustedPower * 0.3333);
       break;
   }
   for (int i = 0; i <= 2; i++) {
@@ -59,22 +56,22 @@ void setPowerData(double totalPower) {
     PhasePower[i].powerFactor = round2(defaultPowerFactor);
     PhasePower[i].frequency = defaultFrequency;
   }
-  DEBUG_SERIAL.print("Current total power: ");
-  DEBUG_SERIAL.println(totalPower);
+  DEBUG_SERIAL.print(F("Current total power (with offset): "));
+  DEBUG_SERIAL.println(adjustedPower);
 }
 
 void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
   switch(phase_number[0]) {
     case '1': // monophase
-      PhasePower[0].power = round2(phase1Power) + round2(phase2Power) + round2(phase3Power);
+      PhasePower[0].power = round2(phase1Power) + round2(phase2Power) + round2(phase3Power) + offsetPerPhase * 3;
       PhasePower[1].power = 0.0;
       PhasePower[2].power = 0.0;
       break;
     case '3': // triphase
     default:
-      PhasePower[0].power = round2(phase1Power);
-      PhasePower[1].power = round2(phase2Power);
-      PhasePower[2].power = round2(phase3Power);
+      PhasePower[0].power = round2(phase1Power + offsetPerPhase);
+      PhasePower[1].power = round2(phase2Power + offsetPerPhase);
+      PhasePower[2].power = round2(phase3Power + offsetPerPhase);
       break;
   }
   for (int i = 0; i <= 2; i++) {
@@ -84,12 +81,12 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
     PhasePower[i].powerFactor = round2(defaultPowerFactor);
     PhasePower[i].frequency = defaultFrequency;
   }
-  DEBUG_SERIAL.print("Current power L1: ");
-  DEBUG_SERIAL.print(phase1Power);
-  DEBUG_SERIAL.print(" - L2: ");
-  DEBUG_SERIAL.print(phase2Power);
-  DEBUG_SERIAL.print(" - L3: ");
-  DEBUG_SERIAL.println(phase3Power);
+  DEBUG_SERIAL.print(F("Current power (with offset) L1: "));
+  DEBUG_SERIAL.print(phase1Power + offsetPerPhase);
+  DEBUG_SERIAL.print(F(" - L2: "));
+  DEBUG_SERIAL.print(phase2Power + offsetPerPhase);
+  DEBUG_SERIAL.print(F(" - L3: "));
+  DEBUG_SERIAL.println(phase3Power + offsetPerPhase);
 }
 
 void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
@@ -108,48 +105,50 @@ void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
     }
     break;
   }
-  DEBUG_SERIAL.print("Total Consumption (Grid Supply): ");
+  DEBUG_SERIAL.print(F("Total Consumption (Grid Supply): "));
   DEBUG_SERIAL.print(totalEnergyGridSupply);
-  DEBUG_SERIAL.print(" - Total Production (Grid Feed-In): ");
+  DEBUG_SERIAL.print(F(" - Total Production (Grid Feed-In): "));
   DEBUG_SERIAL.println(totalEnergyGridFeedIn);
 }
 
 void setJsonPathPower(JsonDocument json) {
   // If the incoming JSON already uses Shelly 3EM field names, parse directly
+  double offsetPerPhase = String(power_offset).toDouble() / 3.0;  // distribute offset equally across phases
+  
   if (json["a_current"].is<JsonVariant>() || json["a_act_power"].is<JsonVariant>()) {
-    DEBUG_SERIAL.println("Parsing direct Shelly 3EM payload");
+    DEBUG_SERIAL.println(F("Parsing direct Shelly 3EM payload"));
     PhasePower[0].current = round2((double)json["a_current"].as<double>());
     PhasePower[0].voltage = round2((double)json["a_voltage"].as<double>());
-    PhasePower[0].power = round2((double)json["a_act_power"].as<double>());
-    PhasePower[0].apparentPower = round2((double)json["a_aprt_power"].as<double>());
+    PhasePower[0].power = round2((double)json["a_act_power"].as<double>() + offsetPerPhase);
+    PhasePower[0].apparentPower = round2((double)json["a_aprt_power"].as<double>() + offsetPerPhase);
     PhasePower[0].powerFactor = round2((double)json["a_pf"].as<double>());
     PhasePower[0].frequency = json["a_freq"].as<int>();
 
     PhasePower[1].current = round2((double)json["b_current"].as<double>());
     PhasePower[1].voltage = round2((double)json["b_voltage"].as<double>());
-    PhasePower[1].power = round2((double)json["b_act_power"].as<double>());
-    PhasePower[1].apparentPower = round2((double)json["b_aprt_power"].as<double>());
+    PhasePower[1].power = round2((double)json["b_act_power"].as<double>() + offsetPerPhase);
+    PhasePower[1].apparentPower = round2((double)json["b_aprt_power"].as<double>() + offsetPerPhase);
     PhasePower[1].powerFactor = round2((double)json["b_pf"].as<double>());
     PhasePower[1].frequency = json["b_freq"].as<int>();
 
     PhasePower[2].current = round2((double)json["c_current"].as<double>());
     PhasePower[2].voltage = round2((double)json["c_voltage"].as<double>());
-    PhasePower[2].power = round2((double)json["c_act_power"].as<double>());
-    PhasePower[2].apparentPower = round2((double)json["c_aprt_power"].as<double>());
+    PhasePower[2].power = round2((double)json["c_act_power"].as<double>() + offsetPerPhase);
+    PhasePower[2].apparentPower = round2((double)json["c_aprt_power"].as<double>() + offsetPerPhase);
     PhasePower[2].powerFactor = round2((double)json["c_pf"].as<double>());
     PhasePower[2].frequency = json["c_freq"].as<int>();
 
     // Optionally use total fields if present
     if (json["total_act_power"].is<JsonVariant>()) {
-      double total = json["total_act_power"].as<double>();
+      double total = json["total_act_power"].as<double>() + offsetPerPhase * 3;
       // distribute if individual phases missing or for logging
-      DEBUG_SERIAL.print("Total power from payload: ");
+      DEBUG_SERIAL.print(F("Total power from payload: "));
       DEBUG_SERIAL.println(total);
     }
     return;
   }
   if (strcmp(power_path, "TRIPHASE") == 0) {
-    DEBUG_SERIAL.println("resolving triphase");
+    DEBUG_SERIAL.println(F("resolving triphase"));
     double power1 = resolveJsonPath(json, power_l1_path);
     double power2 = resolveJsonPath(json, power_l2_path);
     double power3 = resolveJsonPath(json, power_l3_path);
@@ -158,7 +157,7 @@ void setJsonPathPower(JsonDocument json) {
   } else {
     // Check if BOTH paths (Import = power_path, Export = pwr_export_path) are defined
     if ((strcmp(power_path, "") != 0) && (strcmp(pwr_export_path, "") != 0)) {
-      DEBUG_SERIAL.println("Resolving net power (import - export)");
+      DEBUG_SERIAL.println(F("Resolving net power (import - export)"));
       double importPower = resolveJsonPath(json, power_path).as<double>();
       double exportPower = resolveJsonPath(json, pwr_export_path).as<double>();
       double netPower = importPower - exportPower;
@@ -166,7 +165,7 @@ void setJsonPathPower(JsonDocument json) {
     }
     // (FALLBACK): Only the normal power_path (import path) is defined (old logic)
     else if (strcmp(power_path, "") != 0) {
-      DEBUG_SERIAL.println("Resolving monophase (single path only)");
+      DEBUG_SERIAL.println(F("Resolving monophase (single path only)"));
       double power = resolveJsonPath(json, power_path).as<double>();
       setPowerData(power);
     }
@@ -183,7 +182,7 @@ void parseShellyString(const char *jsonStr) {
   JsonDocument doc;
   DeserializationError err = deserializeJson(doc, jsonStr);
   if (err) {
-    DEBUG_SERIAL.print("deserializeJson failed: ");
+    DEBUG_SERIAL.print(F("deserializeJson failed: "));
     DEBUG_SERIAL.println(err.c_str());
     return;
   }

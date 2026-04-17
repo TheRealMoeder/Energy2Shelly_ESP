@@ -16,6 +16,7 @@ char input_type[40];
 char ntp_server[40] = "de.pool.ntp.org";
 char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
 char phase_number[2] = "3"; // number of phases: 1 for monophase or 3 for triphase
+char power_offset[10] = "0";  // Default: no offset
 char mqtt_server[160];
 char mqtt_port[6] = "1883";
 char mqtt_topic[90] = "tele/meter/SENSOR";
@@ -41,8 +42,6 @@ char shelly_port[6] = "2220"; // old: 1010; new (FW>=226): 2220; Venus A and E 3
 // Query and protocol settings
 char query_period[10] = "1000";
 char modbus_dev[10] = "71"; // default for KSEM
-char force_pwr_decimals[6] = "true"; // to fix Marstek bug
-bool forcePwrDecimals = true; // to fix Marstek bug
 char sma_id[17] = "";
 
 // Tibber related
@@ -68,10 +67,11 @@ IPAddress modbus_ip;
 ModbusIP modbus1;
 int16_t modbus_result[256];
 
-// Default electrical values
+// Default electrical values and offset
 const uint8_t defaultVoltage = 230;
 const uint8_t defaultFrequency = 50;
 const uint8_t defaultPowerFactor = 1;
+double offsetPerPhase = 0;
 
 // RPC and query settings
 unsigned long period = 1000;
@@ -140,7 +140,7 @@ void handleblinkled() {
 
 //callback notifying us of the need to save WifiManager config
 void saveConfigCallback() {
-  DEBUG_SERIAL.println("Should save config");
+  DEBUG_SERIAL.println(F("Should save config"));
   shouldSaveConfig = true;
 }
 
@@ -157,6 +157,7 @@ void WifiManagerSetup() {
   strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
   strcpy(timezone, preferences.getString("timezone", timezone).c_str());
   strcpy(phase_number, preferences.getString("phase_number", phase_number).c_str());
+  strcpy(power_offset, preferences.getString("power_offset", power_offset).c_str());
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
   strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
   strcpy(led_gpio_i, preferences.getString("led_gpio_i", led_gpio_i).c_str());
@@ -174,7 +175,6 @@ void WifiManagerSetup() {
   strcpy(energy_in_path, preferences.getString("energy_in_path", energy_in_path).c_str());
   strcpy(energy_out_path, preferences.getString("energy_out_path", energy_out_path).c_str());
   strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
-  strcpy(force_pwr_decimals, preferences.getString("force_pwr_decimals", force_pwr_decimals).c_str());
   strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
   // TibberPulse settings
   strcpy(tibber_url, preferences.getString("tibber_url", tibber_url).c_str());
@@ -194,12 +194,12 @@ void WifiManagerSetup() {
   WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
   WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
   WiFiManagerParameter param_phase_number("phase_number", "Number of phases <span title=\"Number of phases (e.g. 1 or 3)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", phase_number, 1);
+  WiFiManagerParameter custom_power_offset("power_offset", "Power offset <span title=\"optional offset value in Watts added to the emulated output\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", power_offset, 10);
   WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
   WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
   WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
   WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
   WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> or <code>2220</code> depending on Marstek Venus model and firmware version", shelly_port, 6);
-  WiFiManagerParameter custom_force_pwr_decimals("force_pwr_decimals", "<b>Force decimals numbers for Power values</b><br><code>true</code> to fix Marstek bug", force_pwr_decimals, 6);
   WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
   WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
   WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", mqtt_topic, 90);
@@ -231,6 +231,11 @@ void WifiManagerSetup() {
   if (!DEBUG) {
     wifiManager.setDebugOutput(false);
   }
+  wifiManager.setShowStaticFields(true);
+
+  // Move custom parameters to seperate menu to avoid issues with too many custom parameters and too many results from AP scan
+  wifiManager.setParamsPage(true);
+  
   wifiManager.setTitle("Energy2Shelly for ESP");
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
@@ -243,12 +248,12 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&param_ntp_server);
   wifiManager.addParameter(&param_timezone);
   wifiManager.addParameter(&param_phase_number);
+  wifiManager.addParameter(&custom_power_offset);
   wifiManager.addParameter(&custom_query_period);
   wifiManager.addParameter(&custom_led_gpio);
   wifiManager.addParameter(&custom_led_gpio_i);
   wifiManager.addParameter(&custom_shelly_mac);
   wifiManager.addParameter(&custom_shelly_port);
-  wifiManager.addParameter(&custom_force_pwr_decimals);
   wifiManager.addParameter(&custom_sma_id);
   wifiManager.addParameter(&custom_section2);
   wifiManager.addParameter(&custom_mqtt_port);
@@ -274,12 +279,12 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&param_tibber_password_show_password);
 
   if (!wifiManager.autoConnect("Energy2Shelly")) {
-    DEBUG_SERIAL.println("failed to connect and hit timeout");
+    DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
     delay(3000);
     ESP.restart();
     delay(5000);
   }
-  DEBUG_SERIAL.println("connected");
+  DEBUG_SERIAL.println(F("connected"));
 
   //read updated parameters
   strcpy(reset_password, param_reset_password.getValue());
@@ -289,6 +294,7 @@ void WifiManagerSetup() {
   strcpy(ntp_server, param_ntp_server.getValue());
   strcpy(timezone, param_timezone.getValue());
   strcpy(phase_number, param_phase_number.getValue());
+  strcpy(power_offset, custom_power_offset.getValue());
   strcpy(query_period, custom_query_period.getValue());
   strcpy(led_gpio, custom_led_gpio.getValue());
   strcpy(led_gpio_i, custom_led_gpio_i.getValue());
@@ -305,62 +311,88 @@ void WifiManagerSetup() {
   strcpy(energy_in_path, custom_energy_in_path.getValue());
   strcpy(energy_out_path, custom_energy_out_path.getValue());
   strcpy(shelly_port, custom_shelly_port.getValue());
-  strcpy(force_pwr_decimals, custom_force_pwr_decimals.getValue());
   strcpy(sma_id, custom_sma_id.getValue());
   // TibberPulse
   strcpy(tibber_url, param_tibber_url.getValue());
   strcpy(tibber_user, param_tibber_user.getValue());
   strcpy(tibber_password, param_tibber_password.getValue());
 
-  DEBUG_SERIAL.println("The values in the preferences are: ");
-  DEBUG_SERIAL.println("\treset_password: ********");
-  DEBUG_SERIAL.println("\tinput_type : " + String(input_type));
-  DEBUG_SERIAL.println("\tmqtt_server : " + String(mqtt_server));
-  DEBUG_SERIAL.println("\tmqtt_port : " + String(mqtt_port));
-  DEBUG_SERIAL.println("\tntp_server: " + String(ntp_server));
-  DEBUG_SERIAL.println("\ttimezone: " + String(timezone));
-  DEBUG_SERIAL.println("\tphase_number : " + String(phase_number));
-  DEBUG_SERIAL.println("\tquery_period : " + String(query_period));
-  DEBUG_SERIAL.println("\tled_gpio : " + String(led_gpio));
-  DEBUG_SERIAL.println("\tled_gpio_i : " + String(led_gpio_i));
-  DEBUG_SERIAL.println("\tshelly_mac : " + String(shelly_mac));
-  DEBUG_SERIAL.println("\tmqtt_topic : " + String(mqtt_topic));
-  DEBUG_SERIAL.println("\tmqtt_user : " + String(mqtt_user));
-  DEBUG_SERIAL.println("\tmqtt_passwd : ********");
-  DEBUG_SERIAL.println("\tmodbus_dev : " + String(modbus_dev));
-  DEBUG_SERIAL.println("\tpower_path : " + String(power_path));
-  DEBUG_SERIAL.println("\tpwr_export_path : " + String(pwr_export_path));
-  DEBUG_SERIAL.println("\tpower_l1_path : " + String(power_l1_path));
-  DEBUG_SERIAL.println("\tpower_l2_path : " + String(power_l2_path));
-  DEBUG_SERIAL.println("\tpower_l3_path : " + String(power_l3_path));
-  DEBUG_SERIAL.println("\tenergy_in_path : " + String(energy_in_path));
-  DEBUG_SERIAL.println("\tenergy_out_path : " + String(energy_out_path));
-  DEBUG_SERIAL.println("\tshelly_port : " + String(shelly_port));
-  DEBUG_SERIAL.println("\tforce_pwr_decimals : " + String(force_pwr_decimals));
-  DEBUG_SERIAL.println("\tsma_id : " + String(sma_id));
-  DEBUG_SERIAL.println("\tTibberPulse options:");
-  DEBUG_SERIAL.println("\t - tibber_url: " + String(tibber_url));
-  DEBUG_SERIAL.println("\t - tibber_user: " + String(tibber_user));
-  DEBUG_SERIAL.println("\t - tibber_password: ********");
+  offsetPerPhase = String(power_offset).toDouble() / 3.0;  // distribute offset equally across phases
+
+  DEBUG_SERIAL.println(F("The values in the preferences are: "));
+  DEBUG_SERIAL.println(F("\treset_password: ********"));
+  DEBUG_SERIAL.print(F("\tinput_type : "));
+  DEBUG_SERIAL.println(String(input_type));
+  DEBUG_SERIAL.print(F("\tmqtt_server : "));
+  DEBUG_SERIAL.println(String(mqtt_server));
+  DEBUG_SERIAL.print(F("\tmqtt_port : "));
+  DEBUG_SERIAL.println(String(mqtt_port));
+  DEBUG_SERIAL.print(F("\tntp_server: "));
+  DEBUG_SERIAL.println(String(ntp_server));
+  DEBUG_SERIAL.print(F("\ttimezone: "));
+  DEBUG_SERIAL.println(String(timezone));
+  DEBUG_SERIAL.print(F("\tphase_number : "));
+  DEBUG_SERIAL.println(String(phase_number));
+  DEBUG_SERIAL.print(F("\tpower_offset : "));
+  DEBUG_SERIAL.println(String(power_offset));
+  DEBUG_SERIAL.print(F("\tquery_period : "));
+  DEBUG_SERIAL.println(String(query_period));
+  DEBUG_SERIAL.print(F("\tled_gpio : "));
+  DEBUG_SERIAL.println(String(led_gpio));
+  DEBUG_SERIAL.print(F("\tled_gpio_i : "));
+  DEBUG_SERIAL.println(String(led_gpio_i));
+  DEBUG_SERIAL.print(F("\tshelly_mac : "));
+  DEBUG_SERIAL.println(String(shelly_mac));
+  DEBUG_SERIAL.print(F("\tmqtt_topic : "));
+  DEBUG_SERIAL.println(String(mqtt_topic));
+  DEBUG_SERIAL.print(F("\tmqtt_user : "));
+  DEBUG_SERIAL.println(String(mqtt_user));
+  DEBUG_SERIAL.println(F("\tmqtt_passwd : ********"));
+  DEBUG_SERIAL.print(F("\tmodbus_dev : "));
+  DEBUG_SERIAL.println(String(modbus_dev));
+  DEBUG_SERIAL.print(F("\tpower_path : "));
+  DEBUG_SERIAL.println(String(power_path));
+  DEBUG_SERIAL.print(F("\tpwr_export_path : "));
+  DEBUG_SERIAL.println(String(pwr_export_path));
+  DEBUG_SERIAL.print(F("\tpower_l1_path : "));
+  DEBUG_SERIAL.println(String(power_l1_path));
+  DEBUG_SERIAL.print(F("\tpower_l2_path : "));
+  DEBUG_SERIAL.println(String(power_l2_path));
+  DEBUG_SERIAL.print(F("\tpower_l3_path : "));
+  DEBUG_SERIAL.println(String(power_l3_path));
+  DEBUG_SERIAL.print(F("\tenergy_in_path : "));
+  DEBUG_SERIAL.println(String(energy_in_path));
+  DEBUG_SERIAL.print(F("\tenergy_out_path : "));
+  DEBUG_SERIAL.println(String(energy_out_path));
+  DEBUG_SERIAL.print(F("\tshelly_port : "));
+  DEBUG_SERIAL.println(String(shelly_port));
+  DEBUG_SERIAL.print(F("\tsma_id : "));
+  DEBUG_SERIAL.println(String(sma_id));
+  DEBUG_SERIAL.println(F("\tTibberPulse options:"));
+  DEBUG_SERIAL.print(F("\t - tibber_url: "));
+  DEBUG_SERIAL.println(String(tibber_url));
+  DEBUG_SERIAL.print(F("\t - tibber_user: "));
+  DEBUG_SERIAL.println(String(tibber_user));
+  DEBUG_SERIAL.print(F("\t - tibber_password: ********"));
 
   if (strcmp(input_type, "SMA") == 0) {
     dataSMA = true;
-    DEBUG_SERIAL.println("Enabling SMA Multicast data input");
+    DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
   } else if (strcmp(input_type, "SHRDZM") == 0) {
     dataSHRDZM = true;
-    DEBUG_SERIAL.println("Enabling SHRDZM UDP data input");
+    DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
   } else if (strcmp(input_type, "HTTP") == 0) {
     dataHTTP = true;
-    DEBUG_SERIAL.println("Enabling generic HTTP data input");
+    DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
   } else if (strcmp(input_type, "SUNSPEC") == 0) {
     dataSUNSPEC = true;
-    DEBUG_SERIAL.println("Enabling SUNSPEC data input");
+    DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
   } else if (strcmp(input_type, "TIBBERPULSE") == 0) {
     dataTIBBERPULSE = true;
-    DEBUG_SERIAL.println("Enabling TIBBERPULSE data input");
+    DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
   } else {
     dataMQTT = true;
-    DEBUG_SERIAL.println("Enabling MQTT data input");
+    DEBUG_SERIAL.println(F("Enabling MQTT data input"));
   }
 
   if (strcmp(led_gpio_i, "true") == 0) {
@@ -369,14 +401,8 @@ void WifiManagerSetup() {
     led_i = false;
   }
 
-  if (strcmp(force_pwr_decimals, "true") == 0) {
-    forcePwrDecimals = true;
-  } else {
-    forcePwrDecimals = false;
-  }
-
   if (shouldSaveConfig) {
-    DEBUG_SERIAL.println("saving config");
+    DEBUG_SERIAL.println(F("saving config"));
     preferences.putString("reset_password", reset_password);
     preferences.putString("input_type", input_type);
     preferences.putString("mqtt_server", mqtt_server);
@@ -384,6 +410,7 @@ void WifiManagerSetup() {
     preferences.putString("ntp_server", ntp_server);
     preferences.putString("timezone", timezone);
     preferences.putString("phase_number", phase_number);
+    preferences.putString("power_offset", power_offset);
     preferences.putString("query_period", query_period);
     preferences.putString("led_gpio", led_gpio);
     preferences.putString("led_gpio_i", led_gpio_i);
@@ -400,14 +427,13 @@ void WifiManagerSetup() {
     preferences.putString("energy_in_path", energy_in_path);
     preferences.putString("energy_out_path", energy_out_path);
     preferences.putString("shelly_port", shelly_port);
-    preferences.putString("force_pwr_decimals", force_pwr_decimals);
     preferences.putString("sma_id", sma_id);
     preferences.putString("tibber_url", tibber_url);
     preferences.putString("tibber_user", tibber_user);
     preferences.putString("tibber_password", tibber_password);
     wifiManager.reboot();
   }
-  DEBUG_SERIAL.println("local ip");
+  DEBUG_SERIAL.println(F("local ip"));
   DEBUG_SERIAL.println(WiFi.localIP());
 }
 
@@ -416,7 +442,7 @@ void setupMdns() {
   strncat(shelly_name, shelly_mac, sizeof(shelly_name) - strlen(shelly_name) - 1);
 
   if (!MDNS.begin(shelly_name)) {
-    DEBUG_SERIAL.println("Error setting up MDNS responder!");
+    DEBUG_SERIAL.println(F("Error setting up MDNS responder!"));
   }
 
 #ifdef ESP32
@@ -450,5 +476,5 @@ void setupMdns() {
     MDNS.addServiceTxt(hMDNSService2, "id", shelly_name);
   }
 #endif
-  DEBUG_SERIAL.println("mDNS responder started");
+  DEBUG_SERIAL.println(F("mDNS responder started"));
 }

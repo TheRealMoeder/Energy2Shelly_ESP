@@ -19,19 +19,19 @@ double SUNSPEC_scale(int n)
 }
 
 void parseSUNSPEC() {
-  #define SUNSPEC_BASE 40072
-  #define SUNSPEC_VOLTAGE 40077
-  #define SUNSPEC_VOLTAGE_SCALE 40084
-  #define SUNSPEC_REAL_POWER 40088
-  #define SUNSPEC_REAL_POWER_SCALE 40091
-  #define SUNSPEC_APPARANT_POWER 40093
-  #define SUNSPEC_APPARANT_POWER_SCALE 40096
-  #define SUNSPEC_CURRENT 40072
-  #define SUNSPEC_CURRENT_SCALE 40075
-  #define SUNSPEC_POWER_FACTOR 40103
-  #define SUNSPEC_POWER_FACTOR_SCALE 40106
-  #define SUNSPEC_FREQUENCY 40085
-  #define SUNSPEC_FREQUENCY_SCALE 40086
+  #define SUNSPEC_BASE 40073
+  #define SUNSPEC_VOLTAGE 40078
+  #define SUNSPEC_VOLTAGE_SCALE 40085
+  #define SUNSPEC_REAL_POWER 40089
+  #define SUNSPEC_REAL_POWER_SCALE 40092
+  #define SUNSPEC_APPARANT_POWER 40094
+  #define SUNSPEC_APPARANT_POWER_SCALE 40097
+  #define SUNSPEC_CURRENT 40073
+  #define SUNSPEC_CURRENT_SCALE 40076
+  #define SUNSPEC_POWER_FACTOR 40104
+  #define SUNSPEC_POWER_FACTOR_SCALE 40107
+  #define SUNSPEC_FREQUENCY 40086
+  #define SUNSPEC_FREQUENCY_SCALE 40087
   
   modbus_ip.fromString(mqtt_server);
   if (!modbus1.isConnected(modbus_ip)) {
@@ -46,7 +46,7 @@ void parseSUNSPEC() {
       delay(10);
       t++;
       if (t > 50) {
-        DEBUG_SERIAL.println("Timeout SUNSPEC");
+        DEBUG_SERIAL.println(F("Timeout SUNSPEC"));
         //prolong=10;
         modbus1.disconnect(modbus_ip);
         break;
@@ -62,8 +62,8 @@ void parseSUNSPEC() {
       double scale_frequency=SUNSPEC_scale(modbus_result[SUNSPEC_FREQUENCY_SCALE-SUNSPEC_BASE]);
 
       for (int n=0;n<3;n++) {
-        PhasePower[n].power=modbus_result[SUNSPEC_REAL_POWER-SUNSPEC_BASE+n]*scale_real_power;
-        PhasePower[n].apparentPower=modbus_result[SUNSPEC_APPARANT_POWER-SUNSPEC_BASE+n]*scale_apparant_power;
+        PhasePower[n].power=modbus_result[SUNSPEC_REAL_POWER-SUNSPEC_BASE+n]*scale_real_power + offsetPerPhase * 3;
+        PhasePower[n].apparentPower=modbus_result[SUNSPEC_APPARANT_POWER-SUNSPEC_BASE+n]*scale_apparant_power + offsetPerPhase * 3;
         PhasePower[n].current= modbus_result[SUNSPEC_CURRENT-SUNSPEC_BASE+n]*scale_current;
         PhasePower[n].powerFactor=modbus_result[SUNSPEC_POWER_FACTOR-SUNSPEC_BASE+n]*scale_powerfactor;
         PhasePower[n].voltage=modbus_result[SUNSPEC_VOLTAGE-SUNSPEC_BASE+n]*scale_V;
@@ -92,6 +92,7 @@ void parseSUNSPEC() {
           PhaseEnergy[n].gridfeedin = -p/1000.0*scale_real_energy;
         }
     }
-    DEBUG_SERIAL.printf("SUNSPEC power: %d,%d\n\r", t, power);
+    DEBUG_SERIAL.print(F("SUNSPEC power: "));
+    DEBUG_SERIAL.printf("%d,%d\n\r", t, power);
   }
 }

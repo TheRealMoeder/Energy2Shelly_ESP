@@ -103,7 +103,7 @@ void parseUdpRPC() {
     JsonDocument json;
     int rSize = UdpRPC.read(buffer, 1024);
     buffer[rSize] = 0;
-    DEBUG_SERIAL.print("Received UDP packet on port 1010: ");
+    DEBUG_SERIAL.print(F("Received UDP packet on port 1010: "));
     DEBUG_SERIAL.println((char *)buffer);
     deserializeJson(json, buffer);
     if (json["method"].is<JsonVariant>()) {
@@ -149,7 +149,7 @@ void parseUdpRPC() {
 void parseHttpRPC(String requestBody, AsyncWebServerRequest *request) {
   if (request && requestBody) {
     JsonDocument json;
-    DEBUG_SERIAL.print("Received HTTP RPC request: ");
+    DEBUG_SERIAL.print(F("Received HTTP RPC request: "));
     DEBUG_SERIAL.println(requestBody);
     deserializeJson(json, requestBody);
     if (json["method"].is<JsonVariant>()) {
@@ -184,7 +184,7 @@ void parseHttpRPC(String requestBody, AsyncWebServerRequest *request) {
         rpcWrapper();
         request->send(200, "application/json", serJsonResponse);
       } else {
-        DEBUG_SERIAL.printf("RPC over HTTP: unknown request: %s\n", requestBody);
+        DEBUG_SERIAL.printf("RPC over HTTP: unknown request: %s\n", requestBody.c_str());
       }
     }
   }
