@@ -46,18 +46,24 @@ jobs:
       - name: Copy firmware
         run: |
           cp .pio/build/esp32/merged-flash.bin ./.github/pages/esp32.bin
+          cp .pio/build/esp32/firmware.bin ./.github/pages/esp32-ota.bin
           cp .pio/build/esp8266/firmware.bin ./.github/pages/esp8266.bin
           cp .pio/build/esp32-s3/merged-flash.bin ./.github/pages/esp32-s3.bin
           cp .pio/build/esp32-c3/merged-flash.bin ./.github/pages/esp32-c3.bin
+          cp .pio/build/esp32-s3/firmware.bin ./.github/pages/esp32-s3-ota.bin
+          cp .pio/build/esp32-c3/firmware.bin ./.github/pages/esp32-c3-ota.bin
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v7
         with:
           name: firmware
           path: |
             ./.github/pages/esp32.bin
+            ./.github/pages/esp32-ota.bin
             ./.github/pages/esp8266.bin
             ./.github/pages/esp32-s3.bin
+            ./.github/pages/esp32-s3-ota.bin
             ./.github/pages/esp32-c3.bin
+            ./.github/pages/esp32-c3-ota.bin
       - name: Setup Github Page
         uses: actions/configure-pages@v6
       - name: Upload webflash files
@@ -88,8 +94,11 @@ jobs:
           files: |
             ./esp8266.bin
             ./esp32.bin
+            ./esp32-ota.bin
             ./esp32-s3.bin
+            ./esp32-s3-ota.bin
             ./esp32-c3.bin
+            ./esp32-c3-ota.bin
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
