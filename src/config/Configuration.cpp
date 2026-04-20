@@ -239,7 +239,7 @@ void WifiManagerSetup() {
   // Move custom parameters to seperate menu to avoid issues with too many custom parameters and too many results from AP scan
   wifiManager.setParamsPage(true);
   
-  wifiManager.setTitle("Energy2Shelly for ESP");
+  wifiManager.setTitle(String("Energy2Shelly for ESP ") + VERSION_BUILD);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
   //add all your parameters here
