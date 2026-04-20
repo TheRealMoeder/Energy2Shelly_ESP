@@ -33,6 +33,7 @@ jobs:
         run: pio run
       - name: Merge ESP32 flash files
         run: |
+          pip install rich-click
           cd .pio/build/esp32
           python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32 merge_bin -o merged-flash.bin --flash_mode dio --flash_size 4MB 0x1000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
       - name: Merge ESP32-S3 flash files
