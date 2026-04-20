@@ -15,6 +15,11 @@ SMA Multicast code is based on https://www.mikrocontroller.net/topic/559607
 Compile and flash for your microcontroller using [PlatformIO](https://platformio.org/)
 ## Option 2: Flash pre-compiled binary via browser 
 Connect your ESP to your PC using USB and follow the instructions on the [webflasher](https://therealmoeder.github.io/Energy2Shelly_ESP/)
+  > [!NOTE]
+  > If you have trouble connecting to your ESP32-S3 or C3, hold BOOT and press RESET once before starting webflasher.
+
+## Option 3: OTA update if you have previously installed Energy2Shelly
+Directly download a matching OTA-binary for your ESP device from the releases page and install the over-the-air update using WifiManager on your Energy2Shelly. 
 
 # Configuration
 #### 1. Power device and wait for a hotspot named "Energy2Shelly"
@@ -94,7 +99,7 @@ Connect your ESP to your PC using USB and follow the instructions on the [webfla
 # Currently supported microcontrollers
 * ESP32-C3
 * ESP32-S3
-* ESP32 (ESP32-WROOM-32)
+* ESP32
 * ESP8266
 
 # You found a bug
