@@ -57,6 +57,10 @@ const char HTML_HOME[] PROGMEM = R"=====(
     </div>
 
     <div class="timestamp" id="timestamp"></div>
+    <div class="timestamp" id="version">Build: 
+)====="
+VERSION_BUILD
+R"=====(</div>
   </div>
 
 <script>
