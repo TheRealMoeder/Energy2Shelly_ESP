@@ -157,17 +157,36 @@
 
   </div>
 </div>
-
 <!-- Modal -->
 <div id="downloadModal">
   <div class="modal-content">
     <h3 id="modalTitle">Select Device</h3>
 
     <div class="chip-grid">
-      <button class="chipBtn" data-file="esp32.bin">ESP32</button>
-      <button class="chipBtn" data-file="esp32-s3.bin">ESP32-S3</button>
-      <button class="chipBtn" data-file="esp32-c3.bin">ESP32-C3</button>
-      <button class="chipBtn" data-file="esp8266.bin">ESP8266</button>
+
+      <div class="chipGroup">
+        <strong>ESP32</strong>
+        <button class="chipBtn" data-file="esp32.bin">Full Flash</button>
+        <button class="chipBtn secondary" data-file="esp32-ota.bin">OTA Update</button>
+      </div>
+
+      <div class="chipGroup">
+        <strong>ESP32-S3</strong>
+        <button class="chipBtn" data-file="esp32-s3.bin">Full Flash</button>
+        <button class="chipBtn secondary" data-file="esp32-s3-ota.bin">OTA Update</button>
+      </div>
+
+      <div class="chipGroup">
+        <strong>ESP32-C3</strong>
+        <button class="chipBtn" data-file="esp32-c3.bin">Full Flash</button>
+        <button class="chipBtn secondary" data-file="esp32-c3-ota.bin">OTA Update</button>
+      </div>
+
+      <div class="chipGroup">
+        <strong>ESP8266</strong>
+        <button class="chipBtn" data-file="esp8266.bin">Full Flash</button>
+      </div>
+
     </div>
 
     <button id="closeModal" class="secondary">
