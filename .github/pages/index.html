@@ -1,33 +1,292 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-	<title>Energy2Shelly Web Installer</title>
-	<meta charset="utf-8">
-	<script type="module" src="https://unpkg.com/esp-web-tools@9/dist/web/install-button.js?module"></script>
+  <meta charset="utf-8" />
+  <title>Energy2Shelly ESP Installer</title>
+
+  <script type="module" src="https://unpkg.com/esp-web-tools@9/dist/web/install-button.js?module"></script>
+
+  <style>
+:root{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --accent:#3b82f6;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+}
+
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,sans-serif;
+  background:linear-gradient(135deg,#020617,#0f172a);
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+header{
+  text-align:center;
+  padding:50px 20px 20px;
+}
+
+h1{margin:0;font-size:2.5rem}
+
+.version,.info{color:var(--muted)}
+
+.version{margin-top:8px}
+.info{margin-top:15px;font-size:.9rem}
+
+.lang{margin-top:10px}
+
+select{
+  padding:6px;
+  border-radius:6px;
+  border:0;
+  background:#0f172a;
+  color:#fff;
+}
+
+.container{width:100%;max-width:500px;padding:20px}
+
+.card{
+  background:var(--card);
+  border-radius:16px;
+  padding:30px;
+  text-align:center;
+  box-shadow:0 10px 25px rgba(0,0,0,.35);
+}
+
+button{
+  width:100%;
+  padding:16px;
+  font-size:1.05rem;
+  border-radius:12px;
+  border:0;
+  background:var(--accent);
+  color:#fff;
+  cursor:pointer;
+  transition:.2s;
+}
+
+button:hover{background:#2563eb}
+
+button.secondary{background:#334155;margin-top:12px}
+button.secondary:hover{background:#475569}
+
+/* modal */
+#downloadModal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.7);
+  justify-content:center;
+  align-items:center;
+  z-index:1000;
+}
+
+.modal-content{
+  background:var(--card);
+  padding:20px;
+  border-radius:14px;
+  width:360px;
+  text-align:center;
+  box-shadow:0 15px 40px rgba(0,0,0,.5);
+}
+
+.dual-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:15px;
+}
+
+.column{
+  background:#0f172a;
+  padding:12px;
+  border-radius:10px;
+}
+
+.column h4{
+  margin:0 0 10px;
+  font-size:.9rem;
+  color:var(--muted);
+}
+
+.chipBtn{
+  width:100%;
+  margin-bottom:8px;
+  padding:10px;
+  border-radius:8px;
+  border:0;
+  background:#0f172a;
+  color:#fff;
+  cursor:pointer;
+  transition:.15s;
+  font-size:.9rem;
+}
+
+.chipBtn:hover{background:#2563eb}
+
+.chipBtn.secondary{background:#334155}
+.chipBtn.secondary:hover{background:#475569}
+
+@media(max-width:500px){
+  .dual-grid{grid-template-columns:1fr}
+  .modal-content{width:90%}
+}
+  </style>
 </head>
+
 <body>
-    <h1>Energy2Shelly Web Installer</h1>
 
-    <p class="flashable">Make sure to close anything using your devices com port (e.g. Serial monitor). Just hit the button to install the firmware on your shelf.</p>
-	
-	<div id="webflash" style="display: none;" class="flashable">
-        <esp-web-install-button class="installButton" manifest="manifest.json">
-            <button slot="activate">Flash Firmware</button>
-        </esp-web-install-button>
-	</div>
+<header>
+  <h1 id="title">Energy2Shelly ESP Installer</h1>
+  <div class="version" id="version"></div>
 
-    <p id="notSupported" style="display: none; color: red;">
-        Your browser does not support the Web Serial API. Please open this page using Edge or Chrome.
-    </p>
-    
+  <div class="lang">
+    <select id="lang">
+      <option value="en">English</option>
+      <option value="de">Deutsch</option>
+    </select>
+  </div>
+</header>
 
-    <script>
-        if(navigator.serial){
-            document.getElementById('webflash').style.display = 'block';
-        } else {
-			console.log('Serial not supported');
-            document.getElementById('notSupported').style.display = 'block';
-        }
-    </script>
+<div class="container">
+  <div class="card">
+
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate" id="installText">
+        Connect & Install
+      </button>
+    </esp-web-install-button>
+
+    <button id="downloadBtn" class="secondary">
+      Download Firmware (.bin)
+    </button>
+
+    <div class="info" id="hint">
+      Use Chrome or Edge • USB required
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="downloadModal">
+  <div class="modal-content">
+
+    <h3 id="modalTitle">Select Firmware</h3>
+
+    <div class="dual-grid">
+
+      <!-- FULL FLASH COLUMN -->
+      <div class="column">
+        <h4>Full Flash</h4>
+
+        <button class="chipBtn" data-file="esp32.bin">ESP32</button>
+        <button class="chipBtn" data-file="esp32-s3.bin">ESP32-S3</button>
+        <button class="chipBtn" data-file="esp32-c3.bin">ESP32-C3</button>
+        <button class="chipBtn" data-file="esp8266.bin">ESP8266</button>
+      </div>
+
+      <!-- OTA COLUMN -->
+      <div class="column">
+        <h4>OTA Update</h4>
+
+        <button class="chipBtn" data-file="esp32-ota.bin">ESP32</button>
+        <button class="chipBtn" data-file="esp32-s3-ota.bin">ESP32-S3</button>
+        <button class="chipBtn" data-file="esp32-c3-ota.bin">ESP32-C3</button>
+        <button class="chipBtn" data-file="esp8266-ota.bin">ESP8266</button>
+      </div>
+
+    </div>
+
+    <button id="closeModal" class="chipBtn secondary" style="margin-top:12px;">
+      Cancel
+    </button>
+
+  </div>
+</div>
+
+<script>
+/* i18n */
+const i18n = {
+  en: {
+    title: "Energy2Shelly ESP Installer",
+    install: "Connect & Install",
+    download: "Download Firmware (.bin)",
+    hint: "Use Chrome or Edge • USB required",
+    modal: "Select Device",
+    cancel: "Cancel"
+  },
+  de: {
+    title: "Energy2Shelly ESP Installer",
+    install: "Verbinden & Installieren",
+    download: "Firmware herunterladen (.bin)",
+    hint: "Chrome oder Edge • USB erforderlich",
+    modal: "Gerät auswählen",
+    cancel: "Abbrechen"
+  }
+};
+
+function setLang(lang) {
+  document.getElementById("title").innerText = i18n[lang].title;
+  document.getElementById("installText").innerText = i18n[lang].install;
+  document.getElementById("downloadBtn").innerText = i18n[lang].download;
+  document.getElementById("hint").innerText = i18n[lang].hint;
+  document.getElementById("modalTitle").innerText = i18n[lang].modal;
+  document.getElementById("closeModal").innerText = i18n[lang].cancel;
+}
+
+document.getElementById("lang").addEventListener("change", e => {
+  setLang(e.target.value);
+});
+
+setLang("en");
+
+/* version
+fetch("manifest.json")
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById("version").innerText =
+      "Version: " + (data.version || "dev");
+  })
+  .catch(() => {
+    document.getElementById("version").innerText = "Version: unknown";
+  });
+*/
+
+/* modal logic */
+const modal = document.getElementById("downloadModal");
+
+document.getElementById("downloadBtn").addEventListener("click", () => {
+  modal.style.display = "flex";
+});
+
+document.getElementById("closeModal").addEventListener("click", () => {
+  modal.style.display = "none";
+});
+
+document.querySelectorAll(".chipBtn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const file = btn.dataset.file;
+
+    const link = document.createElement("a");
+    link.href = file;
+    link.download = file;
+    link.click();
+
+    modal.style.display = "none";
+  });
+});
+
+modal.addEventListener("click", (e) => {
+  if (e.target === modal) {
+    modal.style.display = "none";
+  }
+});
+</script>
+
 </body>
 </html>
