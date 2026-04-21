@@ -121,6 +121,48 @@
       gap: 10px;
       margin-top: 15px;
     }
+.dual-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.column {
+  background: #0f172a;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.column h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.95rem;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.chipBtn {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #0f172a;
+  color: white;
+  cursor: pointer;
+}
+
+.chipBtn:hover {
+  background: #2563eb;
+}
+
+.chipBtn.secondary {
+  background: #334155;
+}
+
+.chipBtn.secondary:hover {
+  background: #475569;
+}
   </style>
 </head>
 
@@ -157,34 +199,32 @@
 
   </div>
 </div>
+
 <!-- Modal -->
 <div id="downloadModal">
   <div class="modal-content">
-    <h3 id="modalTitle">Select Device</h3>
 
-    <div class="chip-grid">
+    <h3 id="modalTitle">Select Firmware</h3>
 
-      <div class="chipGroup">
-        <strong>ESP32</strong>
-        <button class="chipBtn" data-file="esp32.bin">Full Flash</button>
-        <button class="chipBtn secondary" data-file="esp32-ota.bin">OTA Update</button>
+    <div class="dual-grid">
+
+      <!-- FULL FLASH COLUMN -->
+      <div class="column">
+        <h4>Full Flash</h4>
+
+        <button class="chipBtn" data-file="esp32.bin">ESP32</button>
+        <button class="chipBtn" data-file="esp32-s3.bin">ESP32-S3</button>
+        <button class="chipBtn" data-file="esp32-c3.bin">ESP32-C3</button>
+        <button class="chipBtn" data-file="esp8266.bin">ESP8266</button>
       </div>
 
-      <div class="chipGroup">
-        <strong>ESP32-S3</strong>
-        <button class="chipBtn" data-file="esp32-s3.bin">Full Flash</button>
-        <button class="chipBtn secondary" data-file="esp32-s3-ota.bin">OTA Update</button>
-      </div>
+      <!-- OTA COLUMN -->
+      <div class="column">
+        <h4>OTA Update</h4>
 
-      <div class="chipGroup">
-        <strong>ESP32-C3</strong>
-        <button class="chipBtn" data-file="esp32-c3.bin">Full Flash</button>
-        <button class="chipBtn secondary" data-file="esp32-c3-ota.bin">OTA Update</button>
-      </div>
-
-      <div class="chipGroup">
-        <strong>ESP8266</strong>
-        <button class="chipBtn" data-file="esp8266.bin">Full Flash</button>
+        <button class="chipBtn secondary" data-file="esp32-ota.bin">ESP32</button>
+        <button class="chipBtn secondary" data-file="esp32-s3-ota.bin">ESP32-S3</button>
+        <button class="chipBtn secondary" data-file="esp32-c3-ota.bin">ESP32-C3</button>
       </div>
 
     </div>
@@ -192,6 +232,7 @@
     <button id="closeModal" class="secondary">
       Cancel
     </button>
+
   </div>
 </div>
 
