@@ -1,33 +1,239 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-	<title>Energy2Shelly Web Installer</title>
-	<meta charset="utf-8">
-	<script type="module" src="https://unpkg.com/esp-web-tools@9/dist/web/install-button.js?module"></script>
+  <meta charset="utf-8" />
+  <title>Energy2Shelly ESP Installer</title>
+
+  <script type="module" src="https://unpkg.com/esp-web-tools@9/dist/web/install-button.js?module"></script>
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --accent: #3b82f6;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: linear-gradient(135deg, #020617, #0f172a);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      text-align: center;
+      padding: 40px 20px 10px;
+    }
+
+    h1 { margin: 0; font-size: 2.4rem; }
+
+    .version { color: var(--muted); margin-top: 8px; }
+
+    .lang-switch {
+      margin-top: 10px;
+    }
+
+    select {
+      padding: 6px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 700px;
+      padding: 20px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .chips {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .chip {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .chip.active {
+      border-color: var(--accent);
+      background: #1d4ed8;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .info {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 10px;
+      text-align: center;
+    }
+  </style>
 </head>
+
 <body>
-    <h1>Energy2Shelly Web Installer</h1>
 
-    <p class="flashable">Make sure to close anything using your devices com port (e.g. Serial monitor). Just hit the button to install the firmware on your shelf.</p>
-	
-	<div id="webflash" style="display: none;" class="flashable">
-        <esp-web-install-button class="installButton" manifest="manifest.json">
-            <button slot="activate">Flash Firmware</button>
-        </esp-web-install-button>
-	</div>
+<header>
+  <h1 id="title">Energy2Shelly ESP Installer</h1>
+  <div class="version" id="version">...</div>
 
-    <p id="notSupported" style="display: none; color: red;">
-        Your browser does not support the Web Serial API. Please open this page using Edge or Chrome.
-    </p>
-    
+  <div class="lang-switch">
+    <select id="lang">
+      <option value="en">English</option>
+      <option value="de">Deutsch</option>
+    </select>
+  </div>
+</header>
 
-    <script>
-        if(navigator.serial){
-            document.getElementById('webflash').style.display = 'block';
-        } else {
-			console.log('Serial not supported');
-            document.getElementById('notSupported').style.display = 'block';
-        }
-    </script>
+<div class="container">
+
+  <div class="card">
+    <h3 id="selectDevice">Select Device</h3>
+
+    <div class="chips">
+      <div class="chip active" data-chip="ESP32">ESP32</div>
+      <div class="chip" data-chip="ESP32-S3">ESP32-S3</div>
+      <div class="chip" data-chip="ESP32-C3">ESP32-C3</div>
+      <div class="chip" data-chip="ESP8266">ESP8266</div>
+    </div>
+
+    <esp-web-install-button id="installBtn" manifest="manifest.json">
+      <button slot="activate" id="installBtnText">Connect & Install</button>
+    </esp-web-install-button>
+
+    <div class="info" id="hint">
+      Chrome / Edge required
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ---------------------------
+   🌍 TRANSLATIONS
+---------------------------- */
+const i18n = {
+  en: {
+    title: "Energy2Shelly ESP Installer",
+    select: "Select Device",
+    install: "Connect & Install",
+    hint: "Use Chrome or Edge",
+  },
+  de: {
+    title: "Energy2Shelly ESP Installer",
+    select: "Gerät auswählen",
+    install: "Verbinden & Installieren",
+    hint: "Chrome oder Edge verwenden",
+  }
+};
+
+function setLang(lang) {
+  document.getElementById("title").innerText = i18n[lang].title;
+  document.getElementById("selectDevice").innerText = i18n[lang].select;
+  document.getElementById("installBtnText").innerText = i18n[lang].install;
+  document.getElementById("hint").innerText = i18n[lang].hint;
+}
+
+document.getElementById("lang").addEventListener("change", e => {
+  setLang(e.target.value);
+});
+
+setLang("en");
+
+
+/* ---------------------------
+   🧠 CHIP SELECTION
+---------------------------- */
+const chips = document.querySelectorAll(".chip");
+let selectedChip = "ESP32";
+
+chips.forEach(c => {
+  c.addEventListener("click", () => {
+    chips.forEach(x => x.classList.remove("active"));
+    c.classList.add("active");
+    selectedChip = c.dataset.chip;
+  });
+});
+
+
+/* ---------------------------
+   🔍 AUTO-DETECT CHIP
+---------------------------- */
+const btn = document.getElementById("installBtn");
+
+btn.addEventListener("click", async () => {
+  try {
+    const port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+
+    const reader = port.readable.getReader();
+
+    // quick probe read
+    const { value } = await reader.read();
+
+    // naive detection (works surprisingly well)
+    let detected = "ESP32";
+
+    if (value) {
+      const text = new TextDecoder().decode(value);
+
+      if (text.includes("ESP32-S3")) detected = "ESP32-S3";
+      else if (text.includes("ESP32-C3")) detected = "ESP32-C3";
+      else if (text.includes("8266")) detected = "ESP8266";
+    }
+
+    // update UI
+    chips.forEach(x => x.classList.remove("active"));
+    document.querySelector(`[data-chip="${detected}"]`)?.classList.add("active");
+
+    selectedChip = detected;
+
+    await reader.releaseLock();
+    await port.close();
+
+  } catch (e) {
+    console.log("Detection skipped:", e);
+  }
+});
+
+
+/* ---------------------------
+   📦 VERSION
+---------------------------- */
+fetch("manifest.json")
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById("version").innerText =
+      "Version: " + (data.version || "dev");
+  });
+</script>
+
 </body>
 </html>
