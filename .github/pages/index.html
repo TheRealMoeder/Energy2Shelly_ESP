@@ -142,7 +142,7 @@ button.secondary:hover{background:#475569}
 
 <header>
   <h1 id="title">Energy2Shelly ESP Installer</h1>
-  <div class="version" id="version">...</div>
+  <div class="version" id="version"></div>
 
   <div class="lang">
     <select id="lang">
@@ -210,7 +210,7 @@ button.secondary:hover{background:#475569}
 </div>
 
 <script>
-/* 🌍 i18n */
+/* i18n */
 const i18n = {
   en: {
     title: "Energy2Shelly ESP Installer",
@@ -245,7 +245,7 @@ document.getElementById("lang").addEventListener("change", e => {
 
 setLang("en");
 
-/* 📦 version */
+/* version
 fetch("manifest.json")
   .then(r => r.json())
   .then(data => {
@@ -255,8 +255,9 @@ fetch("manifest.json")
   .catch(() => {
     document.getElementById("version").innerText = "Version: unknown";
   });
+*/
 
-/* 📥 modal logic */
+/* modal logic */
 const modal = document.getElementById("downloadModal");
 
 document.getElementById("downloadBtn").addEventListener("click", () => {
