@@ -7,161 +7,133 @@
   <script type="module" src="https://unpkg.com/esp-web-tools@9/dist/web/install-button.js?module"></script>
 
   <style>
-    :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --accent: #3b82f6;
-      --text: #e5e7eb;
-      --muted: #94a3b8;
-    }
-
-    body {
-      margin: 0;
-      font-family: system-ui, sans-serif;
-      background: linear-gradient(135deg, #020617, #0f172a);
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    header {
-      text-align: center;
-      padding: 50px 20px 20px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 2.5rem;
-    }
-
-    .version {
-      color: var(--muted);
-      margin-top: 8px;
-    }
-
-    .lang {
-      margin-top: 10px;
-    }
-
-    select {
-      padding: 6px;
-      border-radius: 6px;
-      border: none;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 500px;
-      padding: 20px;
-    }
-
-    .card {
-      background: var(--card);
-      border-radius: 16px;
-      padding: 30px;
-      text-align: center;
-    }
-
-    button {
-      width: 100%;
-      padding: 16px;
-      font-size: 1.1rem;
-      border-radius: 12px;
-      border: none;
-      background: var(--accent);
-      color: white;
-      cursor: pointer;
-    }
-
-    button.secondary {
-      margin-top: 12px;
-      background: #334155;
-    }
-
-    .info {
-      margin-top: 15px;
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-
-    /* Modal */
-    #downloadModal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      justify-content: center;
-      align-items: center;
-    }
-
-    .modal-content {
-      background: #1e293b;
-      padding: 20px;
-      border-radius: 14px;
-      width: 320px;
-      text-align: center;
-    }
-
-    .chipBtn {
-      padding: 12px;
-      border-radius: 8px;
-      border: none;
-      background: #0f172a;
-      color: white;
-      cursor: pointer;
-    }
-
-    .chipBtn:hover {
-      background: #2563eb;
-    }
-
-    .chip-grid {
-      display: grid;
-      gap: 10px;
-      margin-top: 15px;
-    }
-.dual-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 15px;
+:root{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --accent:#3b82f6;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
 }
 
-.column {
-  background: #0f172a;
-  padding: 12px;
-  border-radius: 10px;
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,sans-serif;
+  background:linear-gradient(135deg,#020617,#0f172a);
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
 
-.column h4 {
-  margin: 0 0 10px 0;
-  font-size: 0.95rem;
-  color: #94a3b8;
-  text-align: center;
+header{
+  text-align:center;
+  padding:50px 20px 20px;
 }
 
-.chipBtn {
-  width: 100%;
-  margin-bottom: 8px;
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #0f172a;
-  color: white;
-  cursor: pointer;
+h1{margin:0;font-size:2.5rem}
+
+.version,.info{color:var(--muted)}
+
+.version{margin-top:8px}
+.info{margin-top:15px;font-size:.9rem}
+
+.lang{margin-top:10px}
+
+select{
+  padding:6px;
+  border-radius:6px;
+  border:0;
+  background:#0f172a;
+  color:#fff;
 }
 
-.chipBtn:hover {
-  background: #2563eb;
+.container{width:100%;max-width:500px;padding:20px}
+
+.card{
+  background:var(--card);
+  border-radius:16px;
+  padding:30px;
+  text-align:center;
+  box-shadow:0 10px 25px rgba(0,0,0,.35);
 }
 
-.chipBtn.secondary {
-  background: #334155;
+button{
+  width:100%;
+  padding:16px;
+  font-size:1.05rem;
+  border-radius:12px;
+  border:0;
+  background:var(--accent);
+  color:#fff;
+  cursor:pointer;
+  transition:.2s;
 }
 
-.chipBtn.secondary:hover {
-  background: #475569;
+button:hover{background:#2563eb}
+
+button.secondary{background:#334155;margin-top:12px}
+button.secondary:hover{background:#475569}
+
+/* modal */
+#downloadModal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.7);
+  justify-content:center;
+  align-items:center;
+  z-index:1000;
+}
+
+.modal-content{
+  background:var(--card);
+  padding:20px;
+  border-radius:14px;
+  width:360px;
+  text-align:center;
+  box-shadow:0 15px 40px rgba(0,0,0,.5);
+}
+
+.dual-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:15px;
+}
+
+.column{
+  background:#0f172a;
+  padding:12px;
+  border-radius:10px;
+}
+
+.column h4{
+  margin:0 0 10px;
+  font-size:.9rem;
+  color:var(--muted);
+}
+
+.chipBtn{
+  width:100%;
+  margin-bottom:8px;
+  padding:10px;
+  border-radius:8px;
+  border:0;
+  background:#0f172a;
+  color:#fff;
+  cursor:pointer;
+  transition:.15s;
+  font-size:.9rem;
+}
+
+.chipBtn:hover{background:#2563eb}
+
+.chipBtn.secondary{background:#334155}
+.chipBtn.secondary:hover{background:#475569}
+
+@media(max-width:500px){
+  .dual-grid{grid-template-columns:1fr}
+  .modal-content{width:90%}
 }
   </style>
 </head>
@@ -222,14 +194,15 @@
       <div class="column">
         <h4>OTA Update</h4>
 
-        <button class="chipBtn secondary" data-file="esp32-ota.bin">ESP32</button>
-        <button class="chipBtn secondary" data-file="esp32-s3-ota.bin">ESP32-S3</button>
-        <button class="chipBtn secondary" data-file="esp32-c3-ota.bin">ESP32-C3</button>
+        <button class="chipBtn" data-file="esp32-ota.bin">ESP32</button>
+        <button class="chipBtn" data-file="esp32-s3-ota.bin">ESP32-S3</button>
+        <button class="chipBtn" data-file="esp32-c3-ota.bin">ESP32-C3</button>
+        <button class="chipBtn" data-file="esp8266-ota.bin">ESP8266</button>
       </div>
 
     </div>
 
-    <button id="closeModal" class="secondary">
+    <button id="closeModal" class="chipBtn secondary" style="margin-top:12px;">
       Cancel
     </button>
 
