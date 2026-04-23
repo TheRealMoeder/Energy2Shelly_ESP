@@ -30,10 +30,22 @@ void setup(void) {
   // ESP8266
   configTime(timezone, ntp_server);
 #endif
-  while (!getLocalTime(&timeinfo))
-  {
+  uint32_t ntp_timeout = millis() + 10000;
+  bool ntp_success = false;
+  while (millis() < ntp_timeout) {
+    if (getLocalTime(&timeinfo)) {
+      ntp_success = true;
+      break;
+    }
     DEBUG_SERIAL.println(F("Waiting for NTP time..."));
     delay(500);
+  }
+  if (!ntp_success) {
+    DEBUG_SERIAL.println(F("NTP timeout - setting default time"));
+    time_t default_time = 1704067200; // 2024-01-01 00:00:00 UTC
+    struct timeval tv = { .tv_sec = default_time, .tv_usec = 0 };
+    settimeofday(&tv, NULL);
+    getLocalTime(&timeinfo);
   }
   DEBUG_SERIAL.print(F("Current time: "));
   char time_buffer[20];
