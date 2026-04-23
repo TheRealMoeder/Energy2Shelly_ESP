@@ -145,12 +145,66 @@ void saveConfigCallback() {
   shouldSaveConfig = true;
 }
 
-void WifiManagerSetup() {
-  // Set Shelly ID to ESP's MAC address by default
-  uint8_t mac[6];
-  WiFi.macAddress(mac);
-  sprintf(shelly_mac, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+void printConfig() {
+  DEBUG_SERIAL.println(F("\treset_password: ********"));
+  DEBUG_SERIAL.print(F("\tinput_type : "));
+  DEBUG_SERIAL.println(String(input_type));
+  DEBUG_SERIAL.print(F("\tmqtt_server : "));
+  DEBUG_SERIAL.println(String(mqtt_server));
+  DEBUG_SERIAL.print(F("\tmqtt_port : "));
+  DEBUG_SERIAL.println(String(mqtt_port));
+  DEBUG_SERIAL.print(F("\tntp_server: "));
+  DEBUG_SERIAL.println(String(ntp_server));
+  DEBUG_SERIAL.print(F("\ttimezone: "));
+  DEBUG_SERIAL.println(String(timezone));
+  DEBUG_SERIAL.print(F("\tphase_number : "));
+  DEBUG_SERIAL.println(String(phase_number));
+  DEBUG_SERIAL.print(F("\tpower_offset : "));
+  DEBUG_SERIAL.println(String(power_offset));
+  DEBUG_SERIAL.print(F("\tquery_period : "));
+  DEBUG_SERIAL.println(String(query_period));
+  DEBUG_SERIAL.print(F("\tled_gpio : "));
+  DEBUG_SERIAL.println(String(led_gpio));
+  DEBUG_SERIAL.print(F("\tled_gpio_i : "));
+  DEBUG_SERIAL.println(String(led_gpio_i));
+  DEBUG_SERIAL.print(F("\tshelly_mac : "));
+  DEBUG_SERIAL.println(String(shelly_mac));
+  DEBUG_SERIAL.print(F("\tmqtt_topic : "));
+  DEBUG_SERIAL.println(String(mqtt_topic));
+  DEBUG_SERIAL.print(F("\tmqtt_user : "));
+  DEBUG_SERIAL.println(String(mqtt_user));
+  DEBUG_SERIAL.println(F("\tmqtt_passwd : ********"));
+  DEBUG_SERIAL.print(F("\tmodbus_dev : "));
+  DEBUG_SERIAL.println(String(modbus_dev));
+  DEBUG_SERIAL.print(F("\tpower_path : "));
+  DEBUG_SERIAL.println(String(power_path));
+  DEBUG_SERIAL.print(F("\tpwr_export_path : "));
+  DEBUG_SERIAL.println(String(pwr_export_path));
+  DEBUG_SERIAL.print(F("\tpower_l1_path : "));
+  DEBUG_SERIAL.println(String(power_l1_path));
+  DEBUG_SERIAL.print(F("\tpower_l2_path : "));
+  DEBUG_SERIAL.println(String(power_l2_path));
+  DEBUG_SERIAL.print(F("\tpower_l3_path : "));
+  DEBUG_SERIAL.println(String(power_l3_path));
+  DEBUG_SERIAL.print(F("\tenergy_in_path : "));
+  DEBUG_SERIAL.println(String(energy_in_path));
+  DEBUG_SERIAL.print(F("\tenergy_out_path : "));
+  DEBUG_SERIAL.println(String(energy_out_path));
+  DEBUG_SERIAL.print(F("\tshelly_port : "));
+  DEBUG_SERIAL.println(String(shelly_port));
+  DEBUG_SERIAL.print(F("\tsma_id : "));
+  DEBUG_SERIAL.println(String(sma_id));
+  DEBUG_SERIAL.println(F("\tTibberPulse options:"));
+  DEBUG_SERIAL.print(F("\t - tibber_host: "));
+  DEBUG_SERIAL.println(String(tibber_host));
+  DEBUG_SERIAL.print(F("\t - tibber_nodeid: "));
+  DEBUG_SERIAL.println(String(tibber_nodeid));
+  DEBUG_SERIAL.print(F("\t - tibber_user: "));
+  DEBUG_SERIAL.println(String(tibber_user));
+  DEBUG_SERIAL.print(F("\t - tibber_password: ********"));
+}
 
+void readConfig() {
   preferences.begin("e2s_config", false);
   strcpy(reset_password, preferences.getString("reset_password", reset_password).c_str());
   strcpy(input_type, preferences.getString("input_type", input_type).c_str());
@@ -182,6 +236,53 @@ void WifiManagerSetup() {
   strcpy(tibber_nodeid, preferences.getString("tibber_nodeid", tibber_nodeid).c_str());
   strcpy(tibber_user, preferences.getString("tibber_user", tibber_user).c_str());
   strcpy(tibber_password, preferences.getString("tibber_password", tibber_password).c_str());
+  preferences.end();
+  printConfig();
+}
+
+void writeConfig() {
+  DEBUG_SERIAL.println(F("saving config"));
+  preferences.begin("e2s_config", false);
+  preferences.putString("reset_password", reset_password);
+  preferences.putString("input_type", input_type);
+  preferences.putString("mqtt_server", mqtt_server);
+  preferences.putString("mqtt_port", mqtt_port);
+  preferences.putString("ntp_server", ntp_server);
+  preferences.putString("timezone", timezone);
+  preferences.putString("phase_number", phase_number);
+  preferences.putString("power_offset", power_offset);
+  preferences.putString("query_period", query_period);
+  preferences.putString("led_gpio", led_gpio);
+  preferences.putString("led_gpio_i", led_gpio_i);
+  preferences.putString("shelly_mac", shelly_mac);
+  preferences.putString("mqtt_topic", mqtt_topic);
+  preferences.putString("mqtt_user", mqtt_user);
+  preferences.putString("mqtt_passwd", mqtt_passwd);
+  preferences.putString("modbus_dev", modbus_dev);
+  preferences.putString("power_path", power_path);
+  preferences.putString("pwr_export_path", pwr_export_path);
+  preferences.putString("power_l1_path", power_l1_path);
+  preferences.putString("power_l2_path", power_l2_path);
+  preferences.putString("power_l3_path", power_l3_path);
+  preferences.putString("energy_in_path", energy_in_path);
+  preferences.putString("energy_out_path", energy_out_path);
+  preferences.putString("shelly_port", shelly_port);
+  preferences.putString("sma_id", sma_id);
+  preferences.putString("tibber_host", tibber_host);
+  preferences.putString("tibber_nodeid", tibber_nodeid);
+  preferences.putString("tibber_user", tibber_user);
+  preferences.putString("tibber_password", tibber_password);
+  preferences.end();
+  printConfig();
+}
+
+void WifiManagerSetup() {
+  // Set Shelly ID to ESP's MAC address by default
+  uint8_t mac[6];
+  WiFi.macAddress(mac);
+  sprintf(shelly_mac, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+  readConfig();
 
   const char *show_pwd_str = "<input type=\"checkbox\" onclick=\"t('%s')\">&nbsp;<label>Show password</label><br/>";
 
@@ -324,64 +425,6 @@ void WifiManagerSetup() {
 
   offsetPerPhase = String(power_offset).toDouble() / 3.0;  // distribute offset equally across phases
 
-  DEBUG_SERIAL.println(F("The values in the preferences are: "));
-  DEBUG_SERIAL.println(F("\treset_password: ********"));
-  DEBUG_SERIAL.print(F("\tinput_type : "));
-  DEBUG_SERIAL.println(String(input_type));
-  DEBUG_SERIAL.print(F("\tmqtt_server : "));
-  DEBUG_SERIAL.println(String(mqtt_server));
-  DEBUG_SERIAL.print(F("\tmqtt_port : "));
-  DEBUG_SERIAL.println(String(mqtt_port));
-  DEBUG_SERIAL.print(F("\tntp_server: "));
-  DEBUG_SERIAL.println(String(ntp_server));
-  DEBUG_SERIAL.print(F("\ttimezone: "));
-  DEBUG_SERIAL.println(String(timezone));
-  DEBUG_SERIAL.print(F("\tphase_number : "));
-  DEBUG_SERIAL.println(String(phase_number));
-  DEBUG_SERIAL.print(F("\tpower_offset : "));
-  DEBUG_SERIAL.println(String(power_offset));
-  DEBUG_SERIAL.print(F("\tquery_period : "));
-  DEBUG_SERIAL.println(String(query_period));
-  DEBUG_SERIAL.print(F("\tled_gpio : "));
-  DEBUG_SERIAL.println(String(led_gpio));
-  DEBUG_SERIAL.print(F("\tled_gpio_i : "));
-  DEBUG_SERIAL.println(String(led_gpio_i));
-  DEBUG_SERIAL.print(F("\tshelly_mac : "));
-  DEBUG_SERIAL.println(String(shelly_mac));
-  DEBUG_SERIAL.print(F("\tmqtt_topic : "));
-  DEBUG_SERIAL.println(String(mqtt_topic));
-  DEBUG_SERIAL.print(F("\tmqtt_user : "));
-  DEBUG_SERIAL.println(String(mqtt_user));
-  DEBUG_SERIAL.println(F("\tmqtt_passwd : ********"));
-  DEBUG_SERIAL.print(F("\tmodbus_dev : "));
-  DEBUG_SERIAL.println(String(modbus_dev));
-  DEBUG_SERIAL.print(F("\tpower_path : "));
-  DEBUG_SERIAL.println(String(power_path));
-  DEBUG_SERIAL.print(F("\tpwr_export_path : "));
-  DEBUG_SERIAL.println(String(pwr_export_path));
-  DEBUG_SERIAL.print(F("\tpower_l1_path : "));
-  DEBUG_SERIAL.println(String(power_l1_path));
-  DEBUG_SERIAL.print(F("\tpower_l2_path : "));
-  DEBUG_SERIAL.println(String(power_l2_path));
-  DEBUG_SERIAL.print(F("\tpower_l3_path : "));
-  DEBUG_SERIAL.println(String(power_l3_path));
-  DEBUG_SERIAL.print(F("\tenergy_in_path : "));
-  DEBUG_SERIAL.println(String(energy_in_path));
-  DEBUG_SERIAL.print(F("\tenergy_out_path : "));
-  DEBUG_SERIAL.println(String(energy_out_path));
-  DEBUG_SERIAL.print(F("\tshelly_port : "));
-  DEBUG_SERIAL.println(String(shelly_port));
-  DEBUG_SERIAL.print(F("\tsma_id : "));
-  DEBUG_SERIAL.println(String(sma_id));
-  DEBUG_SERIAL.println(F("\tTibberPulse options:"));
-  DEBUG_SERIAL.print(F("\t - tibber_host: "));
-  DEBUG_SERIAL.println(String(tibber_host));
-  DEBUG_SERIAL.print(F("\t - tibber_nodeid: "));
-  DEBUG_SERIAL.println(String(tibber_nodeid));
-  DEBUG_SERIAL.print(F("\t - tibber_user: "));
-  DEBUG_SERIAL.println(String(tibber_user));
-  DEBUG_SERIAL.print(F("\t - tibber_password: ********"));
-
   if (strcmp(input_type, "SMA") == 0) {
     dataSMA = true;
     DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
@@ -409,38 +452,10 @@ void WifiManagerSetup() {
   }
 
   if (shouldSaveConfig) {
-    DEBUG_SERIAL.println(F("saving config"));
-    preferences.putString("reset_password", reset_password);
-    preferences.putString("input_type", input_type);
-    preferences.putString("mqtt_server", mqtt_server);
-    preferences.putString("mqtt_port", mqtt_port);
-    preferences.putString("ntp_server", ntp_server);
-    preferences.putString("timezone", timezone);
-    preferences.putString("phase_number", phase_number);
-    preferences.putString("power_offset", power_offset);
-    preferences.putString("query_period", query_period);
-    preferences.putString("led_gpio", led_gpio);
-    preferences.putString("led_gpio_i", led_gpio_i);
-    preferences.putString("shelly_mac", shelly_mac);
-    preferences.putString("mqtt_topic", mqtt_topic);
-    preferences.putString("mqtt_user", mqtt_user);
-    preferences.putString("mqtt_passwd", mqtt_passwd);
-    preferences.putString("modbus_dev", modbus_dev);
-    preferences.putString("power_path", power_path);
-    preferences.putString("pwr_export_path", pwr_export_path);
-    preferences.putString("power_l1_path", power_l1_path);
-    preferences.putString("power_l2_path", power_l2_path);
-    preferences.putString("power_l3_path", power_l3_path);
-    preferences.putString("energy_in_path", energy_in_path);
-    preferences.putString("energy_out_path", energy_out_path);
-    preferences.putString("shelly_port", shelly_port);
-    preferences.putString("sma_id", sma_id);
-    preferences.putString("tibber_host", tibber_host);
-    preferences.putString("tibber_nodeid", tibber_nodeid);
-    preferences.putString("tibber_user", tibber_user);
-    preferences.putString("tibber_password", tibber_password);
+    writeConfig();
     wifiManager.reboot();
   }
+
   DEBUG_SERIAL.println(F("local ip"));
   DEBUG_SERIAL.println(WiFi.localIP());
 }

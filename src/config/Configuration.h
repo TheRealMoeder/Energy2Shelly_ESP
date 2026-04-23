@@ -165,6 +165,8 @@ extern WiFiUDP UdpRPC;
 void blinkled(int duration);
 void handleblinkled();
 void saveConfigCallback();
+void readConfig();
+void writeConfig();
 void WifiManagerSetup();
 void setupMdns();
 
