@@ -146,6 +146,7 @@ void saveConfigCallback() {
 }
 
 void WifiManagerSetup() {
+  WiFi.setAutoReconnect(true);
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
   WiFi.macAddress(mac);
