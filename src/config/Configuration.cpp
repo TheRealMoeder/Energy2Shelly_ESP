@@ -501,3 +501,95 @@ void setupMdns() {
 #endif
   DEBUG_SERIAL.println(F("mDNS responder started"));
 }
+
+// String processor for config page
+String processor_config(const String &var) {
+  // General
+  if (var == "v_mqttServer")
+    return mqtt_server;
+  if (var == "v_qPeriod")
+    return query_period;
+  if (var == "v_ledGpio")
+    return led_gpio;
+  if (var == "v_shellyMac")
+    return shelly_mac;
+  if (var == "v_shellyPort")
+    return shelly_port;
+  if (var == "v_ntpServer")
+    return ntp_server;
+  if (var == "v_timezone")
+    return timezone;
+  if (var == "v_phaseNumber")
+    return phase_number;
+  if (var == "v_powerOffset")
+    return power_offset;
+  if (var == "v_ledGpio")
+    return led_gpio;
+  if (var == "v_ledGpioInv")
+    return led_gpio_i;
+  if (var == "v_smaId")
+    return sma_id;
+
+  // Data Source Type select
+  if (var == "s_MQTT")
+    return (strcmp(input_type, "MQTT") == 0) ? "selected" : "";
+  if (var == "s_HTTP")
+    return (strcmp(input_type, "HTTP") == 0) ? "selected" : "";
+  if (var == "s_SMA")
+    return (strcmp(input_type, "SMA") == 0) ? "selected" : "";
+  if (var == "s_SHRDZM")
+    return (strcmp(input_type, "SHRDZM") == 0) ? "selected" : "";
+  if (var == "s_SUNSPEC")
+    return (strcmp(input_type, "SUNSPEC") == 0) ? "selected" : "";
+  if (var == "s_TIBBERPULSE")
+    return (strcmp(input_type, "TIBBERPULSE") == 0) ? "selected" : "";
+
+  // MQTT
+  if (var == "v_mqttPort")
+    return mqtt_port;
+  if (var == "v_mqttTopic")
+    return mqtt_topic;
+  if (var == "v_mqttUser")
+    return mqtt_user;
+  if (var == "v_mqttPasswd")
+    return mqtt_passwd;
+
+  // Modbus
+  if (var == "v_mbDevice")
+    return modbus_dev;
+
+  // JSON Paths
+  if (var == "v_powerPath")
+    return power_path;
+  if (var == "v_pwrExpPath")
+    return pwr_export_path;
+  if (var == "v_powerL1Path")
+    return power_l1_path;
+  if (var == "v_powerL2Path")
+    return power_l2_path;
+  if (var == "v_powerL3Path")
+    return power_l3_path;
+  if (var == "v_energyInPath")
+    return energy_in_path;
+  if (var == "v_energyOutPath")
+    return energy_out_path;
+
+      // TibberPulse
+  if (var == "v_tibberHost")
+    return tibber_host;
+  if (var == "v_tibberNodeId")
+    return tibber_nodeid;
+  if (var == "v_tibberUser")
+    return tibber_user;
+  if (var == "v_tibberPasswd")
+    return tibber_password;
+
+  return String();
+}
+
+String getPostParam(AsyncWebServerRequest *request, const char* name, String def = "") {
+  if (request->hasParam(name, true)) {
+    return request->getParam(name, true)->value();
+  }
+  return def;
+}

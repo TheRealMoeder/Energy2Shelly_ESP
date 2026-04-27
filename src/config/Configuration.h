@@ -169,5 +169,7 @@ void readConfig();
 void writeConfig();
 void WifiManagerSetup();
 void setupMdns();
+String processor_config(const String &var);
+String getPostParam(AsyncWebServerRequest *request, const char* name, String def);
 
 #endif // CONFIGURATION_H

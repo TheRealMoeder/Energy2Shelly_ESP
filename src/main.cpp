@@ -16,6 +16,7 @@
 
 // Web content
 #include "web/html_home.h"
+#include "web/html_config.h"
 
 void setup(void) {
   DEBUG_SERIAL.begin(115200);
@@ -105,6 +106,41 @@ void setup(void) {
       shouldResetConfig = true;
       request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
     }
+  });
+
+  server.on("/config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/html", FPSTR(HTML_CONFIG), processor_config);
+  });
+
+  server.on("/save", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {
+    //inputtype
+    strcpy(mqtt_server, getPostParam(request, "mqttServer", mqtt_server).c_str());
+    strcpy(query_period, getPostParam(request, "queryPeriod", query_period).c_str());
+    strcpy(ntp_server, getPostParam(request, "ntpServer", ntp_server).c_str());
+    strcpy(timezone, getPostParam(request, "timezone", timezone).c_str());
+    strcpy(phase_number, getPostParam(request, "phaseNumber", phase_number).c_str());
+    strcpy(power_offset, getPostParam(request, "powerOffset", power_offset).c_str());
+    strcpy(led_gpio, getPostParam(request, "ledGpio", led_gpio).c_str());
+    strcpy(led_gpio_i, getPostParam(request, "ledGpioInv", led_gpio_i).c_str());
+    strcpy(sma_id, getPostParam(request, "smaId", sma_id).c_str());
+    strcpy(mqtt_port, getPostParam(request, "mqttPort", mqtt_port).c_str());
+    strcpy(mqtt_topic, getPostParam(request, "mqttTopic", mqtt_topic).c_str());
+    strcpy(mqtt_user, getPostParam(request, "mqttUser", mqtt_user).c_str());
+    strcpy(mqtt_passwd, getPostParam(request, "mqttPasswd", mqtt_passwd).c_str());
+    strcpy(modbus_dev, getPostParam(request, "modbusDevice", modbus_dev).c_str());
+    strcpy(power_path, getPostParam(request, "powerPath", power_path).c_str());
+    strcpy(pwr_export_path, getPostParam(request, "pwrExportPath", pwr_export_path).c_str());
+    strcpy(power_l1_path, getPostParam(request, "powerL1Path", power_l1_path).c_str());
+    strcpy(power_l2_path, getPostParam(request, "powerL2Path", power_l2_path).c_str());
+    strcpy(power_l3_path, getPostParam(request, "powerL3Path", power_l3_path).c_str());
+    strcpy(energy_in_path, getPostParam(request, "energyInPath", energy_in_path).c_str());
+    strcpy(energy_out_path, getPostParam(request, "energyOutPath", energy_out_path).c_str());
+    strcpy(tibber_host, getPostParam(request, "tibberHost", tibber_host).c_str());
+    strcpy(tibber_nodeid, getPostParam(request, "tibberNodeId", tibber_nodeid).c_str());
+    strcpy(tibber_user, getPostParam(request, "tibberUser", tibber_user).c_str());
+    strcpy(tibber_password, getPostParam(request, "tibberPassword", tibber_password).c_str());
+    writeConfig();
+    request->send(200, "text/html", FPSTR(HTML_SAVE));
   });
 
   // Shelly RPC endpoints called via HTTP GET method
