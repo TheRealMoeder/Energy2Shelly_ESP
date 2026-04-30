@@ -73,6 +73,7 @@ Directly download a matching OTA-binary for your ESP device from the releases pa
     - Following power meters are currently supported and implemented in the parser:
       - **EMH EHZB** (SML message length: 248)
       - **eBZ DD3** (SML message length: 396)
+      - **Iskra MT631** (SML message length: 236)
     - Support for additional power meters can be easily added. If you can provide your meter's SML sample data and message length and confirm that the parser works with your meter's data stream, then please open an issue or, even better, a PR with the details!
 
   #### Here are some sample generic HTTP query paths for common devices:
