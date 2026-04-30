@@ -61,7 +61,7 @@ bool parseTibberPulse() {
     w->readBytes(smlpayload, getlength);
     // the OBIS codes for consumption (1-0:1.8.0*255) and power (1-0:16.7.0*255) are the same,
     // the SML message length might be different, but reading these should still work
-    if (getlength != SML_PM_EMH_EHZB && getlength != SML_PM_EBZ_DD3 && getLength != SML_PM_MT631) {
+    if (getlength != SML_PM_EMH_EHZB && getlength != SML_PM_EBZ_DD3 && getlength != SML_PM_MT631) {
       DEBUG_SERIAL.printf("ERROR: SML data not in expected length! length=%d \r\n", getlength);
       // for extra debugging
       for (int i = 0; i < getlength; i++) {
