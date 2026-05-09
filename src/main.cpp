@@ -247,7 +247,11 @@ void loop() {
 #ifdef ESP32
     WiFi.disconnect(true, true);
 #else
+    // WiFiManager may leave persistent=false; force it so disconnect(true)
+    // actually erases the SDK-saved credentials in flash.
+    WiFi.persistent(true);
     WiFi.disconnect(true);
+    ESP.eraseConfig();
 #endif
     delay(1000);
     ESP.restart();

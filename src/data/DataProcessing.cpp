@@ -145,6 +145,11 @@ void setJsonPathPower(JsonDocument json) {
       DEBUG_SERIAL.print(F("Total power from payload: "));
       DEBUG_SERIAL.println(total);
     }
+    // Pick up energy counters if the Shelly-style payload includes them
+    // (e.g. SMLReader publishes energy_in/energy_out in Wh).
+    if (json["energy_in"].is<JsonVariant>() && json["energy_out"].is<JsonVariant>()) {
+      setEnergyData(json["energy_in"].as<double>(), json["energy_out"].as<double>());
+    }
     return;
   }
   if (strcmp(power_path, "TRIPHASE") == 0) {
