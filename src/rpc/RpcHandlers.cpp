@@ -270,6 +270,27 @@ void shellyGetStatus() {
 }
 
 // aligned with Shelly API docs
+// https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Shelly#shellylistmethods-example
+void shellyListMethods() {
+  JsonDocument jsonResponse;
+  JsonArray methods = jsonResponse["methods"].to<JsonArray>();
+  methods.add("EM.GetStatus");
+  methods.add("EM.GetConfig");
+  methods.add("EMData.GetStatus");
+  methods.add("Shelly.GetComponents");
+  methods.add("Shelly.GetConfig");
+  methods.add("Shelly.GetDeviceInfo");
+  methods.add("Shelly.GetStatus");
+  methods.add("Sys.GetConfig");
+  methods.add("Sys.GetStatus");
+  methods.add("WiFi.GetStatus");
+  serializeJson(jsonResponse, serJsonResponse);
+  DEBUG_SERIAL.print(F("shellyListMethods: "));
+  DEBUG_SERIAL.println(serJsonResponse);
+  blinkled(ledblinkduration);
+}
+
+// aligned with Shelly API docs
 // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Wifi#wifigetstatus-example
 void wifiGetStatus() {
   bool wifiConnected = (WiFi.status() == WL_CONNECTED);

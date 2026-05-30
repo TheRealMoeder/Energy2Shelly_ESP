@@ -57,6 +57,11 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
             shellyGetStatus();
             rpcWrapper();
             webSocket.textAll(serJsonResponse);
+          } else if (json["method"] == "Shelly.ListMethods") {
+            strcpy(rpcUser, "EMPTY");
+            shellyListMethods();
+            rpcWrapper();
+            webSocket.textAll(serJsonResponse);
           } else if (json["method"] == "EM.GetStatus") {
             strcpy(rpcUser, json["src"]);
             EMGetStatus();
@@ -126,6 +131,10 @@ void parseUdpRPC() {
         shellyGetStatus();
         rpcWrapper();
         UdpRPC.UDPPRINT(serJsonResponse.c_str());
+      } else if (json["method"] == "Shelly.ListMethods") {
+        shellyListMethods();
+        rpcWrapper();
+        UdpRPC.UDPPRINT(serJsonResponse.c_str());
       } else if (json["method"] == "EM.GetStatus") {
         EMGetStatus();
         rpcWrapper();
@@ -169,6 +178,10 @@ void parseHttpRPC(String requestBody, AsyncWebServerRequest *request) {
         request->send(200, "application/json", serJsonResponse);
       } else if (json["method"] == "Shelly.GetStatus") {
         shellyGetStatus();
+        rpcWrapper();
+        request->send(200, "application/json", serJsonResponse);
+      } else if (json["method"] == "Shelly.ListMethods") {
+        shellyListMethods();
         rpcWrapper();
         request->send(200, "application/json", serJsonResponse);
       } else if (json["method"] == "EM.GetStatus") {

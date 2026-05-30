@@ -14,6 +14,7 @@ void EMGetConfig();
 void shellyGetConfig();
 void shellyGetComponents();
 void shellyGetStatus();
+void shellyListMethods();
 void wifiGetStatus();
 
 #endif // RPC_HANDLERS_H
