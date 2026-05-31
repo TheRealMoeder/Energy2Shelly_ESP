@@ -95,6 +95,10 @@ extern uint8_t led;
 extern bool led_i;
 extern const uint8_t ledblinkduration;
 
+// Wifi
+extern char wifi_hot[6];
+extern bool wifo_hot_flag;
+
 // SMA Multicast IP and Port
 extern unsigned int multicastPort;  // local port to listen on
 extern IPAddress multicastIP;
