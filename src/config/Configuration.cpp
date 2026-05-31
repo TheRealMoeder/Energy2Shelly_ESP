@@ -164,13 +164,17 @@ void saveConfigCallback() {
 // EVENT HANDLER ESP8266 
 #if defined(ESP8266)
 void onWifiGotIP(const WiFiEventStationModeGotIP& event) {
-  DEBUG_SERIAL.println("[WiFi] Connected! Disable Wifi sleep");
-  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+  if (wifi_hot_flag) {
+    DEBUG_SERIAL.println("[WiFi] Connected! Disable Wifi sleep");
+    WiFi.setSleepMode(WIFI_NONE_SLEEP);
+  }
 }
 void onWifiConnected(const WiFiEventStationModeConnected& event) {
-  DEBUG_SERIAL.print("[WiFi] Connected to AP: ");
-  DEBUG_SERIAL.println(event.ssid);
-  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+  if (wifi_hot_flag) {
+    DEBUG_SERIAL.print("[WiFi] Connected to AP: ");
+    DEBUG_SERIAL.println(event.ssid);
+    WiFi.setSleepMode(WIFI_NONE_SLEEP);
+  }
 }
 #endif
 
@@ -178,27 +182,30 @@ void onWifiConnected(const WiFiEventStationModeConnected& event) {
 #if defined(ESP32)
 void WiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
   if (event == ARDUINO_EVENT_WIFI_STA_CONNECTED) {
-    DEBUG_SERIAL.println("[WiFi] Connected to AP! Disabling Sleep...");
-    WiFi.setSleep(false); 
-    esp_wifi_set_ps(WIFI_PS_NONE); 
+     if (wifi_hot_flag) {
+       DEBUG_SERIAL.println("[WiFi] Connected to AP! Disabling Sleep...");
+       WiFi.setSleep(false); 
+       esp_wifi_set_ps(WIFI_PS_NONE);
+     } 
   } else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
     DEBUG_SERIAL.println("[WiFi] Connected! Disable Wifi sleep");
-    WiFi.setSleep(false); 
-    esp_wifi_set_ps(WIFI_PS_NONE); 
+    if  if (wifi_hot_flag) { 
+      WiFi.setSleep(false); 
+      esp_wifi_set_ps(WIFI_PS_NONE);
+    }
   }
 }
 #endif
 
 
 void WifiManagerSetup() {
-  if (wifi_hot_flag) {
   #if defined(ESP8266)
     connectedEventHandler = WiFi.onStationModeConnected(onWifiConnected);
     gotIpEventHandler = WiFi.onStationModeGotIP(onWifiGotIP);
   #elif defined(ESP32)
     WiFi.onEvent(WiFiEvent); 
   #endif
-  }
+  
 
 
   
