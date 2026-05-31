@@ -149,7 +149,59 @@ void saveConfigCallback() {
   shouldSaveConfig = true;
 }
 
+// ============================================================================
+// Wifi No Sleep option
+// ============================================================================
+#if defined(ESP8266)
+  #include <ESP8266WiFi.h>
+  WiFiEventHandler gotIpEventHandler;
+  WiFiEventHandler connectedEventHandler;
+#elif defined(ESP32)
+  #include <WiFi.h>
+  #include "esp_wifi.h" 
+#endif
+
+// EVENT HANDLER ESP8266 
+#if defined(ESP8266)
+void onWifiGotIP(const WiFiEventStationModeGotIP& event) {
+  DEBUG_SERIAL.println("[WiFi] Connected! Disable Wifi sleep");
+  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+}
+void onWifiConnected(const WiFiEventStationModeConnected& event) {
+  DEBUG_SERIAL.print("[WiFi] Connected to AP: ");
+  DEBUG_SERIAL.println(event.ssid);
+  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+}
+#endif
+
+// EVENT HANDLER ESP32
+#if defined(ESP32)
+void WiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
+  if (event == ARDUINO_EVENT_WIFI_STA_CONNECTED) {
+    DEBUG_SERIAL.println("[WiFi] Connected to AP! Disabling Sleep...");
+    WiFi.setSleep(false); 
+    esp_wifi_set_ps(WIFI_PS_NONE); 
+  } else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
+    DEBUG_SERIAL.println("[WiFi] Connected! Disable Wifi sleep");
+    WiFi.setSleep(false); 
+    esp_wifi_set_ps(WIFI_PS_NONE); 
+  }
+}
+#endif
+
+
 void WifiManagerSetup() {
+  if (wifi_hot_flag) {
+  #if defined(ESP8266)
+    connectedEventHandler = WiFi.onStationModeConnected(onWifiConnected);
+    gotIpEventHandler = WiFi.onStationModeGotIP(onWifiGotIP);
+  #elif defined(ESP32)
+    WiFi.onEvent(WiFiEvent); 
+  #endif
+  }
+
+
+  
   WiFi.setAutoReconnect(true);
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
