@@ -189,7 +189,7 @@ void WiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
      } 
   } else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
     DEBUG_SERIAL.println("[WiFi] Connected! Disable Wifi sleep");
-    if  if (wifi_hot_flag) { 
+    if (wifi_hot_flag) { 
       WiFi.setSleep(false); 
       esp_wifi_set_ps(WIFI_PS_NONE);
     }
