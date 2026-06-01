@@ -352,6 +352,9 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&param_tibber_password);
   wifiManager.addParameter(&param_tibber_password_show_password);
 
+  // fallback if remote AP boots slower than ESP,reboot after 600s without user interaction
+  wifiManager.setConfigPortalTimeout(600); 
+
   if (!wifiManager.autoConnect("Energy2Shelly")) {
     DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
     delay(3000);
