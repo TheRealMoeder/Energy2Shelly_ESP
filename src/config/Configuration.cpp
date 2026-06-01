@@ -59,6 +59,10 @@ uint8_t led = 0;
 bool led_i = false;
 const uint8_t ledblinkduration = 50;
 
+//Wifi
+char  wifi_hot[6];
+bool wifi_hot_flag = false;
+
 // SMA Multicast IP and Port
 unsigned int multicastPort = 9522;  // local port to listen on
 IPAddress multicastIP(239, 12, 255, 254);
@@ -145,7 +149,66 @@ void saveConfigCallback() {
   shouldSaveConfig = true;
 }
 
+// ============================================================================
+// Wifi No Sleep option
+// ============================================================================
+#if defined(ESP8266)
+  #include <ESP8266WiFi.h>
+  WiFiEventHandler gotIpEventHandler;
+  WiFiEventHandler connectedEventHandler;
+#elif defined(ESP32)
+  #include <WiFi.h>
+  #include "esp_wifi.h" 
+#endif
+
+// EVENT HANDLER ESP8266 
+#if defined(ESP8266)
+void onWifiGotIP(const WiFiEventStationModeGotIP& event) {
+  if (wifi_hot_flag) {
+    DEBUG_SERIAL.println("[WiFi] Connected! Disable Wifi sleep");
+    WiFi.setSleepMode(WIFI_NONE_SLEEP);
+  }
+}
+void onWifiConnected(const WiFiEventStationModeConnected& event) {
+  if (wifi_hot_flag) {
+    DEBUG_SERIAL.print("[WiFi] Connected to AP: ");
+    DEBUG_SERIAL.println(event.ssid);
+    WiFi.setSleepMode(WIFI_NONE_SLEEP);
+  }
+}
+#endif
+
+// EVENT HANDLER ESP32
+#if defined(ESP32)
+void WiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
+  if (event == ARDUINO_EVENT_WIFI_STA_CONNECTED) {
+     if (wifi_hot_flag) {
+       DEBUG_SERIAL.println("[WiFi] Connected to AP! Disabling Sleep...");
+       WiFi.setSleep(false); 
+       esp_wifi_set_ps(WIFI_PS_NONE);
+     } 
+  } else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
+    DEBUG_SERIAL.println("[WiFi] Connected! Disable Wifi sleep");
+    if (wifi_hot_flag) { 
+      WiFi.setSleep(false); 
+      esp_wifi_set_ps(WIFI_PS_NONE);
+    }
+  }
+}
+#endif
+
+
 void WifiManagerSetup() {
+  #if defined(ESP8266)
+    connectedEventHandler = WiFi.onStationModeConnected(onWifiConnected);
+    gotIpEventHandler = WiFi.onStationModeGotIP(onWifiGotIP);
+  #elif defined(ESP32)
+    WiFi.onEvent(WiFiEvent); 
+  #endif
+  
+
+
+  
   WiFi.setAutoReconnect(true);
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
@@ -163,6 +226,7 @@ void WifiManagerSetup() {
   strcpy(query_period, preferences.getString("query_period", query_period).c_str());
   strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
   strcpy(led_gpio_i, preferences.getString("led_gpio_i", led_gpio_i).c_str());
+  strcpy(wifi_hot, preferences.getString("wifi_hot", wifi_hot).c_str());
   strcpy(shelly_mac, preferences.getString("shelly_mac", shelly_mac).c_str());
   strcpy(mqtt_port, preferences.getString("mqtt_port", mqtt_port).c_str());
   strcpy(mqtt_topic, preferences.getString("mqtt_topic", mqtt_topic).c_str());
@@ -208,6 +272,7 @@ void WifiManagerSetup() {
   static WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
   static WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
   static WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
+  static WiFiManagerParameter custom_wifi_hot("wifi_hot", "<b>Keep Wifi in high power mode</b><br><code>true</code> or <code>false</code>", wifi_hot, 6);
   static WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
   static WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> or <code>2220</code> depending on Marstek Venus model and firmware version", shelly_port, 6);
   static WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
@@ -259,6 +324,7 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&custom_query_period);
   wifiManager.addParameter(&custom_led_gpio);
   wifiManager.addParameter(&custom_led_gpio_i);
+  wifiManager.addParameter(&custom_wifi_hot);
   wifiManager.addParameter(&custom_shelly_mac);
   wifiManager.addParameter(&custom_shelly_port);
   wifiManager.addParameter(&custom_sma_id);
@@ -286,6 +352,9 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&param_tibber_password);
   wifiManager.addParameter(&param_tibber_password_show_password);
 
+  // fallback if remote AP boots slower than ESP,reboot after 600s without user interaction
+  wifiManager.setConfigPortalTimeout(600); 
+
   if (!wifiManager.autoConnect("Energy2Shelly")) {
     DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
     delay(3000);
@@ -306,6 +375,7 @@ void WifiManagerSetup() {
   strcpy(query_period, custom_query_period.getValue());
   strcpy(led_gpio, custom_led_gpio.getValue());
   strcpy(led_gpio_i, custom_led_gpio_i.getValue());
+  strcpy(wifi_hot, custom_wifi_hot.getValue());
   strcpy(shelly_mac, custom_shelly_mac.getValue());
   strcpy(mqtt_topic, custom_mqtt_topic.getValue());
   strcpy(mqtt_user, custom_mqtt_user.getValue());
@@ -350,6 +420,8 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println(String(led_gpio));
   DEBUG_SERIAL.print(F("\tled_gpio_i : "));
   DEBUG_SERIAL.println(String(led_gpio_i));
+  DEBUG_SERIAL.print(F("\twifi_hot : "));
+  DEBUG_SERIAL.println(String(  wifi_hot));  
   DEBUG_SERIAL.print(F("\tshelly_mac : "));
   DEBUG_SERIAL.println(String(shelly_mac));
   DEBUG_SERIAL.print(F("\tmqtt_topic : "));
@@ -412,6 +484,14 @@ void WifiManagerSetup() {
     led_i = false;
   }
 
+  if (strcmp(wifi_hot, "true") == 0) {
+    wifi_hot_flag = true;
+  } else {
+    wifi_hot_flag = false;
+  }
+
+  
+
   if (shouldSaveConfig) {
     DEBUG_SERIAL.println(F("saving config"));
     preferences.putString("reset_password", reset_password);
@@ -425,6 +505,7 @@ void WifiManagerSetup() {
     preferences.putString("query_period", query_period);
     preferences.putString("led_gpio", led_gpio);
     preferences.putString("led_gpio_i", led_gpio_i);
+    preferences.putString("wifi_hot", wifi_hot);
     preferences.putString("shelly_mac", shelly_mac);
     preferences.putString("mqtt_topic", mqtt_topic);
     preferences.putString("mqtt_user", mqtt_user);
