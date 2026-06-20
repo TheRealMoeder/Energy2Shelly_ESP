@@ -34,7 +34,7 @@ enum {
   SML_PM_EBZ_DD3 = 396,
   // Iskra MT631
   SML_PM_MT631 = 236,
-  // EasyMetec ESY11
+  // EasyMeter ESY11
   SML_PM_ESY11 = 476,
   SMLPAYLOADMAXSIZE = 500
 };
