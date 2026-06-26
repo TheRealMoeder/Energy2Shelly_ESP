@@ -23,13 +23,14 @@
 
 void setup(void) {
   DEBUG_SERIAL.begin(115200);
-  WifiManagerSetup();
 
-  // Initialize watchdog timer (30s timeout)
+  // Initialize watchdog timer (30s timeout) - before WifiManagerSetup
 #ifdef ESP32
   esp_task_wdt_init(30, true);
   esp_task_wdt_add(NULL);
 #endif
+
+  WifiManagerSetup();
 
   // Initialize time via NTP
 #ifdef ESP32
@@ -49,6 +50,9 @@ void setup(void) {
     }
     DEBUG_SERIAL.println(F("Waiting for NTP time..."));
     delay(500);
+#ifdef ESP32
+    esp_task_wdt_reset();
+#endif
   }
   if (!ntp_success) {
     DEBUG_SERIAL.println(F("NTP timeout - setting default time"));
