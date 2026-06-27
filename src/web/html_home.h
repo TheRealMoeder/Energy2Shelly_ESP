@@ -42,6 +42,7 @@ const char HTML_HOME[] PROGMEM = R"=====(
   <p>This device emulates a Shelly Pro 3EM to integrate various energy meters.</p>
   <div class="nav">
     <a href="/status">View Status</a>
+    <a href="/settings">Settings</a>
     <a href="/reset" class="reset">Reset Device</a>
   </div>
 

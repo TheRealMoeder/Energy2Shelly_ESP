@@ -20,6 +20,68 @@
 
 // Web content
 #include "web/html_home.h"
+#include <Preferences.h>
+
+void handleSettingsGet(AsyncWebServerRequest *request) {
+  String html = "<!DOCTYPE html><html><head><title>Energy2Shelly Settings</title>";
+  html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+  html += "<style>body{font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;}";
+  html += "label{display:block;margin-top:15px;font-weight:bold;}";
+  html += "input,select{width:100%;padding:8px;margin-top:5px;box-sizing:border-box;}";
+  html += "button{margin-top:20px;padding:10px 20px;background:#007bff;color:white;border:none;border-radius:5px;cursor:pointer;}";
+  html += "button:hover{background:#0056b3;}</style></head><body>";
+  html += "<h1>Energy2Shelly Settings</h1>";
+  html += "<form method='POST'>";
+  html += "<label>Shelly UDP Port (1010 or 2220)</label>";
+  html += "<input name='shelly_port' value='" + String(shelly_port) + "'>";
+  html += "<label>Phase Number (1 or 3)</label>";
+  html += "<input name='phase_number' value='" + String(phase_number) + "'>";
+  html += "<label>Power Offset (W)</label>";
+  html += "<input name='power_offset' value='" + String(power_offset) + "'>";
+  html += "<label>Query Period (ms)</label>";
+  html += "<input name='query_period' value='" + String(query_period) + "'>";
+  html += "<label>Reset Password</label>";
+  html += "<input name='reset_password' type='password' value='" + String(reset_password) + "'>";
+  html += "<button type='submit'>Save</button>";
+  html += "</form>";
+  html += "<p><a href='/'>Back to Dashboard</a></p>";
+  html += "</body></html>";
+  request->send(200, "text/html", html);
+}
+
+void handleSettingsPost(AsyncWebServerRequest *request) {
+  Preferences prefs;
+  prefs.begin("settings", false);
+  if (request->hasParam("shelly_port", true)) {
+    strncpy(shelly_port, request->getParam("shelly_port", true)->value().c_str(), 5);
+    prefs.putString("shelly_port", shelly_port);
+  }
+  if (request->hasParam("phase_number", true)) {
+    strncpy(phase_number, request->getParam("phase_number", true)->value().c_str(), 1);
+    prefs.putString("phase_number", phase_number);
+  }
+  if (request->hasParam("power_offset", true)) {
+    strncpy(power_offset, request->getParam("power_offset", true)->value().c_str(), 9);
+    prefs.putString("power_offset", power_offset);
+  }
+  if (request->hasParam("query_period", true)) {
+    strncpy(query_period, request->getParam("query_period", true)->value().c_str(), 9);
+    prefs.putString("query_period", query_period);
+  }
+  if (request->hasParam("reset_password", true)) {
+    strncpy(reset_password, request->getParam("reset_password", true)->value().c_str(), 32);
+    prefs.putString("reset_password", reset_password);
+  }
+  prefs.end();
+  String html = "<!DOCTYPE html><html><head><title>Settings Saved</title>";
+  html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+  html += "<meta http-equiv='refresh' content='2;url=/settings'>";
+  html += "<style>body{font-family:Arial,sans-serif;text-align:center;padding:50px;}</style></head><body>";
+  html += "<h1>Settings saved!</h1><p>Restarting...</p></body></html>";
+  request->send(200, "text/html", html);
+  delay(1000);
+  ESP.restart();
+}
 
 void setup(void) {
   DEBUG_SERIAL.begin(115200);
@@ -94,6 +156,9 @@ void setup(void) {
     shellyGetStatus();
     request->send(200, "application/json", serJsonResponse);
   });
+
+  server.on("/settings", AsyncWebRequestMethod::HTTP_GET, handleSettingsGet);
+  server.on("/settings", AsyncWebRequestMethod::HTTP_POST, handleSettingsPost);
 
   server.on("/reset", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     String html = "<!DOCTYPE html><html><head><title>Reset Confirmation</title>";
