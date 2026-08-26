@@ -100,6 +100,7 @@ Directly download a matching OTA-binary for your ESP device from the releases pa
 - [ ] \(Optional) If you want to reset you Wifi-Configuration and/or reconfigure other settings go to <code>http://IP-address/reset</code> and reconnect to the Energy2Shelly hotspot.
 
 #### 6. Check debug output at <code>http://IP-address/console</code><br>
+- you can enable/disable autoscroll, save text data and clear console
 
 # Currently supported microcontrollers
 * ESP32-C3

@@ -43,6 +43,9 @@ char shelly_port[6] = "2220"; // old: 1010; new (FW>=226): 2220; Venus A and E 3
 char query_period[10] = "1000";
 char modbus_dev[10] = "71"; // default for KSEM
 char sma_id[17] = "";
+uint16_t sunspec_port_int; // default port
+uint8_t modbusdev_int; // default device id for KSEM
+
 
 // Tibber related
 char tibber_host[41] = "x.x.x.x[:xxxx]"; // IP / HOSTNAME [and PORT] of Tibber Pulse Bridge
@@ -105,6 +108,7 @@ AsyncWebSocket wsConsole("/consolews");
 WiFiUDP Udp;
 HTTPClient http;
 WiFiUDP UdpRPC;
+uint16_t wifi_reconnect_attempts = 0;
 
 // ============================================================================
 // MDNS RESPONDER HANDLES (ESP8266 only)

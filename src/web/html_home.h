@@ -154,10 +154,14 @@ function refreshData() {
 }
 
 // Initial load
-refreshData();
-
-// Auto-refresh every 5 seconds
-setInterval(refreshData, 5000);
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    refreshData();
+    
+    
+    setInterval(refreshData, 5000);
+  }, 400); // 400ms delay to allow the page to render before fetching data
+});
 </script>
 </body>
 </html>
@@ -166,42 +170,94 @@ setInterval(refreshData, 5000);
 
 
 // Single-file HTML & JavaScript source for the browser console
-const char* htmlPage_console = R"rawliteral(
+const char* htmlPage_console PROGMEM  = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Arduino HTTP Console</title>
+    <title>Energy2Shelly_ESP HTTP Console</title>
     <style>
         body { background-color: #1e1e1e; color: #00ff00; font-family: monospace; padding: 20px; margin: 0; }
         h2 { color: #ffffff; font-family: sans-serif; margin-bottom: 10px; }
         #console { width: calc(100% - 20px); height: 500px; border: 1px solid #444; overflow-y: scroll; padding: 10px; background: #000; box-shadow: inset 0 0 10px #000; }
         .status { color: #888; font-style: italic; }
+        .timestamp { color: #00aaaa; margin-right: 8px; }
+        .controls-container { margin-top: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; width: calc(100% - 0px); }
+        .btn-container { display: flex; gap: 10px; }
+        .btn { background-color: #000; color: #00ff00; border: 1px solid #00ff00; padding: 8px 15px; font-family: monospace; cursor: pointer; transition: all 0.2s; }
+        .btn:hover { background-color: #00ff00; color: #000; }
+        .scroll-lock-label { color: #ffffff; font-family: sans-serif; font-size: 14px; display: flex; align-items: center; cursor: pointer; }
+        .scroll-lock-label input { margin-right: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <h2>Arduino Live Web Console</h2>
+    <h2>Energy2Shelly_ESP Live Web Console</h2>
     <div id="console"><span class="status">[Connecting to console stream...]</span><br></div>
-
+    <div class="controls-container">
+        <div class="btn-container">
+            <button class="btn" onclick="clearConsole()">Clear Console</button>
+            <button class="btn" onclick="saveConsole()">Save Log</button>
+        </div>
+        <label class="scroll-lock-label">
+            <input type="checkbox" id="autoscroll" checked> Enable Autoscroll
+        </label>
+    </div>
     <script>
-        var wsPort = 8080; // Default port, will be replaced by the server
+        var wsPort = 8080; 
         var ws = new WebSocket('ws://' + window.location.hostname +  '/consolews');
         var consoleDiv = document.getElementById('console');
-
+        var autoscrollCheck = document.getElementById('autoscroll');
+        var messageBuffer = "";
+        function getTimestamp() {
+            var now = new Date();
+            return '[' + now.toTimeString().split(' ')[0] + '] ';
+        }
         ws.onopen = function() {
-            consoleDiv.innerHTML += '<span style="color:#00ff00;">[Connected to WebSocket on Port ' + wsPort + ']</span><br>';
+            consoleDiv.innerHTML += '<span class="timestamp">' + getTimestamp() + '</span><span style="color:#00ff00;">[Connected to WebSocket on Port ' + wsPort + ']</span><br>';
         };
-
         ws.onmessage = function(event) {
-            consoleDiv.innerHTML += event.data + '<br>';
-            consoleDiv.scrollTop = consoleDiv.scrollHeight; // Keep scrolling down
+            messageBuffer += event.data;
+            if (messageBuffer.indexOf('\n') !== -1) {
+                var lines = messageBuffer.split('\n');
+                messageBuffer = lines.pop();
+                var timeTag = '<span class="timestamp">' + getTimestamp() + '</span>';
+                lines.forEach(function(line) {
+                    if (line.length > 0 || line === "") {
+                        consoleDiv.innerHTML += timeTag + line + '<br>';
+                    }
+                });
+                if (autoscrollCheck.checked) {
+                    consoleDiv.scrollTop = consoleDiv.scrollHeight;
+                }
+            }
         };
-
         ws.onclose = function() {
-            consoleDiv.innerHTML += '<span style="color:#ff0000; font-weight:bold;">[Disconnected from Server]</span><br>';
+            consoleDiv.innerHTML += '<span class="timestamp">' + getTimestamp() + '</span><span style="color:#ff0000; font-weight:bold;">[Disconnected from Server]</span><br>';
         };
+        function clearConsole() {
+            consoleDiv.innerHTML = '<span class="timestamp">' + getTimestamp() + '</span><span class="status">[Console cleared]</span><br>';
+            messageBuffer = ""; 
+        }
+        function saveConsole() {
+            var text = consoleDiv.innerText;
+            var blob = new Blob([text], { type: 'text/plain' });
+            var anchor = document.createElement('a');
+            var now = new Date();
+            var dateStr = now.toISOString().slice(0,10);
+            var timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+            anchor.download = 'console_log_' + dateStr + '_' + timeStr + '.txt';
+            anchor.href = window.URL.createObjectURL(blob);
+            anchor.target = '_blank';
+            anchor.style.display = 'none';
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+        }
     </script>
 </body>
 </html>
 )rawliteral";
+
+
+
 
 #endif // HTML_HOME_H
