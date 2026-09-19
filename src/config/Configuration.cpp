@@ -269,10 +269,7 @@ void WifiManagerSetup(bool stationmode)
   static WiFiManagerParameter param_tibber_password_show_password(buf_tibber_pwd_show_pwd);
 
   static WiFiManager wifiManager;
-  if (!DEBUG)
-  {
-    wifiManager.setDebugOutput(false);
-  }
+  wifiManager.setDebugOutput(false);
   wifiManager.setShowStaticFields(true);
 
   // Move custom parameters to seperate menu to avoid issues with too many custom parameters and too many results from AP scan
