@@ -23,6 +23,7 @@
 
 // Web & JSON libraries
 #include <ArduinoJson.h>
+#define WM_MDNS  
 #include <WiFiManager.h>
 #include <PubSubClient.h>
 #include <WiFiClient.h>
@@ -102,7 +103,7 @@ public:
             head = (head + 1) % QUEUE_SIZE;
         } else {
             // Memory safe guard: track drop count instead of corrupting data positions
-            droppedBytes++;
+            droppedBytes=droppedBytes+1;
         }
         return 1;
     }
@@ -270,6 +271,7 @@ extern char rpcUser[20];
 // flags for saving/resetting WifiManager data
 extern bool shouldSaveConfig;
 extern bool shouldResetConfig;
+extern bool shouldupdate;
 
 // flags for data sources
 extern bool dataMQTT;
@@ -320,7 +322,7 @@ extern void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 void blinkled(int duration);
 void handleblinkled();
 void saveConfigCallback();
-void WifiManagerSetup();
+void WifiManagerSetup(bool stationmode);
 void setupMdns();
 
 #endif // CONFIGURATION_H

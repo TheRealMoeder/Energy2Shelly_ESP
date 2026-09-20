@@ -1,5 +1,5 @@
 #include "Configuration.h"
-
+#include "../utils/utils.h"
 unsigned long startMillis = 0;
 unsigned long currentMillis;
 // for time synchronization
@@ -15,8 +15,8 @@ char reset_password[33] = "admin-changeMe"; // default reset password
 char input_type[40];
 char ntp_server[40] = "de.pool.ntp.org";
 char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
-char phase_number[2] = "3"; // number of phases: 1 for monophase or 3 for triphase
-char power_offset[10] = "0";  // Default: no offset
+char phase_number[2] = "3";                         // number of phases: 1 for monophase or 3 for triphase
+char power_offset[10] = "0";                        // Default: no offset
 char mqtt_server[160];
 char mqtt_port[6] = "1883";
 char mqtt_topic[90] = "tele/meter/SENSOR";
@@ -44,15 +44,14 @@ char query_period[10] = "1000";
 char modbus_dev[10] = "71"; // default for KSEM
 char sma_id[17] = "";
 uint16_t sunspec_port_int; // default port
-uint8_t modbusdev_int; // default device id for KSEM
-
+uint8_t modbusdev_int;     // default device id for KSEM
 
 // Tibber related
-char tibber_host[41] = "x.x.x.x[:xxxx]"; // IP / HOSTNAME [and PORT] of Tibber Pulse Bridge
-char tibber_user[11] = "admin"; // fixed user
-char tibber_password[10] = "xxxx-xxxx"; // replace with password printed on Tibber Pulse Bridge device
+char tibber_host[41] = "x.x.x.x[:xxxx]";     // IP / HOSTNAME [and PORT] of Tibber Pulse Bridge
+char tibber_user[11] = "admin";              // fixed user
+char tibber_password[10] = "xxxx-xxxx";      // replace with password printed on Tibber Pulse Bridge device
 char tibber_rpc[21] = "/data.json?node_id="; // fixed rpc path
-char tibber_nodeid[2] = "1"; // node id of the Pulse IR device, defaults to 1. if reparing this might change, check the node id in the web interface of the Tibber Pulse Bridge device
+char tibber_nodeid[2] = "1";                 // node id of the Pulse IR device, defaults to 1. if reparing this might change, check the node id in the web interface of the Tibber Pulse Bridge device
 
 // LED settings
 char led_gpio[3] = "";
@@ -63,7 +62,7 @@ bool led_i = false;
 const uint8_t ledblinkduration = 50;
 
 // SMA Multicast IP and Port
-unsigned int multicastPort = 9522;  // local port to listen on
+unsigned int multicastPort = 9522; // local port to listen on
 IPAddress multicastIP(239, 12, 255, 254);
 
 // MODBUS settings
@@ -85,6 +84,7 @@ char rpcUser[20] = "user_1";
 // flags for saving/resetting WifiManager data
 bool shouldSaveConfig = false;
 bool shouldResetConfig = false;
+bool shouldupdate = false;
 
 // flags for data sources
 bool dataMQTT = false;
@@ -104,7 +104,7 @@ WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
 AsyncWebServer server(80);
 AsyncWebSocket webSocket("/rpc");
-AsyncWebSocket wsConsole("/consolews"); 
+AsyncWebSocket wsConsole("/consolews");
 WiFiUDP Udp;
 HTTPClient http;
 WiFiUDP UdpRPC;
@@ -115,28 +115,39 @@ uint16_t wifi_reconnect_attempts = 0;
 // ============================================================================
 
 #ifndef ESP32
-  MDNSResponder::hMDNSService hMDNSService = 0; // handle of the http service in the MDNS responder
-  MDNSResponder::hMDNSService hMDNSService2 = 0; // handle of the shelly service in the MDNS responder
+MDNSResponder::hMDNSService hMDNSService = 0;  // handle of the http service in the MDNS responder
+MDNSResponder::hMDNSService hMDNSService2 = 0; // handle of the shelly service in the MDNS responder
 #endif
 
 // Blink LED handlers
-void blinkled(int duration) {
-  if (led > 0) {
-    if (led_i) {
+void blinkled(int duration)
+{
+  if (led > 0)
+  {
+    if (led_i)
+    {
       digitalWrite(led, HIGH);
-    } else {
+    }
+    else
+    {
       digitalWrite(led, LOW);
     }
     ledOffTime = millis() + duration;
   }
 }
 
-void handleblinkled() {
-  if (led > 0) {
-    if (ledOffTime > 0 && millis() > ledOffTime) {
-      if (led_i) {
+void handleblinkled()
+{
+  if (led > 0)
+  {
+    if (ledOffTime > 0 && millis() > ledOffTime)
+    {
+      if (led_i)
+      {
         digitalWrite(led, LOW);
-      } else {
+      }
+      else
+      {
         digitalWrite(led, HIGH);
       }
       ledOffTime = 0;
@@ -144,28 +155,31 @@ void handleblinkled() {
   }
 }
 
-//callback notifying us of the need to save WifiManager config
-void saveConfigCallback() {
+// callback notifying us of the need to save WifiManager config
+void saveConfigCallback()
+{
   DEBUG_SERIAL.println(F("Should save config"));
   shouldSaveConfig = true;
 }
 
 #if DEBUG
 WebDebugLogger DebugConsole;
-bool enableConsoleOutput=true;
+bool enableConsoleOutput = true;
 #else
 NullDebug EmptyConsole;
-bool enableConsoleOutput=false;
+bool enableConsoleOutput = false;
 #endif
 
-void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
-    if (type == WS_EVT_CONNECT) {
-        client->text("--- Connected to WebSocket ---");
-    }
+void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
+  if (type == WS_EVT_CONNECT)
+  {
+    client->text("--- Connected to WebSocket ---");
+  }
 }
 
-
-void WifiManagerSetup() {
+void WifiManagerSetup(bool stationmode)
+{
   WiFi.setAutoReconnect(true);
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
@@ -255,18 +269,16 @@ void WifiManagerSetup() {
   static WiFiManagerParameter param_tibber_password_show_password(buf_tibber_pwd_show_pwd);
 
   static WiFiManager wifiManager;
-  if (!DEBUG) {
-    wifiManager.setDebugOutput(false);
-  }
+  wifiManager.setDebugOutput(false);
   wifiManager.setShowStaticFields(true);
 
   // Move custom parameters to seperate menu to avoid issues with too many custom parameters and too many results from AP scan
   wifiManager.setParamsPage(true);
-  
+
   wifiManager.setTitle(String("Energy2Shelly for ESP ") + VERSION_BUILD);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
-  //add all your parameters here
+  // add all your parameters here
   wifiManager.addParameter(&custom_section1);
   wifiManager.addParameter(&param_reset_password);
   wifiManager.addParameter(&param_reset_password_show_password);
@@ -305,16 +317,46 @@ void WifiManagerSetup() {
   wifiManager.addParameter(&param_tibber_user);
   wifiManager.addParameter(&param_tibber_password);
   wifiManager.addParameter(&param_tibber_password_show_password);
-
-  if (!wifiManager.autoConnect("Energy2Shelly")) {
-    DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
-    delay(3000);
-    ESP.restart();
-    delay(5000);
+  wifiManager.setConfigPortalTimeout(180);
+  std::vector<const char *> usermenu = {"wifi","info","param","exit","sep","update"};
+  wifiManager.setMenu(usermenu);
+  if (stationmode)
+  {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin();
+    unsigned long startAttemptTime = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000)
+    {
+      delay(500);
+      Serial.print(".");
+    }
+    update_reset_reason(Energy2Shelly_ResetReason::OTA_UPDATE);
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      shouldSaveConfig=true;      
+      wifiManager.startWebPortal();
+      startAttemptTime = millis();
+      while (wifiManager.getWebPortalActive())
+      {
+        wifiManager.process();
+        delay(10);
+      }
+     
+    }
+  }
+  else
+  {
+    if (!wifiManager.autoConnect("Energy2Shelly"))
+    {
+      DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
+      delay(3000);
+      ESP.restart();
+      delay(5000);
+    }
   }
   DEBUG_SERIAL.println(F("connected"));
 
-  //read updated parameters
+  // read updated parameters
   strcpy(reset_password, param_reset_password.getValue());
   strcpy(input_type, custom_input_type.getValue());
   strcpy(mqtt_server, custom_mqtt_server.getValue());
@@ -346,7 +388,7 @@ void WifiManagerSetup() {
   strcpy(tibber_user, param_tibber_user.getValue());
   strcpy(tibber_password, param_tibber_password.getValue());
 
-  offsetPerPhase = String(power_offset).toDouble() / 3.0;  // distribute offset equally across phases
+  offsetPerPhase = String(power_offset).toDouble() / 3.0; // distribute offset equally across phases
 
   DEBUG_SERIAL.println(F("The values in the preferences are: "));
   DEBUG_SERIAL.println(F("\treset_password: ********"));
@@ -406,33 +448,48 @@ void WifiManagerSetup() {
   DEBUG_SERIAL.println(String(tibber_user));
   DEBUG_SERIAL.print(F("\t - tibber_password: ********"));
 
-  if (strcmp(input_type, "SMA") == 0) {
+  if (strcmp(input_type, "SMA") == 0)
+  {
     dataSMA = true;
     DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
-  } else if (strcmp(input_type, "SHRDZM") == 0) {
+  }
+  else if (strcmp(input_type, "SHRDZM") == 0)
+  {
     dataSHRDZM = true;
     DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
-  } else if (strcmp(input_type, "HTTP") == 0) {
+  }
+  else if (strcmp(input_type, "HTTP") == 0)
+  {
     dataHTTP = true;
     DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
-  } else if (strcmp(input_type, "SUNSPEC") == 0) {
+  }
+  else if (strcmp(input_type, "SUNSPEC") == 0)
+  {
     dataSUNSPEC = true;
     DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
-  } else if (strcmp(input_type, "TIBBERPULSE") == 0) {
+  }
+  else if (strcmp(input_type, "TIBBERPULSE") == 0)
+  {
     dataTIBBERPULSE = true;
     DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
-  } else {
+  }
+  else
+  {
     dataMQTT = true;
     DEBUG_SERIAL.println(F("Enabling MQTT data input"));
   }
 
-  if (strcmp(led_gpio_i, "true") == 0) {
+  if (strcmp(led_gpio_i, "true") == 0)
+  {
     led_i = true;
-  } else {
+  }
+  else
+  {
     led_i = false;
   }
 
-  if (shouldSaveConfig) {
+  if (shouldSaveConfig)
+  {
     DEBUG_SERIAL.println(F("saving config"));
     preferences.putString("reset_password", reset_password);
     preferences.putString("input_type", input_type);
@@ -463,17 +520,20 @@ void WifiManagerSetup() {
     preferences.putString("tibber_nodeid", tibber_nodeid);
     preferences.putString("tibber_user", tibber_user);
     preferences.putString("tibber_password", tibber_password);
+    
     wifiManager.reboot();
   }
   DEBUG_SERIAL.println(F("local ip"));
   DEBUG_SERIAL.println(WiFi.localIP());
 }
 
-void setupMdns() {
+void setupMdns()
+{
   // Set up mDNS responder
   strncat(shelly_name, shelly_mac, sizeof(shelly_name) - strlen(shelly_name) - 1);
 
-  if (!MDNS.begin(shelly_name)) {
+  if (!MDNS.begin(shelly_name))
+  {
     DEBUG_SERIAL.println(F("Error setting up MDNS responder!"));
   }
 
@@ -481,11 +541,10 @@ void setupMdns() {
   MDNS.addService("http", "tcp", 80);
   MDNS.addService("shelly", "tcp", 80);
   mdns_txt_item_t serviceTxtData[4] = {
-    {"arch", "esp8266"},
-    {"gen", shelly_gen},
-    {"fw_id", shelly_fw_id},
-    {"id", shelly_name}
-  };
+      {"arch", "esp8266"},
+      {"gen", shelly_gen},
+      {"fw_id", shelly_fw_id},
+      {"id", shelly_name}};
   mdns_service_instance_name_set("_http", "_tcp", shelly_name);
   mdns_service_txt_set("_http", "_tcp", serviceTxtData, 4);
   mdns_service_instance_name_set("_shelly", "_tcp", shelly_name);
@@ -493,14 +552,16 @@ void setupMdns() {
 #else
   hMDNSService = MDNS.addService(0, "http", "tcp", 80);
   hMDNSService2 = MDNS.addService(0, "shelly", "tcp", 80);
-  if (hMDNSService) {
+  if (hMDNSService)
+  {
     MDNS.setServiceName(hMDNSService, shelly_name);
     MDNS.addServiceTxt(hMDNSService, "arch", "esp8266");
     MDNS.addServiceTxt(hMDNSService, "gen", shelly_gen);
     MDNS.addServiceTxt(hMDNSService, "fw_id", shelly_fw_id);
     MDNS.addServiceTxt(hMDNSService, "id", shelly_name);
   }
-  if (hMDNSService2) {
+  if (hMDNSService2)
+  {
     MDNS.setServiceName(hMDNSService2, shelly_name);
     MDNS.addServiceTxt(hMDNSService2, "arch", "esp8266");
     MDNS.addServiceTxt(hMDNSService2, "gen", shelly_gen);

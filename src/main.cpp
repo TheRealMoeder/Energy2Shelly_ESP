@@ -29,13 +29,26 @@
 void setup(void)
 {
   DEBUG_SERIAL.begin(115200);
-  clear_rtc_power_on();
-  WifiManagerSetup();
+  WifiManagerSetup(clear_rtc_power_on() == Energy2Shelly_ResetReason::RECONFIGURE);
 
   // Initialize watchdog timer (30s timeout)
 #ifdef ESP32
+  // check SDK version.
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  // ---new version ---
+  esp_task_wdt_config_t wdt_config = {
+      .timeout_ms = 30000,                             // 30 seconds timeout
+      .idle_core_mask = (1 << portNUM_PROCESSORS) - 1, // watch all idle tasks on all cpus
+      .trigger_panic = true                            // true = restart if needed
+  };
+  // reconfigure WD
+  esp_task_wdt_reconfigure(&wdt_config);
+  esp_task_wdt_add(NULL);
+#else
+  // --- old SDK version
   esp_task_wdt_init(30, true);
   esp_task_wdt_add(NULL);
+#endif
 #endif
 
   // Initialize time via NTP
@@ -91,7 +104,6 @@ void setup(void)
   }
 
   // Set up web server and endpoints
-
   server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
     AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(HTML_HOME), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
@@ -125,40 +137,83 @@ void setup(void)
 
   server.on("/reset", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    String html = "<!DOCTYPE html><html><head><title>Reset Confirmation</title>";
-    html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
-    html += "<style>body{font-family:Arial,sans-serif;text-align:center;padding:20px;}";
-    html += ".btn{padding:10px 20px;margin:10px;cursor:pointer;text-decoration:none;display:inline-block;border-radius:5px;font-size:16px;}";
-    html += ".btn-yes{background-color:#d9534f;color:white;border:none;}";
-    html += ".btn-no{background-color:#5bc0de;color:white;border:none;}</style></head><body>";
-    html += "<h2>Reset Configuration?</h2>";
-    html += "<p>Are you sure you want to reset the WiFi configuration? This will clear current WiFi settings and restart the device in AP mode.</p>";
-    html += "<form method='POST' style='display:inline;' accept-charset='UTF-8'>";
-    if (reset_password != nullptr && strlen(reset_password) > 0) {
-      html += "<input type='password' name='reset_password' placeholder='Enter reset password' required><br/>";
+    bool hasPassword = (reset_password != nullptr && strlen(reset_password) > 0);  
+    
+    size_t maxNeededLength = (sizeof(RESET_HTML) - 1) + (sizeof(RESET_HTML_END) - 1);
+    
+    if (hasPassword) {
+        maxNeededLength += (sizeof(PASSWORD_INPUT_HTML) - 1);
+    }   
+    String html;
+    html.reserve(maxNeededLength); 
+    
+    html += FPSTR(RESET_HTML);
+    if (hasPassword) {
+        html += FPSTR(PASSWORD_INPUT_HTML);
     }
-    html += "<button type='submit' class='btn btn-yes'>Yes, Reset</button>";
-    html += "</form>";
-    html += "<a href='/' class='btn btn-no'>Cancel</a>";
-    html += "</body></html>";
+    html += FPSTR(RESET_HTML_END);
+    
     request->send(200, "text/html", html); });
 
   server.on("/reset", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request)
             {
     if (reset_password != nullptr && strlen(reset_password) > 0) {
-       if (request->hasParam("reset_password", true)) {
-        if (String(reset_password) == request->getParam("reset_password", true)->value()) {
-          shouldResetConfig = true;
-          request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
+        if (request->hasParam("reset_password", true)) {            
+            const char* submitted_pw = request->getParam("reset_password", true)->value().c_str();
+            
+            if (strcmp(reset_password, submitted_pw) == 0) {
+                shouldResetConfig = true;
+                request->send(200, "text/plain", PSTR("Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n"));
+            } else {
+                request->send(403, "text/plain", PSTR("Unauthorized: Invalid reset password.\r\n"));
+            }
         } else {
-          request->send(403, "text/plain", "Unauthorized: Invalid reset password.\r\n");
+            request->send(400, "text/plain", PSTR("Reset password missing.\r\n"));
         }
-      } else {
-        request->send(400, "text/plain", "Reset password missing.\r\n");
-      }
+    } else {        
+        shouldResetConfig = true;
+        request->send(200, "text/plain", PSTR("Resetting WiFi configuration...\r\n"));
+    } });
+  
+    server.on("/update", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+    bool hasPassword = (reset_password != nullptr && strlen(reset_password) > 0);
+    
+    size_t maxNeededLength = (sizeof(UPDATE_HTML) - 1) + (sizeof(UPDATE_HTML_END) - 1);
+    
+    if (hasPassword) {
+        maxNeededLength += (sizeof(PASSWORD_INPUT_HTML) - 1);
+    }
+    
+    String html;
+    html.reserve(maxNeededLength); 
+    
+    html += FPSTR(UPDATE_HTML);
+    if (hasPassword) {
+        html += FPSTR(PASSWORD_INPUT_HTML);
+    }
+    html += FPSTR(UPDATE_HTML_END);
+    
+    request->send(200, "text/html", html); });
+
+  server.on("/update", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request)
+            {
+    if (reset_password != nullptr && strlen(reset_password) > 0) {
+        if (request->hasParam("reset_password", true)) {
+            const char* submitted_pw = request->getParam("reset_password", true)->value().c_str();
+            
+            if (strcmp(reset_password, submitted_pw) == 0) {
+                shouldupdate = true;
+                request->send(200, "text/plain", PSTR("Update device. Entering WiFi configuration\r\n"));
+            } else {
+                request->send(403, "text/plain", PSTR("Unauthorized: Invalid reset password.\r\n"));
+            }
+        } else {
+            request->send(400, "text/plain", PSTR("Reset password missing.\r\n"));
+        }
     } else {
-      shouldResetConfig = true;
-      request->send(200, "text/plain", "Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n");
+        shouldupdate = true;
+        request->send(200, "text/plain", PSTR("Update device. Entering WiFi configuration...\r\n"));
     } });
 
   // Shelly RPC endpoints called via HTTP GET method
@@ -272,7 +327,7 @@ void setup(void)
     sunspec_port_int = atol(mqtt_port);
     modbusdev_int = atol(modbus_dev);
     DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
-    modbus1.connect(modbus_ip, sunspec_port_int);   
+    modbus1.connect(modbus_ip, sunspec_port_int);
   }
 
   // Set Up HTTP query
@@ -295,6 +350,10 @@ void worker_loop(int currentMillis)
   MDNS.update();
 #endif
   parseUdpRPC();
+  if (shouldupdate)
+  {
+    all_esp_reset(Energy2Shelly_ResetReason::RECONFIGURE);
+  }
   if (shouldResetConfig)
   {
 #ifdef ESP32
@@ -353,7 +412,6 @@ void worker_loop(int currentMillis)
   DEBUG_SERIAL.handleQueue();
 }
 
-
 void loop()
 {
   currentMillis = millis();
@@ -366,7 +424,7 @@ void loop()
   }
   else
   {
-    // not connected, attempt to reconnect  
+    // not connected, attempt to reconnect
     static unsigned long reconnectStart = 0;
     if (currentMillis - reconnectStart > 10000) // Attempt to reconnect every 10 seconds, to fast reconnection can cause issues with some routers and APs
     {
@@ -375,8 +433,6 @@ void loop()
       WiFi.reconnect(); // forces a disconnect and reconnect, hence the 10s delay to avoid rapid reconnection attempts
       DEBUG_SERIAL.println(F("WiFi disconnected, attempting to reconnect..."));
     }
-   
-    
   }
 
   // check Watchdogs and print status info
@@ -393,7 +449,7 @@ void loop()
   if (millis() - WiFilastConnectionCheck > WiFicheckInterval)
   {
     DEBUG_SERIAL.println(F("Lost WiFi connection or SSID changed!"));
-    all_esp_reset(Energ2Shelly_ResetReason::WIFI_DISCONNECT);
+    all_esp_reset(Energy2Shelly_ResetReason::WIFI_DISCONNECT);
   }
 
   handleblinkled();

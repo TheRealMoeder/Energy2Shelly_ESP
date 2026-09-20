@@ -19,7 +19,10 @@ Connect your ESP to your PC using USB and follow the instructions on the [webfla
   > If you have trouble connecting to your ESP32-S3 or C3, hold BOOT and press RESET once before starting webflasher.
 
 ## Option 3: OTA update if you have previously installed Energy2Shelly
-Directly download a matching OTA-binary for your ESP device from the releases page and install the over-the-air update using WifiManager on your Energy2Shelly. 
+Directly download a matching OTA-binary for your ESP device from the releases page and install the over-the-air update using WifiManager on your Energy2Shelly.<br>
+You can reenter WifiManager Config page again after successfull config by <code>http://IP-address/update</code> (reboots)<br> 
+When WifiManger has started again within your network, you can update SW  <code>http://IP-address/update</code> or reconfigure your settings. Don't forget to safe your settings.
+
 
 # Configuration
 #### 1. Power device and wait for a hotspot named "Energy2Shelly"

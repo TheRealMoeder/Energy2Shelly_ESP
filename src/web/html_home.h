@@ -42,7 +42,9 @@ const char HTML_HOME[] PROGMEM = R"=====(
   <p>This device emulates a Shelly Pro 3EM to integrate various energy meters.</p>
   <div class="nav">
     <a href="/status">View Status</a>
+    <a href="/console">Console</a>
     <a href="/reset" class="reset">Reset Device</a>
+    <a href="/update" class="reset">Update SW</a>
   </div>
 
   <div class="data-container">
@@ -257,6 +259,47 @@ const char* htmlPage_console PROGMEM  = R"rawliteral(
 </html>
 )rawliteral";
 
+const char PASSWORD_INPUT_HTML[] PROGMEM = "<input type='password' name='reset_password' placeholder='Enter reset password' required><br/>";
+
+
+const char RESET_HTML[] PROGMEM = R"rawhtml(
+<!DOCTYPE html><html><head><title>Reset Confirmation</title>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<style>body{font-family:Arial,sans-serif;text-align:center;padding:20px;}
+.btn{padding:10px 20px;margin:10px;cursor:pointer;text-decoration:none;display:inline-block;border-radius:5px;font-size:16px;}
+.btn-yes{background-color:#d9534f;color:white;border:none;}
+.btn-no{background-color:#5bc0de;color:white;border:none;}</style></head><body>
+<h2>Reset Configuration?</h2>
+<p>Are you sure you want to reset the WiFi configuration? This will clear current WiFi settings and restart the device in AP mode.</p>
+<form method='POST' style='display:inline;' accept-charset='UTF-8'>
+)rawhtml";
+
+const char RESET_HTML_END[] PROGMEM = R"rawhtml(
+<button type='submit' class='btn btn-yes'>Yes, Reset</button>
+</form>
+<a href='/' class='btn btn-no'>Cancel</a>
+</body></html>
+)rawhtml";
+
+
+const char UPDATE_HTML[] PROGMEM = R"rawhtml(
+<!DOCTYPE html><html><head><title>Update Confirmation</title>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<style>body{font-family:Arial,sans-serif;text-align:center;padding:20px;}
+.btn{padding:10px 20px;margin:10px;cursor:pointer;text-decoration:none;display:inline-block;border-radius:5px;font-size:16px;}
+.btn-yes{background-color:#d9534f;color:white;border:none;}
+.btn-no{background-color:#5bc0de;color:white;border:none;}</style></head><body>
+<h2>Update Configuration?</h2>
+<p>Are you sure you want to update the WiFi configuration?</p>
+<form method='POST' style='display:inline;' accept-charset='UTF-8'>
+)rawhtml";
+
+const char UPDATE_HTML_END[] PROGMEM = R"rawhtml(
+<button type='submit' class='btn btn-yes'>Yes, Update</button>
+</form>
+<a href='/' class='btn btn-no'>Cancel</a>
+</body></html>
+)rawhtml";
 
 
 
