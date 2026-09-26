@@ -94,7 +94,7 @@ bool parseTibberPulse()
       TibberPulse_URL_guesser();
       return false;
     }
-    success_counter = 10;
+   
     WiFiClient *w = http.getStreamPtr();
     w->readBytes(smlpayload, getlength);
     // the OBIS codes for consumption (1-0:1.8.0*255) and power (1-0:16.7.0*255) are the same,
@@ -108,10 +108,12 @@ bool parseTibberPulse()
         DEBUG_SERIAL.printf("%02xh ", smlpayload[i]);
       }
       DEBUG_SERIAL.println();
+      TibberPulse_URL_guesser();
       ret = false;
     }
     else
     {
+      success_counter = 10;
       int i = 0, iHandler = 0;
       unsigned char c;
       sml_states_t s;
