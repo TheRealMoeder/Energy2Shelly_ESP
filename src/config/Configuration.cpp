@@ -50,7 +50,8 @@ uint8_t modbusdev_int;     // default device id for KSEM
 char tibber_host[41] = "x.x.x.x[:xxxx]";     // IP / HOSTNAME [and PORT] of Tibber Pulse Bridge
 char tibber_user[11] = "admin";              // fixed user
 char tibber_password[10] = "xxxx-xxxx";      // replace with password printed on Tibber Pulse Bridge device
-char tibber_rpc[21] = "/data.json?node_id="; // fixed rpc path
+char tibber_rpc[2][26] = {"/data.json?node_id=","/node_data.json?node_id="}; // fixed rpc path
+
 char tibber_nodeid[2] = "1";                 // node id of the Pulse IR device, defaults to 1. if reparing this might change, check the node id in the web interface of the Tibber Pulse Bridge device
 
 // LED settings
