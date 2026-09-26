@@ -234,6 +234,10 @@ extern uint16_t sunspec_port_int; // default port
 extern uint8_t modbusdev_int; // default device id for KSEM
 
 
+// RCT Power settings
+extern char rct_host[41];
+extern char rct_port[6];
+
 extern char tibber_host[41];
 extern char tibber_user[11];
 extern char tibber_password[10];
@@ -280,6 +284,7 @@ extern bool dataSHRDZM;
 extern bool dataHTTP;
 extern bool dataSUNSPEC;
 extern bool dataTIBBERPULSE;
+extern bool dataRCT;
 
 extern Preferences preferences;
 

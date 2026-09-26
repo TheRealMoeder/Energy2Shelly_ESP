@@ -80,6 +80,11 @@ When WifiManger has started again within your network, you can update SW  <code>
       - **EMH EHZ** (SML message length: 448)
       - **EasyMeter ESY11** (SML message length: 476)
     - Support for additional power meters can be easily added. If you can provide your meter's SML sample data and message length and confirm that the parser works with your meter's data stream, then please open an issue or, even better, a PR with the details!
+  - <code>RCT</code>
+    - RCT Power inverter with integrated grid sensor (e.g. RCT Power Storage) via the RCT Power "Serial Communication Protocol" over TCP
+    - allow the ESP access to the RCT device on port <code>8899</code> (optional firewall / VLAN configuration)
+    - provide the IP address or hostname of the RCT Power device
+    - grid power per phase, import/export energy counters and grid voltage/frequency are read automatically and made available to the Shelly Pro 3EM Emulator
 
   #### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>

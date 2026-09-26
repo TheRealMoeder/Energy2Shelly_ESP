@@ -53,6 +53,10 @@ char tibber_password[10] = "xxxx-xxxx";      // replace with password printed on
 char tibber_rpc[21] = "/data.json?node_id="; // fixed rpc path
 char tibber_nodeid[2] = "1";                 // node id of the Pulse IR device, defaults to 1. if reparing this might change, check the node id in the web interface of the Tibber Pulse Bridge device
 
+// RCT Power settings
+char rct_host[41] = "192.168.0.1"; // IP / HOSTNAME of the RCT Power device
+char rct_port[6] = "8899";         // TCP port (8899 is the standard RCT Power port)
+
 // LED settings
 char led_gpio[3] = "";
 char led_gpio_i[6];
@@ -93,6 +97,7 @@ bool dataSHRDZM = false;
 bool dataHTTP = false;
 bool dataSUNSPEC = false;
 bool dataTIBBERPULSE = false;
+bool dataRCT = false;
 
 Preferences preferences;
 
@@ -217,6 +222,9 @@ void WifiManagerSetup(bool stationmode)
   strcpy(tibber_nodeid, preferences.getString("tibber_nodeid", tibber_nodeid).c_str());
   strcpy(tibber_user, preferences.getString("tibber_user", tibber_user).c_str());
   strcpy(tibber_password, preferences.getString("tibber_password", tibber_password).c_str());
+  // RCT Power settings
+  strcpy(rct_host, preferences.getString("rct_host", rct_host).c_str());
+  strcpy(rct_port, preferences.getString("rct_port", rct_port).c_str());
 
   const char *show_pwd_str = "<input type=\"checkbox\" onclick=\"t('%s')\">&nbsp;<label>Show password</label><br/>";
 
@@ -232,7 +240,7 @@ void WifiManagerSetup(bool stationmode)
   static WiFiManagerParameter custom_section1("<h3>General settings</h3><script>function t(s) { var x = document.getElementById(s); x.type === \"password\" ? x.type = \"text\" : x.type = \"password\"; }</script>");
   static WiFiManagerParameter param_reset_password("reset_password", "Reset Password <span title=\"For resetting the WiFi configuration and putting the device in AP / config mode\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", reset_password, 32, "type='password'");
   static WiFiManagerParameter param_reset_password_show_password(buf_rst_pwd_show_pwd);
-  static WiFiManagerParameter custom_input_type("type", "<hr><b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data<br><code>TIBBERPULSE</code> for TibberPulse SML data", input_type, 40);
+  static WiFiManagerParameter custom_input_type("type", "<hr><b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data<br><code>TIBBERPULSE</code> for TibberPulse SML data<br><code>RCT</code> for RCT Power grid data", input_type, 40);
   static WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 160);
   static WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
   static WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
@@ -267,6 +275,11 @@ void WifiManagerSetup(bool stationmode)
   static WiFiManagerParameter param_tibber_user("tibber_user", "User <span title=\"defaults to: admin\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_user, 10);
   static WiFiManagerParameter param_tibber_password("tibber_password", "Password <span title=\"as printed on bridge device: xxxx-xxxx\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_password, 10, "type='password'");
   static WiFiManagerParameter param_tibber_password_show_password(buf_tibber_pwd_show_pwd);
+
+  // RCT Power section
+  static WiFiManagerParameter custom_section_rct("<hr><h3>RCT Power options</h3>");
+  static WiFiManagerParameter custom_rct_host("rct_host", "<b>RCT host</b><br>IP address or hostname of the RCT Power device (with integrated grid sensor)", rct_host, 41);
+  static WiFiManagerParameter custom_rct_port("rct_port", "<b>RCT port</b><br><code>8899</code> default", rct_port, 6);
 
   static WiFiManager wifiManager;
   wifiManager.setDebugOutput(false);
@@ -317,6 +330,10 @@ void WifiManagerSetup(bool stationmode)
   wifiManager.addParameter(&param_tibber_user);
   wifiManager.addParameter(&param_tibber_password);
   wifiManager.addParameter(&param_tibber_password_show_password);
+  // RCT Power
+  wifiManager.addParameter(&custom_section_rct);
+  wifiManager.addParameter(&custom_rct_host);
+  wifiManager.addParameter(&custom_rct_port);
   wifiManager.setConfigPortalTimeout(180);
   std::vector<const char *> usermenu = {"wifi","info","param","exit","sep","update"};
   wifiManager.setMenu(usermenu);
@@ -387,6 +404,9 @@ void WifiManagerSetup(bool stationmode)
   strcpy(tibber_nodeid, param_tibber_node_id.getValue());
   strcpy(tibber_user, param_tibber_user.getValue());
   strcpy(tibber_password, param_tibber_password.getValue());
+  // RCT Power
+  strcpy(rct_host, custom_rct_host.getValue());
+  strcpy(rct_port, custom_rct_port.getValue());
 
   offsetPerPhase = String(power_offset).toDouble() / 3.0; // distribute offset equally across phases
 
@@ -446,7 +466,12 @@ void WifiManagerSetup(bool stationmode)
   DEBUG_SERIAL.println(String(tibber_nodeid));
   DEBUG_SERIAL.print(F("\t - tibber_user: "));
   DEBUG_SERIAL.println(String(tibber_user));
-  DEBUG_SERIAL.print(F("\t - tibber_password: ********"));
+  DEBUG_SERIAL.println(F("\t - tibber_password: ********"));
+  DEBUG_SERIAL.println(F("\tRCT Power options:"));
+  DEBUG_SERIAL.print(F("\t - rct_host: "));
+  DEBUG_SERIAL.println(String(rct_host));
+  DEBUG_SERIAL.print(F("\t - rct_port: "));
+  DEBUG_SERIAL.println(String(rct_port));
 
   if (strcmp(input_type, "SMA") == 0)
   {
@@ -472,6 +497,11 @@ void WifiManagerSetup(bool stationmode)
   {
     dataTIBBERPULSE = true;
     DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
+  }
+  else if (strcmp(input_type, "RCT") == 0)
+  {
+    dataRCT = true;
+    DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
   }
   else
   {
@@ -520,6 +550,8 @@ void WifiManagerSetup(bool stationmode)
     preferences.putString("tibber_nodeid", tibber_nodeid);
     preferences.putString("tibber_user", tibber_user);
     preferences.putString("tibber_password", tibber_password);
+    preferences.putString("rct_host", rct_host);
+    preferences.putString("rct_port", rct_port);
     
     wifiManager.reboot();
   }
