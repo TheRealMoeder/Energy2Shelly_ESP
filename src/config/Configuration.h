@@ -241,7 +241,7 @@ extern char rct_port[6];
 extern char tibber_host[41];
 extern char tibber_user[11];
 extern char tibber_password[10];
-extern char tibber_rpc[21];
+extern char tibber_rpc[2][26];
 extern char tibber_nodeid[2];
 
 // LED settings

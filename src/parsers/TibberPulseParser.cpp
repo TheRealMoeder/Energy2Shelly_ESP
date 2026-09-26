@@ -6,7 +6,8 @@
 double tibber_consumption = 0, tibber_production = 0, tibber_power = 0;
 double tibber_power_l1 = 0, tibber_power_l2 = 0, tibber_power_l3 = 0;
 
-typedef struct {
+typedef struct
+{
   const unsigned char OBIS[6];
   void (*Handler)();
 } OBISHandler;
@@ -26,17 +27,17 @@ void PowerL2() { smlOBISW(tibber_power_l2); }
 void PowerL3() { smlOBISW(tibber_power_l3); }
 
 OBISHandler OBISHandlers[] = {
-  {{0x01, 0x00, 0x01, 0x08, 0x00, 0xff}, &Consumption}, /* 1-0: 1. 8.0*255 (Consumption Total) */
-  {{0x01, 0x00, 0x02, 0x08, 0x00, 0xff}, &Production},  /* 1-0: 2. 8.0*255 (Production Total) */
-  {{0x01, 0x00, 0x10, 0x07, 0x00, 0xff}, &Power},       /* 1-0:16. 7.0*255 (power) */
-  {{0x01, 0x00, 0x24, 0x07, 0x00, 0xff}, &PowerL1},     /* 1-0:36. 7.0*255 (power L1) */
-  {{0x01, 0x00, 0x38, 0x07, 0x00, 0xff}, &PowerL2},     /* 1-0:56. 7.0*255 (power L2) */
-  {{0x01, 0x00, 0x4c, 0x07, 0x00, 0xff}, &PowerL3},     /* 1-0:76. 7.0*255 (power L3) */
-  {{0, 0}}
-};
+    {{0x01, 0x00, 0x01, 0x08, 0x00, 0xff}, &Consumption}, /* 1-0: 1. 8.0*255 (Consumption Total) */
+    {{0x01, 0x00, 0x02, 0x08, 0x00, 0xff}, &Production},  /* 1-0: 2. 8.0*255 (Production Total) */
+    {{0x01, 0x00, 0x10, 0x07, 0x00, 0xff}, &Power},       /* 1-0:16. 7.0*255 (power) */
+    {{0x01, 0x00, 0x24, 0x07, 0x00, 0xff}, &PowerL1},     /* 1-0:36. 7.0*255 (power L1) */
+    {{0x01, 0x00, 0x38, 0x07, 0x00, 0xff}, &PowerL2},     /* 1-0:56. 7.0*255 (power L2) */
+    {{0x01, 0x00, 0x4c, 0x07, 0x00, 0xff}, &PowerL3},     /* 1-0:76. 7.0*255 (power L3) */
+    {{0, 0}}};
 
 // SML message length tested with following power meters:
-enum {
+enum
+{
   // EMH eHZB
   SML_PM_EMH_EHZB = 248,
   // eBZ DD3
@@ -53,46 +54,75 @@ enum {
 };
 byte smlpayload[SMLPAYLOADMAXSIZE]{0};
 
-bool parseTibberPulse() {
+static uint8_t guess = 0;
+static uint8_t success_counter = 0;
+
+void TibberPulse_URL_guesser(void)
+{
+  if (success_counter > 0)
+  { // keep old URL fetch some time
+    success_counter--;
+  }
+  else
+  { // try another one
+    guess++;
+    guess %= 2;
+  }
+}
+
+bool parseTibberPulse()
+{
   bool ret = true;
   int getlength = 0;
   DEBUG_SERIAL.print(F("Querying TibberPulse raw SML: "));
   String url = "http://";
   url += String(tibber_host);
-  url += String(tibber_rpc);
+  url += String(tibber_rpc[guess]);
   url += String(tibber_nodeid);
   DEBUG_SERIAL.printf("URL:%s, user:%s\r\n", url.c_str(), tibber_user);
   http.begin(wifi_client, url);
   http.setAuthorization(tibber_user, tibber_password);
   http.setTimeout(5000);
   int httpResponseCode = http.GET();
-  if (httpResponseCode > 0) {
+  if (httpResponseCode > 0)
+  {
     getlength = http.getSize();
     DEBUG_SERIAL.printf("Response message size=%d\r\n", getlength);
-    if ((getlength > SMLPAYLOADMAXSIZE) || (getlength == 0)) {
+    if ((getlength > SMLPAYLOADMAXSIZE) || (getlength == 0))
+    {
       http.end();
+      TibberPulse_URL_guesser();
       return false;
     }
+   
     WiFiClient *w = http.getStreamPtr();
     w->readBytes(smlpayload, getlength);
     // the OBIS codes for consumption (1-0:1.8.0*255) and power (1-0:16.7.0*255) are the same,
     // the SML message length might be different, but reading these should still work
-    if (getlength != SML_PM_EMH_EHZB && getlength != SML_PM_EBZ_DD3 && getlength != SML_PM_MT631 && getlength != SML_PM_ESY11 && getlength != SML_PM_EMH_EHZ && getlength != SML_PM_LG_LE320) {
+    if (getlength != SML_PM_EMH_EHZB && getlength != SML_PM_EBZ_DD3 && getlength != SML_PM_MT631 && getlength != SML_PM_ESY11 && getlength != SML_PM_EMH_EHZ && getlength != SML_PM_LG_LE320)
+    {
       DEBUG_SERIAL.printf("ERROR: SML data not in expected length! length=%d \r\n", getlength);
       // for extra debugging
-      for (int i = 0; i < getlength; i++) {
-          DEBUG_SERIAL.printf("%02xh ", smlpayload[i]);
+      for (int i = 0; i < getlength; i++)
+      {
+        DEBUG_SERIAL.printf("%02xh ", smlpayload[i]);
       }
       DEBUG_SERIAL.println();
+      TibberPulse_URL_guesser();
       ret = false;
-    } else {
+    }
+    else
+    {
+      success_counter = 10;
       int i = 0, iHandler = 0;
       unsigned char c;
       sml_states_t s;
-      for (i = 0; i < getlength; ++i) {
+      for (i = 0; i < getlength; ++i)
+      {
         c = smlpayload[i];
         s = smlState(c);
-        switch (s) {
+        switch (s)
+        {
         case SML_START:
           /* reset local vars */
           tibber_consumption = 0;
@@ -104,11 +134,12 @@ bool parseTibberPulse() {
           break;
         case SML_LISTEND:
           for (
-            iHandler = 0;
-            OBISHandlers[iHandler].Handler != 0 && !(smlOBISCheck(OBISHandlers[iHandler].OBIS));
-            iHandler++
-          );
-          if (OBISHandlers[iHandler].Handler != 0) {
+              iHandler = 0;
+              OBISHandlers[iHandler].Handler != 0 && !(smlOBISCheck(OBISHandlers[iHandler].OBIS));
+              iHandler++)
+            ;
+          if (OBISHandlers[iHandler].Handler != 0)
+          {
             OBISHandlers[iHandler].Handler();
           }
           break;
@@ -117,9 +148,12 @@ bool parseTibberPulse() {
           break;
         case SML_FINAL:
           setEnergyData(tibber_consumption, tibber_production);
-          if (tibber_power_l1 != 0 || tibber_power_l2 != 0 || tibber_power_l3 != 0) {
+          if (tibber_power_l1 != 0 || tibber_power_l2 != 0 || tibber_power_l3 != 0)
+          {
             setPowerData(tibber_power_l1, tibber_power_l2, tibber_power_l3);
-          } else {
+          }
+          else
+          {
             setPowerData(tibber_power);
           }
           ret = true;
@@ -129,9 +163,14 @@ bool parseTibberPulse() {
         }
       }
     }
-  } else {
-      DEBUG_SERIAL.printf("HTTP request failed, error code: %d\n", httpResponseCode);
-      ret = false;
+  }
+  else
+  {
+    TibberPulse_URL_guesser();
+    DEBUG_SERIAL.print(F("HTTP request failed, error code:"));
+    DEBUG_SERIAL.println(httpResponseCode);
+
+    ret = false;
   }
   // Free resources
   http.end();
