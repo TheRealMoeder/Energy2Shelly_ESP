@@ -95,9 +95,61 @@ bool parseTibberPulse()
       return false;
     }
    
-    WiFiClient *w = http.getStreamPtr();
-    w->readBytes(smlpayload, getlength);
-    // the OBIS codes for consumption (1-0:1.8.0*255) and power (1-0:16.7.0*255) are the same,
+  size_t bytesRead = 0;
+  WiFiClient *w = http.getStreamPtr();
+    if (getlength > 0) 
+    {
+      //size is known
+      bytesRead = w->readBytes(smlpayload, getlength);
+    } 
+    else 
+    {
+      // unkown size
+      unsigned long timeout = millis();
+      
+      // keep polling until exit condition met
+      while (http.connected() && (w->available() || w->peek() != -1)) 
+      {
+        if (w->available()) 
+        {
+          // Buffer Overflow Protection
+          if (bytesRead >= SMLPAYLOADMAXSIZE) 
+          {
+            DEBUG_SERIAL.println(F("Error: Payload exceeds SMLPAYLOADMAXSIZE!"));
+            http.end();
+            TibberPulse_URL_guesser();
+            return false;
+          }
+          
+          smlpayload[bytesRead] = w->read();
+          bytesRead++;
+          timeout = millis(); // reset timeout, if data is comming in.
+        }
+        
+        // Abort in case of inactivity
+        if (millis() - timeout > 3000) 
+        {
+          DEBUG_SERIAL.println(F("Error: Timeout during reading stream."));
+          break;
+        }
+        
+        delay(1); 
+      }
+      
+    }
+    getlength=bytesRead;
+    // read some data?
+    if (bytesRead == 0)
+    {
+      DEBUG_SERIAL.println(F("Error: No data received"));
+      http.end();
+      TibberPulse_URL_guesser();
+      return false;
+    }
+
+    DEBUG_SERIAL.printf("successful %d bytes in smlpayload.\r\n", bytesRead);
+  
+       // the OBIS codes for consumption (1-0:1.8.0*255) and power (1-0:16.7.0*255) are the same,
     // the SML message length might be different, but reading these should still work
     if (getlength != SML_PM_EMH_EHZB && getlength != SML_PM_EBZ_DD3 && getlength != SML_PM_MT631 && getlength != SML_PM_ESY11 && getlength != SML_PM_EMH_EHZ && getlength != SML_PM_LG_LE320)
     {
