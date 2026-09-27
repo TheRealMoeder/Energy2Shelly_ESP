@@ -45,7 +45,11 @@ extern AsyncWebSocket wsConsole;
 class WebDebugLogger : public Print {
 private:
     // Safe static size inside the global BSS RAM segment (0 bytes on Stack)
-    static const size_t QUEUE_SIZE = 1024; 
+    #ifdef ESP32
+    static const size_t QUEUE_SIZE = 4096; // allow more queue size for ESP32
+    #else
+    static const size_t QUEUE_SIZE = 1024;
+    #endif
     char queue[QUEUE_SIZE];
     volatile size_t head = 0;
     volatile size_t tail = 0;
