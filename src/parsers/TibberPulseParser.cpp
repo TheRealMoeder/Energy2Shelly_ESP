@@ -35,6 +35,8 @@ OBISHandler OBISHandlers[] = {
     {{0x01, 0x00, 0x4c, 0x07, 0x00, 0xff}, &PowerL3},     /* 1-0:76. 7.0*255 (power L3) */
     {{0, 0}}};
 
+
+#define SMLPAYLOADMAXSIZE 500
 byte smlpayload[SMLPAYLOADMAXSIZE]{0};
 
 static uint8_t guess = 0;
