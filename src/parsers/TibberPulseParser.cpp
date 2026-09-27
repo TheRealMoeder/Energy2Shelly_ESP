@@ -35,24 +35,6 @@ OBISHandler OBISHandlers[] = {
     {{0x01, 0x00, 0x4c, 0x07, 0x00, 0xff}, &PowerL3},     /* 1-0:76. 7.0*255 (power L3) */
     {{0, 0}}};
 
-// SML message length tested with following power meters:
-enum
-{
-  // EMH eHZB
-  SML_PM_EMH_EHZB = 248,
-  // eBZ DD3
-  SML_PM_EBZ_DD3 = 396,
-  // Iskra MT631
-  SML_PM_MT631 = 236,
-  // EasyMeter ESY11
-  SML_PM_ESY11 = 476,
-  // EMH EHZ
-  SML_PM_EMH_EHZ = 448,
-  SML_PM_EBZDD3_B = 408,
-  // Landis + Gyr E320
-  SML_PM_LG_LE320 = 276,
-  SMLPAYLOADMAXSIZE = 500
-};
 byte smlpayload[SMLPAYLOADMAXSIZE]{0};
 
 static uint8_t guess = 0;
@@ -95,50 +77,49 @@ bool parseTibberPulse()
       TibberPulse_URL_guesser();
       return false;
     }
-   
-  size_t bytesRead = 0;
-  WiFiClient *w = http.getStreamPtr();
-    if (getlength > 0) 
+
+    size_t bytesRead = 0;
+    WiFiClient *w = http.getStreamPtr();
+    if (getlength > 0)
     {
-      //size is known
+      // size is known
       bytesRead = w->readBytes(smlpayload, getlength);
-    } 
-    else 
+    }
+    else
     {
       // unkown size
       unsigned long timeout = millis();
-      
+
       // keep polling until exit condition met
-      while (http.connected() && (w->available() || w->peek() != -1)) 
+      while (http.connected() && (w->available() || w->peek() != -1))
       {
-        if (w->available()) 
+        if (w->available())
         {
           // Buffer Overflow Protection
-          if (bytesRead >= SMLPAYLOADMAXSIZE) 
+          if (bytesRead >= SMLPAYLOADMAXSIZE)
           {
             DEBUG_SERIAL.println(F("Error: Payload exceeds SMLPAYLOADMAXSIZE!"));
             http.end();
             TibberPulse_URL_guesser();
             return false;
           }
-          
+
           smlpayload[bytesRead] = w->read();
           bytesRead++;
           timeout = millis(); // reset timeout, if data is comming in.
         }
-        
+
         // Abort in case of inactivity
-        if (millis() - timeout > 3000) 
+        if (millis() - timeout > 3000)
         {
           DEBUG_SERIAL.println(F("Error: Timeout during reading stream."));
           break;
         }
-        
-        delay(1); 
+
+        delay(1);
       }
-      
     }
-    getlength=bytesRead;
+    getlength = bytesRead;
     // read some data?
     if (bytesRead == 0)
     {
@@ -149,11 +130,11 @@ bool parseTibberPulse()
     }
 
     DEBUG_SERIAL.printf("successful %d bytes in smlpayload.\r\n", bytesRead);
-  
-       // the OBIS codes for consumption (1-0:1.8.0*255) and power (1-0:16.7.0*255) are the same,
+
+    // the OBIS codes for consumption (1-0:1.8.0*255) and power (1-0:16.7.0*255) are the same,
     // the SML message length might be different, but reading these should still work
-    //if (getlength != SML_PM_EMH_EHZB && getlength != SML_PM_EBZ_DD3 && getlength != SML_PM_MT631 && getlength != SML_PM_ESY11 && getlength != SML_PM_EMH_EHZ && getlength != SML_PM_LG_LE320)
-    if (getlength<100)
+    // if (getlength != SML_PM_EMH_EHZB && getlength != SML_PM_EBZ_DD3 && getlength != SML_PM_MT631 && getlength != SML_PM_ESY11 && getlength != SML_PM_EMH_EHZ && getlength != SML_PM_LG_LE320)
+    if (getlength < 100)
     {
       DEBUG_SERIAL.printf("ERROR: SML data not in expected length! length=%d \r\n", getlength);
       // for extra debugging
