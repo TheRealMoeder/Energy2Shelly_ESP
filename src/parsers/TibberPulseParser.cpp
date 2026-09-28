@@ -124,6 +124,9 @@ bool parseTibberPulse()
         }
         timeout = millis(); // reset timeout, if data is comming in.
       }
+      else {
+         delay(1);
+      }
 
       // Abort in case of inactivity
       if (millis() - timeout > 3000)
@@ -132,7 +135,7 @@ bool parseTibberPulse()
         break;
       }
 
-      delay(1);
+     
     }
     DEBUG_SERIAL.print(F("\nSML, Number of bytes parsed: "));
     DEBUG_SERIAL.println(counter);
