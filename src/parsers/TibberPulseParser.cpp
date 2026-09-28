@@ -35,25 +35,6 @@ OBISHandler OBISHandlers[] = {
     {{0x01, 0x00, 0x4c, 0x07, 0x00, 0xff}, &PowerL3},     /* 1-0:76. 7.0*255 (power L3) */
     {{0, 0}}};
 
-// SML message length tested with following power meters:
-enum
-{
-  // EMH eHZB
-  SML_PM_EMH_EHZB = 248,
-  // eBZ DD3
-  SML_PM_EBZ_DD3 = 396,
-  // Iskra MT631
-  SML_PM_MT631 = 236,
-  // EasyMeter ESY11
-  SML_PM_ESY11 = 476,
-  // EMH EHZ
-  SML_PM_EMH_EHZ = 448,
-  // Landis + Gyr E320
-  SML_PM_LG_LE320 = 276,
-  SMLPAYLOADMAXSIZE = 500
-};
-byte smlpayload[SMLPAYLOADMAXSIZE]{0};
-
 static uint8_t guess = 0;
 static uint8_t success_counter = 0;
 
@@ -72,8 +53,7 @@ void TibberPulse_URL_guesser(void)
 
 bool parseTibberPulse()
 {
-  bool ret = true;
-  int getlength = 0;
+  bool ret = false;
   DEBUG_SERIAL.print(F("Querying TibberPulse raw SML: "));
   String url = "http://";
   url += String(tibber_host);
@@ -86,41 +66,21 @@ bool parseTibberPulse()
   int httpResponseCode = http.GET();
   if (httpResponseCode > 0)
   {
-    getlength = http.getSize();
-    DEBUG_SERIAL.printf("Response message size=%d\r\n", getlength);
-    if ((getlength > SMLPAYLOADMAXSIZE) || (getlength == 0))
+
+    WiFiClient *w = http.getStreamPtr();    
+    int iHandler = 0;
+    sml_states_t s;
+    unsigned int counter=0;
+    unsigned long timeout = millis();
+    // keep polling until exit condition met
+    while (http.connected() && (w->available() || w->peek() != -1))
     {
-      http.end();
-      TibberPulse_URL_guesser();
-      return false;
-    }
-   
-    WiFiClient *w = http.getStreamPtr();
-    w->readBytes(smlpayload, getlength);
-    // the OBIS codes for consumption (1-0:1.8.0*255) and power (1-0:16.7.0*255) are the same,
-    // the SML message length might be different, but reading these should still work
-    if (getlength != SML_PM_EMH_EHZB && getlength != SML_PM_EBZ_DD3 && getlength != SML_PM_MT631 && getlength != SML_PM_ESY11 && getlength != SML_PM_EMH_EHZ && getlength != SML_PM_LG_LE320)
-    {
-      DEBUG_SERIAL.printf("ERROR: SML data not in expected length! length=%d \r\n", getlength);
-      // for extra debugging
-      for (int i = 0; i < getlength; i++)
+      if (w->available())
       {
-        DEBUG_SERIAL.printf("%02xh ", smlpayload[i]);
-      }
-      DEBUG_SERIAL.println();
-      TibberPulse_URL_guesser();
-      ret = false;
-    }
-    else
-    {
-      success_counter = 10;
-      int i = 0, iHandler = 0;
-      unsigned char c;
-      sml_states_t s;
-      for (i = 0; i < getlength; ++i)
-      {
-        c = smlpayload[i];
-        s = smlState(c);
+        counter++;
+        unsigned char val = w->read();
+        if (success_counter<10) DEBUG_SERIAL.printf("%02x ",val);  // if SML has been successfully parsed do not print bytes.
+        s = smlState(val);
         switch (s)
         {
         case SML_START:
@@ -144,7 +104,7 @@ bool parseTibberPulse()
           }
           break;
         case SML_UNEXPECTED:
-          DEBUG_SERIAL.printf(">>> Unexpected byte >%02X<! <<<\n", smlpayload[i]);
+          DEBUG_SERIAL.printf(">>> Unexpected byte >%02X<! <<<\n", val);
           break;
         case SML_FINAL:
           setEnergyData(tibber_consumption, tibber_production);
@@ -156,22 +116,39 @@ bool parseTibberPulse()
           {
             setPowerData(tibber_power);
           }
+          success_counter = 10;
           ret = true;
           break;
         default:
           break;
         }
+        timeout = millis(); // reset timeout, if data is comming in.
       }
+      else {
+         delay(1);
+      }
+
+      // Abort in case of inactivity
+      if (millis() - timeout > 3000)
+      {
+        DEBUG_SERIAL.println(F("Error: Timeout during reading stream."));
+        break;
+      }
+
+     
     }
+    DEBUG_SERIAL.print(F("\nSML, Number of bytes parsed: "));
+    DEBUG_SERIAL.println(counter);
   }
   else
   {
-    TibberPulse_URL_guesser();
+   
     DEBUG_SERIAL.print(F("HTTP request failed, error code:"));
     DEBUG_SERIAL.println(httpResponseCode);
 
     ret = false;
   }
+  if (ret==false)  TibberPulse_URL_guesser();
   // Free resources
   http.end();
   return ret;
