@@ -88,12 +88,12 @@ To re-enter WiFiManager for updates or parameter changes:
     - Provide the `IP address / hostname` and `port` of the WebSocket API, the `node id` of your Pulse IR in the Bridge configuration, plus `username` and `password` of your Tibber Bridge, in the configuration options so Energy2Shelly_ESP can connect and receive power data.
     - The parser automatically extracts `total power`, `phase power` and `energy from/to the grid` from the WebSocket API data stream and makes it available for the Shelly Pro 3EM Emulator.
     - The following power meters are confirmed to work:
-      - **EMH EHZB** (SML message length: 248)
-      - **eBZ DD3** (SML message length: 396)
-      - **Iskra MT631** (SML message length: 236)
-      - **EMH EHZ** (SML message length: 448)
-      - **EasyMeter ESY11** (SML message length: 476)
-    - Most power meters with SML output should work out of the box. If you encounter an error, please open an issue with your meter's model, SML message length, and a sample data log.
+      - **EMH EHZB**
+      - **eBZ DD3**
+      - **Iskra MT631**
+      - **EMH EHZ**
+      - **EasyMeter ESY11**
+    - Most power meters with SML output should work out of the box. If you encounter an error, please open an issue with your meter's model and a sample data log.
 
   #### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>
