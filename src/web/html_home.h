@@ -399,7 +399,7 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     <div id="power-data"></div>
     <footer class="footer">
         <p>Energy2Shelly_ESP EM Live Power Dashboard</p>
-        <p>This software uses <a href="https://chartjs.org" target="_blank" rel="noopener">Chart.js</a> (Released under the MIT License, Copyright © 2023 Chart.js Contributors).</p>
+        <p>This software uses <a href="https://chartjs.org" target="_blank" rel="noopener">Chart.js</a> (Released under the MIT License, Copyright © 2025 Chart.js Contributors).</p>
     </footer>
 </div>
 
