@@ -2,6 +2,7 @@
 #define HTML_HOME_H
 
 #include <Arduino.h>
+#include "chart_js.h"
 
 const char HTML_HOME[] PROGMEM = R"=====(
 <!DOCTYPE html>
@@ -308,8 +309,23 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Energy2Shelly_ESP EM Live Power Dashboard</title>
     <!-- Chart.js via CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/chart.min.js"></script>
     <style>
+        .footer {
+            margin-top: 30px;
+            padding: 15px 0;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #9ca3af;
+            border-top: 1px solid #e5e7eb;
+        }
+        .footer a {
+            color: #6b7280;
+            text-decoration: underline;
+        }
+        .footer a:hover {
+            color: #374151;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f3f4f6;
@@ -381,6 +397,10 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     </div>
 
     <div id="power-data"></div>
+    <footer class="footer">
+        <p>Energy2Shelly_ESP EM Live Power Dashboard</p>
+        <p>This software uses <a href="https://chartjs.org" target="_blank" rel="noopener">Chart.js</a> (Released under the MIT License, Copyright © 2023 Chart.js Contributors).</p>
+    </footer>
 </div>
 
 <script>
