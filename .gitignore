@@ -7,3 +7,4 @@
 .vscode/extensions.json
 .DS_Store
 .vscode/settings.json
+src/web/chart_js.h
