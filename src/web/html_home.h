@@ -43,7 +43,7 @@ const char HTML_HOME[] PROGMEM = R"=====(
   <div class="nav">
     <a href="/status">View Status</a>
     <a href="/console">Console</a>
-    <a href="/reset" class="reset">Reset Device</a>
+    <a href="/plot">Plot Data</a>
     <a href="/update" class="reset">Update SW</a>
   </div>
 
@@ -301,6 +301,197 @@ const char UPDATE_HTML_END[] PROGMEM = R"rawhtml(
 </body></html>
 )rawhtml";
 
+const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy2Shelly_ESP EM Live Power Dashboard</title>
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 20px;
+            color: #1f2937;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        /* Style for Chart-Container */
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+        /* Grid-Layout phase charts */
+        .phase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .phase-card {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            border-top: 4px solid #cbd5e1;
+        }
+        /* color code phases */
+        .phase-a { border-top-color: #ef4444; }
+        .phase-b { border-top-color: #3b82f6; }
+        .phase-c { border-top-color: #10b981; }
+        .total   { border-top-color: #f59e0b; background-color: #fffbeb; }
+        
+        .phase-card h3 {
+            margin: 0 0 12px 0;
+            font-size: 1.1rem;
+            color: #374151;
+        }
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.9rem;
+        }
+        .data-row:last-child {
+            border-bottom: none;
+        }
+        .data-label {
+            color: #6b7280;
+        }
+        .data-value {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>⚡ Consumption in real-time Monitoring</h2>
+
+    <div class="chart-container">
+        <canvas id="powerChart"></canvas>
+    </div>
+
+    <div id="power-data"></div>
+</div>
+
+<script>
+    // Helperfunction for formating
+    function formatValue(value, unit, decimals = 2) {
+        if (value === undefined || value === null) return '-- ' + unit;
+        return Number(value).toFixed(decimals) + ' ' + unit;
+    }
+
+    // init CHART.JS
+    const ctx = document.getElementById('powerChart').getContext('2d');
+    const maxDataPoints = 30; // Number of points to display on the chart at once
+
+    const powerChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [], // filled dynamically with timestamps
+            datasets: [
+                { label: 'Phase A', data: [], borderColor: 'rgba(239, 68, 68, 0.6)', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 2 },
+                { label: 'Phase B', data: [], borderColor: 'rgba(59, 130, 246, 0.6)', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 3 },
+                { label: 'Phase C', data: [], borderColor: 'rgba(16, 185, 129, 0.6)', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 5 },
+                { label: 'Sum Power', data: [], borderColor: 'rgba(245, 158, 11, 0.6)', backgroundColor: 'rgba(245, 158, 11, 0.05)', borderWidth: 3, tension: 0.2, fill: true, pointRadius: 2 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // allow CSS control of height
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Power (Watt)' }
+                },
+                x: {
+                    title: { display: true, text: 'Time' }
+                }
+            },
+            plugins: {
+                legend: { position: 'top' }
+            }
+        }
+    });
+
+    // Exchange Standard-Canvas-Control with fixed height
+    ctx.canvas.parentNode.style.height = '350px';
+
+    function updatePowerData() {
+        fetch('/rpc/EM.GetStatus')
+            .then(response => response.json())
+            .then(data => {
+                
+                // Inject live data in graph
+                const jetzt = new Date();
+                const timeString = jetzt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                powerChart.data.labels.push(timeString);
+                powerChart.data.datasets[0].data.push(Number(data.a_act_power || 0));
+                powerChart.data.datasets[1].data.push(Number(data.b_act_power || 0));
+                powerChart.data.datasets[2].data.push(Number(data.c_act_power || 0));
+                powerChart.data.datasets[3].data.push(Number(data.total_act_power || 0));
+
+                // Shift effect: Remove oldest values on the left if limit is exceeded
+                if (powerChart.data.labels.length > maxDataPoints) {
+                    powerChart.data.labels.shift();
+                    powerChart.data.datasets.forEach(dataset => dataset.data.shift());
+                }
+
+                // display chart
+                powerChart.update('none'); // 'none' deactivate internal standard animation for better performance at fast updates
+
+
+                const phases = [
+                    { name: 'Phase A', prefix: 'a', class: 'phase-a' },
+                    { name: 'Phase B', prefix: 'b', class: 'phase-b' },
+                    { name: 'Phase C', prefix: 'c', class: 'phase-c' }
+                ];
+
+                let html = '<div class="phase-grid">';
+                phases.forEach(phase => {
+                    html += `<div class="phase-card ${phase.class}">
+                        <h3>${phase.name}</h3>
+                        <div class="data-row"><span class="data-label">Voltage:</span><span class="data-value">${formatValue(data[phase.prefix + '_voltage'], 'V')}</span></div>
+                        <div class="data-row"><span class="data-label">Current:</span><span class="data-value">${formatValue(data[phase.prefix + '_current'], 'A')}</span></div>
+                        <div class="data-row"><span class="data-label">Power:</span><span class="data-value">${formatValue(data[phase.prefix + '_act_power'], 'W')}</span></div>
+                        <div class="data-row"><span class="data-label">Apparent:</span><span class="data-value">${formatValue(data[phase.prefix + '_aprt_power'], 'VA')}</span></div>
+                        <div class="data-row"><span class="data-label">Power Factor:</span><span class="data-value">${formatValue(data[phase.prefix + '_pf'], '', 3)}</span></div>
+                        <div class="data-row"><span class="data-label">Frequency:</span><span class="data-value">${formatValue(data[phase.prefix + '_freq'], 'Hz')}</span></div>
+                    </div>`;
+                });
+
+                html += '<div class="phase-card total"><h3>Totals</h3>';
+                html += `<div class="data-row"><span class="data-label">Total Current:</span><span class="data-value">${formatValue(data.total_current, 'A')}</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Total Power:</span><span class="data-value">${formatValue(data.total_act_power, 'W')}</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Total Apparent:</span><span class="data-value">${formatValue(data.total_aprt_power, 'VA')}</span></div>`;
+                html += '</div>';
+                html += '</div>';
+
+                document.getElementById('power-data').innerHTML = html;
+            })
+            .catch(err => console.error("Error fetching Shelly data:", err));
+    }
+
+    // --- TIMING / INTERVALL ---
+    // force update by first entry
+    updatePowerData();
+    // and every 5 seconds after
+    setInterval(updatePowerData, 5000);
+</script>
+
+</body>
+</html>
+)rawliteral";
 
 
 #endif // HTML_HOME_H

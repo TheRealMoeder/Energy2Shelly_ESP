@@ -112,6 +112,15 @@ void setup(void)
     });
     request->send(response); });
 
+  server.on("/plot", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+    AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(webplotter_html), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+        // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
+        memcpy_P(buffer, webplotter_html + index, maxLen); return maxLen;
+    });
+    request->send(response); });
+
+
   server.on("/favicon.ico", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
               request->send(204); // 204 "No Content"
