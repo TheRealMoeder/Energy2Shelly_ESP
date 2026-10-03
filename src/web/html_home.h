@@ -432,8 +432,9 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             .then(data => {
                 
                 // Inject live data in graph
-                const jetzt = new Date();
-                const timeString = jetzt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const now_time = new Date();
+                const timeString = now_time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
 
                 powerChart.data.labels.push(timeString);
                 powerChart.data.datasets[0].data.push(Number(data.a_act_power || 0));
