@@ -330,7 +330,7 @@ const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
   <h2>System reboots...</h2>
   <p>The device will be reachable again in WiFiManager-Mode within your local network shortly.</p>
   <div class='loader'></div>
-  <div class='countdown'>Redirecting in <span id='count'>10</span> seconds...</div>
+  <div class='countdown'>Redirecting in <span id='count'>20</span> seconds...</div>
 </body></html>
 )rawhtml";
 
