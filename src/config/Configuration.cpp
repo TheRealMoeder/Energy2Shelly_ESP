@@ -273,32 +273,6 @@ void WifiManagerSetup(bool stationmode)
   wifiManager.setDebugOutput(false);
   wifiManager.setShowStaticFields(true);
 
-  // Inject script, catching OTA success messages in the browser
-  wifiManager.setCustomHeadElement(R"rawjavascript(
-<script>
-  document.addEventListener("DOMContentLoaded", function() {
-    if (window.location.pathname === '/u' || window.location.pathname === '/oaupdate') {
-      
-      let msgDiv = document.querySelector('div.msg.S');
-      if (msgDiv) {
-        msgDiv.innerHTML = "<strong>Update successful!</strong><br/>The device will restart.<br/>Redirecting in <span id='ota-count'>20</span> seconds...";
-        
-        let seconds = 20;
-        const timer = setInterval(() => {
-          seconds--;
-          let el = document.getElementById('ota-count');
-          if (el) el.textContent = seconds;
-          if (seconds <= 0) {
-            clearInterval(timer);
-            window.location.href = '/'; 
-          }
-        }, 1000);
-      }
-    }
-  });
-</script>
-)rawjavascript");
-
   // Move custom parameters to seperate menu to avoid issues with too many custom parameters and too many results from AP scan
   wifiManager.setParamsPage(true);
 

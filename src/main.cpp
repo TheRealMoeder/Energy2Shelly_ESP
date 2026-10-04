@@ -118,6 +118,16 @@ void setup(void)
             {
               request->send(204); // 204 "No Content"
             });
+  //Reloads of wifi manager page, redirect to main page 
+   server.on("/exit", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+   {
+    request->redirect("/");
+   });
+
+   server.on("/close", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+   {
+    request->redirect("/");
+   });
 
   server.on("/console", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
