@@ -273,6 +273,7 @@ void WifiManagerSetup(bool stationmode)
   wifiManager.setDebugOutput(false);
   wifiManager.setShowStaticFields(true);
 
+  wifiManager.setCustomHeadElement("<meta http-equiv='refresh' content='20;url=/'>"); // goto root page after 20 seconds
   // Move custom parameters to seperate menu to avoid issues with too many custom parameters and too many results from AP scan
   wifiManager.setParamsPage(true);
 
