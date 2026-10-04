@@ -20,8 +20,22 @@ Connect your ESP to your PC using USB and follow the instructions on the [webfla
 
 ## Option 3: OTA update if you have previously installed Energy2Shelly
 Directly download a matching OTA-binary for your ESP device from the releases page and install the over-the-air update using WifiManager on your Energy2Shelly.<br>
-You can reenter WifiManager Config page again after successfull config by <code>http://IP-address/update</code> (reboots)<br> 
-When WifiManger has started again within your network, you can update SW  <code>http://IP-address/update</code> or reconfigure your settings. Don't forget to safe your settings.
+
+### Reconfiguration & Software Updates
+After a successful initial setup, **WiFiManager no longer runs in Access Point (AP) mode**. You do not need to connect to a temporary Wi-Fi network anymore. Instead, the device is now available **locally within your home network**.
+
+To re-enter WiFiManager for updates or parameter changes:
+
+1. Make sure your computer or smartphone is connected to the **same home network** as the device.
+2. Navigate to `http://<your-device-ip>/update` to reboot the device into configuration mode.
+3. Once the system has restarted, you can:
+   * Use `http://<your-device-ip>/update` to perform an **OTA software update**.
+   * Use the interface to **adjust parameters** and reconfigure your settings.
+
+> 💡 **Tip:** If the page does not appear or shows an error after the reboot, **refresh/reload your browser**  to force a clean reconnect.
+
+
+
 
 
 # Configuration
@@ -69,17 +83,17 @@ When WifiManger has started again within your network, you can update SW  <code>
     - Modbus TCP port (usually 502)
     - Modbus Device ID of the unit ID (71 for KSEM)
   - <code>TIBBERPULSE</code>
-    - Parses SML data from your Tibber Pulse IR locally using the [sml_parser](https://github.com/olliiiver/sml_parser) ESP library. This is a great option if you want to use Tibber Pulse data for zero feed-in with Hoymiles MS-A2, Growatt NOAH/NEXA, or Marstek Venus inverters/batteries.
+    - Parses SML data from your Tibber Pulse IR locally using the [sml_parser](https://github.com/olliiiver/sml_parser) ESP library. This is a great option if you want to use Tibber Pulse data for zero feed-in with Hoymiles MS-A2, Growatt NOAH/NEXA, TSUN DCU2000lite or Marstek Venus inverters/batteries.
     - Follow [these](https://github.com/marq24/ha-tibber-pulse-local#tibber-pulse-ir-local) instructions to access your Tibber Pulse/Bridge data locally.
     - Provide the `IP address / hostname` and `port` of the WebSocket API, the `node id` of your Pulse IR in the Bridge configuration, plus `username` and `password` of your Tibber Bridge, in the configuration options so Energy2Shelly_ESP can connect and receive power data.
     - The parser automatically extracts `total power`, `phase power` and `energy from/to the grid` from the WebSocket API data stream and makes it available for the Shelly Pro 3EM Emulator.
-    - Following power meters are currently supported and implemented in the parser:
-      - **EMH EHZB** (SML message length: 248)
-      - **eBZ DD3** (SML message length: 396)
-      - **Iskra MT631** (SML message length: 236)
-      - **EMH EHZ** (SML message length: 448)
-      - **EasyMeter ESY11** (SML message length: 476)
-    - Support for additional power meters can be easily added. If you can provide your meter's SML sample data and message length and confirm that the parser works with your meter's data stream, then please open an issue or, even better, a PR with the details!
+    - The following power meters are confirmed to work:
+      - **EMH EHZB**
+      - **eBZ DD3**
+      - **Iskra MT631**
+      - **EMH EHZ**
+      - **EasyMeter ESY11**
+    - Most power meters with SML output should work out of the box. If you encounter an error, please open an issue with your meter's model and a sample data log.
   - <code>RCT</code>
     - RCT Power inverter with integrated grid sensor (e.g. RCT Power Storage) via the RCT Power "Serial Communication Protocol" over TCP
     - allow the ESP access to the RCT device on port <code>8899</code> (optional firewall / VLAN configuration)
