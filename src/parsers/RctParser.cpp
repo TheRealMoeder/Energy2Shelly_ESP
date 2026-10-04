@@ -258,6 +258,9 @@ enum RCT_SLOT
   RCT_SLOT_F0,     // rb485.f_grid[0]         grid frequency L1 [Hz]
   RCT_SLOT_F1,     // rb485.f_grid[1]         grid frequency L2 [Hz]
   RCT_SLOT_F2,     // rb485.f_grid[2]         grid frequency L3 [Hz]
+  RCT_SLOT_I0,     // g_sync.i_dr_eff[0]      grid current L1 [A]
+  RCT_SLOT_I1,     // g_sync.i_dr_eff[1]      grid current L2 [A]
+  RCT_SLOT_I2,     // g_sync.i_dr_eff[2]      grid current L3 [A]
   RCT_NUM_SLOTS
 };
 
@@ -274,6 +277,9 @@ static const uint32_t rctOids[RCT_NUM_SLOTS] = {
   0x9558AD8A, // grid frequency L1 (Hz)
   0xFAE429C5, // grid frequency L2 (Hz)
   0x0104EB6A, // grid frequency L3 (Hz)
+  0x89EE3EB5, // grid current L1 (A)
+  0x650C1ED7, // grid current L2 (A)
+  0x92BC682B, // grid current L3 (A)
 };
 
 // Slot index for a RESPONSE frame's OID, or -1 if we do not track it.
@@ -318,6 +324,9 @@ static void rctSendExtension()
 // ---------------------------------------------------------------------------
 static float rctCur[RCT_NUM_SLOTS];
 static bool rctHaveAny = false;
+// Set once a slot has ever been answered, so we can tell "measured 0 A" apart
+// from "never received" and fall back to the derived current in the latter case.
+static bool rctSlotSeen[RCT_NUM_SLOTS];
 
 static void rctApplyValues()
 {
@@ -325,6 +334,7 @@ static void rctApplyValues()
   const float *energies = &rctCur[RCT_SLOT_EFEED];
   const float *voltages = &rctCur[RCT_SLOT_V0];
   const float *frequencies = &rctCur[RCT_SLOT_F0];
+  const float *currents = &rctCur[RCT_SLOT_I0];
 
   // Grid-meter sign conventions (matches the Shelly 3EM): positive power =
   // consuming from the grid. The RCT energy counters
@@ -338,12 +348,38 @@ static void rctApplyValues()
   double loadWh = (double)energies[1];
   setEnergyData(loadWh, feedInWh);
 
-  // Overwrite the defaulted electrical values with the metered ones and
-  // recompute current so it stays consistent with the real voltage.
+  // Overwrite the defaulted electrical values with the metered ones. Current is
+  // taken from the grid meter's own current sensors (g_sync.i_dr_eff) rather
+  // than derived from power/voltage, which is only correct for PF == 1. If a
+  // device never answers the current OIDs we keep the derived value so the
+  // emulator still reports a plausible current instead of 0 A.
   for (int i = 0; i < 3; i++)
   {
     PhasePower[i].voltage = voltages[i];
-    if (voltages[i] > 0.0)
+    if (rctSlotSeen[RCT_SLOT_I0 + i] && voltages[i] > 0.0)
+    {
+      // Metered current: keep the Shelly triple self-consistent. setPowerData
+      // assumes PF == 1 (S = |P| and I = P/V), which stops holding once we use
+      // a real current reading, so derive apparent power and PF from the
+      // metered V, I and active power instead of leaving them at the defaults.
+      PhasePower[i].current = currents[i];
+      double apparent = (double)voltages[i] * (double)currents[i];
+      if (apparent < 0.0)
+      {
+        apparent = -apparent;
+      }
+      PhasePower[i].apparentPower = round2(apparent);
+      // Shelly reports pf as an unsigned 0..1 factor; the direction of the flow
+      // is carried by the sign of act_power, so use the magnitude here.
+      double active = (PhasePower[i].power < 0.0) ? -PhasePower[i].power : PhasePower[i].power;
+      double pf = (apparent > 0.0) ? (active / apparent) : 1.0;
+      if (pf > 1.0)
+      {
+        pf = 1.0;
+      }
+      PhasePower[i].powerFactor = round2(pf);
+    }
+    else if (voltages[i] > 0.0)
     {
       PhasePower[i].current = PhasePower[i].power / voltages[i];
     }
@@ -436,6 +472,7 @@ void parseRCT()
       {
         rctCur[slot] = rctDecodeFloat(payload);
         freshMask |= (1u << slot);
+        rctSlotSeen[slot] = true;
         rctHaveAny = true;
       }
     }
@@ -455,9 +492,10 @@ void parseRCT()
     {
       freshCount++;
     }
-    DEBUG_SERIAL.printf("RCT: grid L1/L2/L3: %.1f/%.1f/%.1f W, %.1f/%.1f/%.1f V (%d/%d fresh)\n",
+    DEBUG_SERIAL.printf("RCT: grid L1/L2/L3: %.1f/%.1f/%.1f W, %.1f/%.1f/%.1f V, %.2f/%.2f/%.2f A (%d/%d fresh)\n",
                         rctCur[RCT_SLOT_P0], rctCur[RCT_SLOT_P1], rctCur[RCT_SLOT_P2],
                         rctCur[RCT_SLOT_V0], rctCur[RCT_SLOT_V1], rctCur[RCT_SLOT_V2],
+                        rctCur[RCT_SLOT_I0], rctCur[RCT_SLOT_I1], rctCur[RCT_SLOT_I2],
                         freshCount, RCT_NUM_SLOTS);
     if (freshCount < RCT_NUM_SLOTS)
     {
