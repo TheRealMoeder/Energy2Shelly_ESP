@@ -27,9 +27,9 @@ After a successful initial setup, **WiFiManager no longer runs in Access Point (
 To re-enter WiFiManager for updates or parameter changes:
 
 1. Make sure your computer or smartphone is connected to the **same home network** as the device.
-2. Navigate to `http://<your-device-ip>/update` to reboot the device into configuration mode.
+2. Navigate to `http://<your-device-ip>/update` to reboot the device into configuration mode. Webpage will reload in about 20s
 3. Once the system has restarted, you can:
-   * Use `http://<your-device-ip>/update` to perform an **OTA software update**.
+   * Use `http://<your-device-ip>/update` to perform an **OTA software update**. After OTA update, webpage will reload in about 20s
    * Use the interface to **adjust parameters** and reconfigure your settings.
 
 > 💡 **Tip:** If the page does not appear or shows an error after the reboot, **refresh/reload your browser**  to force a clean reconnect.
