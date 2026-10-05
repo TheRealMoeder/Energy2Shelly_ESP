@@ -10,5 +10,6 @@ void parseSHRDZM();
 void parseSMA();
 void parseSUNSPEC();
 void parseTibberPulse();
+void parseRCT();
 
 #endif // PARSERS_H

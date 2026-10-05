@@ -26,6 +26,8 @@
 
 #define WiFicheckInterval 60000 // Check every 60 seconds
 
+unsigned long updateTimestamp = 0; 
+
 void setup(void)
 {
   DEBUG_SERIAL.begin(115200);
@@ -135,6 +137,16 @@ void setup(void)
             {
               request->send(204); // 204 "No Content"
             });
+  //Reloads of wifi manager page, redirect to main page 
+   server.on("/exit", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+   {
+    request->redirect("/");
+   });
+
+   server.on("/close", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+   {
+    request->redirect("/");
+   });
 
   server.on("/console", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
@@ -222,8 +234,9 @@ void setup(void)
             const char* submitted_pw = request->getParam("reset_password", true)->value().c_str();
             
             if (strcmp(reset_password, submitted_pw) == 0) {
-                shouldupdate = true;
-                request->send(200, "text/plain", PSTR("Update device. Entering WiFi configuration\r\n"));
+                  shouldupdate = true;
+                  updateTimestamp=millis();
+                  request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
             } else {
                 request->send(403, "text/plain", PSTR("Unauthorized: Invalid reset password.\r\n"));
             }
@@ -232,7 +245,8 @@ void setup(void)
         }
     } else {
         shouldupdate = true;
-        request->send(200, "text/plain", PSTR("Update device. Entering WiFi configuration...\r\n"));
+        updateTimestamp=millis();
+        request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
     } });
 
   // Shelly RPC endpoints called via HTTP GET method
@@ -369,9 +383,10 @@ void worker_loop(int currentMillis)
   MDNS.update();
 #endif
   parseUdpRPC();
-  if (shouldupdate)
+  if (shouldupdate && (currentMillis - updateTimestamp >= 2000))
   {
     all_esp_reset(Energy2Shelly_ResetReason::RECONFIGURE);
+    shouldupdate=false;
   }
   if (shouldResetConfig)
   {
@@ -425,6 +440,14 @@ void worker_loop(int currentMillis)
     if (currentMillis - startMillis >= period)
     {
       parseTibberPulse();
+      startMillis = currentMillis;
+    }
+  }
+  if (dataRCT)
+  {
+    if (currentMillis - startMillis >= period)
+    {
+      parseRCT();
       startMillis = currentMillis;
     }
   }
