@@ -328,71 +328,65 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         .footer a:hover {
             color: #374151;
         }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f3f4f6;
-            margin: 0;
-            padding: 20px;
-            color: #1f2937;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-        /* Style for Chart-Container */
-        .chart-container {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            margin-bottom: 25px;
-        }
-        /* Grid-Layout phase charts */
-        .phase-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
-        }
-        .phase-card {
-            background: white;
-            padding: 16px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            border-top: 4px solid #cbd5e1;
-        }
-        /* color code phases */
-        .phase-a { border-top-color: #ef4444; }
-        .phase-b { border-top-color: #3b82f6; }
-        .phase-c { border-top-color: #10b981; }
-        .total   { border-top-color: #f59e0b; background-color: #fffbeb; }
-        
-        .phase-card h3 {
-            margin: 0 0 12px 0;
-            font-size: 1.1rem;
-            color: #374151;
-        }
-        .data-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            border-bottom: 1px solid #f3f4f6;
-            font-size: 0.9rem;
-        }
-        .data-row:last-child {
-            border-bottom: none;
-        }
-        .data-label {
-            color: #6b7280;
-        }
-        .data-value {
-            font-weight: 600;
-        }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; color: #333; }
+        h1 { color: #0056b3; margin-bottom: 10px; }
+        p { font-size: 1.1em; margin-top: 5px; }
+        .nav { margin: 30px 0; }
+        .nav a { display: inline-block; padding: 12px 24px; margin: 8px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; transition: background-color 0.3s; }
+        .nav a:hover { background-color: #0056b3; }
+        .nav a.reset { background-color: #d9534f; }
+        .nav a.reset:hover { background-color: #c9302c; }
+        .data-container { max-width: 1300px; margin: 0 auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .data-section { margin: 20px 0; }
+        .data-section h2 { color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 15px; font-size: 1.3em; }
+        .phase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .phase-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
+        .phase-card.phase-a { border-left-color: #dc3545; }
+        .phase-card.phase-b { border-left-color: #ffc107; }
+        .phase-card.phase-c { border-left-color: #28a745; }
+        .phase-card.total { background: #e7f3ff; }
+        .phase-card h3 { margin: 0 0 10px 0; font-size: 1.1em; }
+        .data-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #dee2e6; }
+        .data-row:last-child { border-bottom: none; }
+        .data-label { font-weight: 600; color: #555; }
+        .data-value { color: #007bff; font-weight: bold; }
+        .timestamp { text-align: center; color: #6c757d; font-size: 0.9em; margin-top: 15px; font-style: italic; }
+        .loading { color: #6c757d; }
+        .error { color: #dc3545; padding: 10px; background: #f8d7da; border-radius: 5px; }
+         .back-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 16px;
+        background-color: #ffffff;
+        color: #333333;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-bottom: 20px;
+         }
+        .back-btn:hover {
+            background-color: #e2e8f0;
+        }     
     </style>
 </head>
 <body>
+    <button onclick="goBack()" class="back-btn">
+        ← Back
+    </button>
 
-<div class="container">
-    <h2>⚡ Consumption in real-time Monitoring</h2>
+    <script>
+    function goBack() {
+        if (document.referrer) {
+            window.history.back();
+        } else {
+            window.location.href = 'index.html'; 
+        }
+    }
+    </script>
+    <div class="container">
+    <h2>⚡ Power Consumption Trend</h2>
 
     <div class="chart-container">
         <canvas id="powerChart"></canvas>
@@ -421,10 +415,10 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         data: {
             labels: [], // filled dynamically with timestamps
             datasets: [
-                { label: 'Phase A', data: [], borderColor: 'rgba(239, 68, 68, 0.6)', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 2 },
-                { label: 'Phase B', data: [], borderColor: 'rgba(59, 130, 246, 0.6)', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 3 },
-                { label: 'Phase C', data: [], borderColor: 'rgba(16, 185, 129, 0.6)', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 5 },
-                { label: 'Sum Power', data: [], borderColor: 'rgba(245, 158, 11, 0.6)', backgroundColor: 'rgba(245, 158, 11, 0.05)', borderWidth: 3, tension: 0.2, fill: true, pointRadius: 2 }
+                { label: 'Phase A', data: [], borderColor: '#dc354599', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 2 },
+                { label: 'Phase B', data: [], borderColor: '#ffc10799', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 3 },
+                { label: 'Phase C', data: [], borderColor: '#28a74599', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 5 },
+                { label: 'Sum Power', data: [], borderColor: '#007bff99', backgroundColor: '#007bff10', borderWidth: 3, tension: 0.2, fill: true, pointRadius: 2 }
             ]
         },
         options: {
@@ -462,6 +456,10 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 powerChart.data.datasets[0].data.push(Number(data.a_act_power || 0));
                 powerChart.data.datasets[1].data.push(Number(data.b_act_power || 0));
                 powerChart.data.datasets[2].data.push(Number(data.c_act_power || 0));
+                //powerChart.data.datasets[0].data.push(Number(data.a_act_power || 0));
+                //powerChart.data.datasets[1].data.push(Number((data.b_act_power+data.b_act_power) || 0));
+                //powerChart.data.datasets[2].data.push(Number((data.a_act_power+data.b_act_power+data.c_act_power) || 0));
+
                 powerChart.data.datasets[3].data.push(Number(data.total_act_power || 0));
 
                 // Shift effect: Remove oldest values on the left if limit is exceeded
