@@ -409,6 +409,14 @@ void worker_loop(int currentMillis)
       startMillis = currentMillis;
     }
   }
+  if (dataRCT)
+  {
+    if (currentMillis - startMillis >= period)
+    {
+      parseRCT();
+      startMillis = currentMillis;
+    }
+  }
   DEBUG_SERIAL.handleQueue();
 }
 
