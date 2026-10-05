@@ -408,7 +408,7 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 
     // init CHART.JS
     const ctx = document.getElementById('powerChart').getContext('2d');
-    const maxDataPoints = 30; // Number of points to display on the chart at once
+    const maxDataPoints = 120; // Number of points to display on the chart at once
 
     const powerChart = new Chart(ctx, {
         type: 'line',
@@ -456,10 +456,6 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 powerChart.data.datasets[0].data.push(Number(data.a_act_power || 0));
                 powerChart.data.datasets[1].data.push(Number(data.b_act_power || 0));
                 powerChart.data.datasets[2].data.push(Number(data.c_act_power || 0));
-                //powerChart.data.datasets[0].data.push(Number(data.a_act_power || 0));
-                //powerChart.data.datasets[1].data.push(Number((data.b_act_power+data.b_act_power) || 0));
-                //powerChart.data.datasets[2].data.push(Number((data.a_act_power+data.b_act_power+data.c_act_power) || 0));
-
                 powerChart.data.datasets[3].data.push(Number(data.total_act_power || 0));
 
                 // Shift effect: Remove oldest values on the left if limit is exceeded
@@ -506,8 +502,8 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
     // --- TIMING / INTERVALL ---
     // force update by first entry
     updatePowerData();
-    // and every 5 seconds after
-    setInterval(updatePowerData, 5000);
+    // and every 500 ms after
+    setInterval(updatePowerData, 500);
 </script>
 
 </body>
