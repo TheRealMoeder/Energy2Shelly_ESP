@@ -301,6 +301,38 @@ const char UPDATE_HTML_END[] PROGMEM = R"rawhtml(
 </body></html>
 )rawhtml";
 
+const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
+<!DOCTYPE html><html><head><title>Rebooting...</title>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<meta charset='UTF-8'>
+<style>
+  body{font-family:Arial,sans-serif;text-align:center;padding:40px 20px;}
+  .countdown{font-size:24px;font-weight:bold;color:#d9534f;margin:20px 0;}
+  .loader {border: 5px solid #f3f3f3; border-top: 5px solid #d9534f; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto;}
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+<script>
+  let seconds = 20;
+  function startCountdown() {
+    const timer = setInterval(() => {
+      seconds--;
+      document.getElementById('count').textContent = seconds;
+      if (seconds <= 0) {
+        clearInterval(timer);
+        window.location.href = '/'; // Forwarding to Root Page
+      }
+    }, 1000);
+  }
+  window.onload = startCountdown;
+</script>
+</head>
+<body>
+  <h2>System reboots...</h2>
+  <p>The device will be reachable again in WiFiManager-Mode within your local network shortly.</p>
+  <div class='loader'></div>
+  <div class='countdown'>Redirecting in <span id='count'>20</span> seconds...</div>
+</body></html>
+)rawhtml";
 
 
 #endif // HTML_HOME_H
