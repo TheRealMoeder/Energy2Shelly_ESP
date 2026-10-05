@@ -241,7 +241,29 @@ void WifiManagerSetup(bool stationmode)
   static WiFiManagerParameter custom_section1("<h3>General settings</h3><script>function t(s) { var x = document.getElementById(s); x.type === \"password\" ? x.type = \"text\" : x.type = \"password\"; }</script>");
   static WiFiManagerParameter param_reset_password("reset_password", "Reset Password <span title=\"For resetting the WiFi configuration and putting the device in AP / config mode\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", reset_password, 32, "type='password'");
   static WiFiManagerParameter param_reset_password_show_password(buf_rst_pwd_show_pwd);
-  static WiFiManagerParameter custom_input_type("type", "<hr><b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data<br><code>TIBBERPULSE</code> for TibberPulse SML data<br><code>RCT</code> for RCT Power grid data", input_type, 40);
+  //static WiFiManagerParameter custom_input_type("type", "<hr><b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data<br><code>TIBBERPULSE</code> for TibberPulse SML data<br><code>RCT</code> for RCT Power grid data", input_type, 40);
+  // The "type" field is submitted as a hidden input; the real UI is the
+  // <select> rendered above it (custom_type_select), which mirrors its value
+  // here so the existing read-back (getParam("type")->getValue()) keeps working.
+  static WiFiManagerParameter custom_input_type("type", "", input_type, 40, "type='hidden'", 0);
+  // Dropdown for the data source; must render after the hidden "type" input
+  // (same addParameter order) so the script can find it. Values must stay in
+  // sync with the strcmp() dispatch in Configuration.cpp / main.cpp.
+  static WiFiManagerParameter custom_type_select(
+      "<label for='type_sel'><b>Data source</b></label><br><select id='type_sel'>"
+      "<option value='MQTT'>MQTT</option>"
+      "<option value='HTTP'>generic HTTP</option>"
+      "<option value='SMA'>SMA EM/HM multicast</option>"
+      "<option value='SHRDZM'>SHRDZM UDP data</option>"
+      "<option value='SUNSPEC'>Modbus TCP SUNSPEC</option>"
+      "<option value='TIBBERPULSE'>TibberPulse SML data</option>"
+      "<option value='RCT'>RCT Power grid data</option>"
+      "</select><br>"
+      "<script>var t=document.getElementById('type'),s=document.getElementById('type_sel'),i,f=false;"
+      "for(i=0;i<s.options.length;i++){if(s.options[i].value===t.value){s.selectedIndex=i;f=true;}}"
+      "if(!f){var o=document.createElement('option');o.text=t.value;o.value=t.value;s.add(o);"
+      "s.selectedIndex=s.options.length-1;}"
+      "s.onchange=function(){t.value=s.value;};</script>");
   static WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 160);
   static WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
   static WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
@@ -297,6 +319,7 @@ void WifiManagerSetup(bool stationmode)
   wifiManager.addParameter(&param_reset_password);
   wifiManager.addParameter(&param_reset_password_show_password);
   wifiManager.addParameter(&custom_input_type);
+  wifiManager.addParameter(&custom_type_select);
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&param_ntp_server);
   wifiManager.addParameter(&param_timezone);
