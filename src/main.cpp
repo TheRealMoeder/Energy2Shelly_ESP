@@ -114,6 +114,25 @@ void setup(void)
     });
     request->send(response); });
 
+  server.on("/plot", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+    AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(webplotter_html), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+        // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
+        memcpy_P(buffer, webplotter_html + index, maxLen); return maxLen;
+    });
+    request->send(response); });
+ server.on("/chart.min.js", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    AsyncWebServerResponse *response = request->beginResponse("application/javascript", chart_js_len, [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+        size_t remaining = chart_js_len - index;
+        size_t toCopy = (remaining < maxLen) ? remaining : maxLen;
+        
+        memcpy_P(buffer, chart_js + index, toCopy); 
+        return toCopy;
+    });
+    
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response); 
+});
   server.on("/favicon.ico", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
               request->send(204); // 204 "No Content"

@@ -2,6 +2,7 @@
 #define HTML_HOME_H
 
 #include <Arduino.h>
+#include "chart_js.h"
 
 const char HTML_HOME[] PROGMEM = R"=====(
 <!DOCTYPE html>
@@ -43,7 +44,7 @@ const char HTML_HOME[] PROGMEM = R"=====(
   <div class="nav">
     <a href="/status">View Status</a>
     <a href="/console">Console</a>
-    <a href="/reset" class="reset">Reset Device</a>
+    <a href="/plot">Plot Data</a>
     <a href="/update" class="reset">Update SW</a>
   </div>
 
@@ -301,6 +302,215 @@ const char UPDATE_HTML_END[] PROGMEM = R"rawhtml(
 </body></html>
 )rawhtml";
 
+
+  
+const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy2Shelly_ESP EM Live Power Dashboard</title>
+    <!-- Chart.js via CDN -->
+    <script src="/chart.min.js"></script>
+    <style>
+        .footer {
+            margin-top: 30px;
+            padding: 15px 0;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #9ca3af;
+            border-top: 1px solid #e5e7eb;
+        }
+        .footer a {
+            color: #6b7280;
+            text-decoration: underline;
+        }
+        .footer a:hover {
+            color: #374151;
+        }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; color: #333; }
+        h1 { color: #0056b3; margin-bottom: 10px; }
+        p { font-size: 1.1em; margin-top: 5px; }
+        .nav { margin: 30px 0; }
+        .nav a { display: inline-block; padding: 12px 24px; margin: 8px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; transition: background-color 0.3s; }
+        .nav a:hover { background-color: #0056b3; }
+        .nav a.reset { background-color: #d9534f; }
+        .nav a.reset:hover { background-color: #c9302c; }
+        .data-container { max-width: 1300px; margin: 0 auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .data-section { margin: 20px 0; }
+        .data-section h2 { color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 15px; font-size: 1.3em; }
+        .phase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .phase-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
+        .phase-card.phase-a { border-left-color: #dc3545; }
+        .phase-card.phase-b { border-left-color: #ffc107; }
+        .phase-card.phase-c { border-left-color: #28a745; }
+        .phase-card.total { background: #e7f3ff; }
+        .phase-card h3 { margin: 0 0 10px 0; font-size: 1.1em; }
+        .data-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #dee2e6; }
+        .data-row:last-child { border-bottom: none; }
+        .data-label { font-weight: 600; color: #555; }
+        .data-value { color: #007bff; font-weight: bold; }
+        .timestamp { text-align: center; color: #6c757d; font-size: 0.9em; margin-top: 15px; font-style: italic; }
+        .loading { color: #6c757d; }
+        .error { color: #dc3545; padding: 10px; background: #f8d7da; border-radius: 5px; }
+         .back-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 16px;
+        background-color: #ffffff;
+        color: #333333;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-bottom: 20px;
+         }
+        .back-btn:hover {
+            background-color: #e2e8f0;
+        }     
+    </style>
+</head>
+<body>
+    <button onclick="goBack()" class="back-btn">
+        ← Back
+    </button>
+
+    <script>
+    function goBack() {
+        if (document.referrer) {
+            window.history.back();
+        } else {
+            window.location.href = 'index.html'; 
+        }
+    }
+    </script>
+    <div class="container">
+    <h2>⚡ Power Consumption Trend</h2>
+
+    <div class="chart-container">
+        <canvas id="powerChart"></canvas>
+    </div>
+
+    <div id="power-data"></div>
+    <footer class="footer">
+        <p>Energy2Shelly_ESP EM Live Power Dashboard</p>
+        <p>This software uses <a href="https://chartjs.org" target="_blank" rel="noopener">Chart.js</a> (Released under the MIT License, Copyright © 2025 Chart.js Contributors).</p>
+    </footer>
+</div>
+
+<script>
+    // Helperfunction for formating
+    function formatValue(value, unit, decimals = 2) {
+        if (value === undefined || value === null) return '-- ' + unit;
+        return Number(value).toFixed(decimals) + ' ' + unit;
+    }
+
+    // init CHART.JS
+    const ctx = document.getElementById('powerChart').getContext('2d');
+    const maxDataPoints = 120; // Number of points to display on the chart at once
+
+    const powerChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [], // filled dynamically with timestamps
+            datasets: [
+                { label: 'Phase A', data: [], borderColor: '#dc354599', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 2 },
+                { label: 'Phase B', data: [], borderColor: '#ffc10799', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 3 },
+                { label: 'Phase C', data: [], borderColor: '#28a74599', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 5 },
+                { label: 'Sum Power', data: [], borderColor: '#007bff99', backgroundColor: '#007bff10', borderWidth: 3, tension: 0.2, fill: true, pointRadius: 2 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // allow CSS control of height
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Power (Watt)' }
+                },
+                x: {
+                    title: { display: true, text: 'Time' }
+                }
+            },
+            plugins: {
+                legend: { position: 'top' }
+            }
+        }
+    });
+
+    // Exchange Standard-Canvas-Control with fixed height
+    ctx.canvas.parentNode.style.height = '350px';
+
+    function updatePowerData() {
+        fetch('/rpc/EM.GetStatus')
+            .then(response => response.json())
+            .then(data => {
+                
+                // Inject live data in graph
+                const now_time = new Date();
+                const timeString = now_time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+
+                powerChart.data.labels.push(timeString);
+                powerChart.data.datasets[0].data.push(Number(data.a_act_power || 0));
+                powerChart.data.datasets[1].data.push(Number(data.b_act_power || 0));
+                powerChart.data.datasets[2].data.push(Number(data.c_act_power || 0));
+                powerChart.data.datasets[3].data.push(Number(data.total_act_power || 0));
+
+                // Shift effect: Remove oldest values on the left if limit is exceeded
+                if (powerChart.data.labels.length > maxDataPoints) {
+                    powerChart.data.labels.shift();
+                    powerChart.data.datasets.forEach(dataset => dataset.data.shift());
+                }
+
+                // display chart
+                powerChart.update('none'); // 'none' deactivate internal standard animation for better performance at fast updates
+
+
+                const phases = [
+                    { name: 'Phase A', prefix: 'a', class: 'phase-a' },
+                    { name: 'Phase B', prefix: 'b', class: 'phase-b' },
+                    { name: 'Phase C', prefix: 'c', class: 'phase-c' }
+                ];
+
+                let html = '<div class="phase-grid">';
+                phases.forEach(phase => {
+                    html += `<div class="phase-card ${phase.class}">
+                        <h3>${phase.name}</h3>
+                        <div class="data-row"><span class="data-label">Voltage:</span><span class="data-value">${formatValue(data[phase.prefix + '_voltage'], 'V')}</span></div>
+                        <div class="data-row"><span class="data-label">Current:</span><span class="data-value">${formatValue(data[phase.prefix + '_current'], 'A')}</span></div>
+                        <div class="data-row"><span class="data-label">Power:</span><span class="data-value">${formatValue(data[phase.prefix + '_act_power'], 'W')}</span></div>
+                        <div class="data-row"><span class="data-label">Apparent:</span><span class="data-value">${formatValue(data[phase.prefix + '_aprt_power'], 'VA')}</span></div>
+                        <div class="data-row"><span class="data-label">Power Factor:</span><span class="data-value">${formatValue(data[phase.prefix + '_pf'], '', 3)}</span></div>
+                        <div class="data-row"><span class="data-label">Frequency:</span><span class="data-value">${formatValue(data[phase.prefix + '_freq'], 'Hz')}</span></div>
+                    </div>`;
+                });
+
+                html += '<div class="phase-card total"><h3>Totals</h3>';
+                html += `<div class="data-row"><span class="data-label">Total Current:</span><span class="data-value">${formatValue(data.total_current, 'A')}</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Total Power:</span><span class="data-value">${formatValue(data.total_act_power, 'W')}</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Total Apparent:</span><span class="data-value">${formatValue(data.total_aprt_power, 'VA')}</span></div>`;
+                html += '</div>';
+                html += '</div>';
+
+                document.getElementById('power-data').innerHTML = html;
+            })
+            .catch(err => console.error("Error fetching Shelly data:", err));
+    }
+
+    // --- TIMING / INTERVALL ---
+    // force update by first entry
+    updatePowerData();
+    // and every 500 ms after
+    setInterval(updatePowerData, 500);
+</script>
+
+</body>
+</html>
+)rawliteral";
+
+  
 const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
 <!DOCTYPE html><html><head><title>Rebooting...</title>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
@@ -333,6 +543,8 @@ const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
   <div class='countdown'>Redirecting in <span id='count'>20</span> seconds...</div>
 </body></html>
 )rawhtml";
+
+  
 
 
 #endif // HTML_HOME_H
