@@ -196,61 +196,61 @@ extern unsigned long currentMillis;
 // for time synchronization
 extern time_t now;
 extern tm timeinfo;
+extern  JsonDocument config_doc;
 
 // ============================================================================
 // CONFIGURATION VARIABLES (stored in Preferences)
 // ============================================================================
 
 // Data source and server settings
-extern char reset_password[33];
-extern char input_type[40];
-extern char ntp_server[40];
-extern char timezone[64];
-extern char phase_number[2];
-extern char power_offset[10];
-extern char mqtt_server[160];
-extern char mqtt_port[6];
-extern char mqtt_topic[90];
-extern char mqtt_user[40];
-extern char mqtt_passwd[40];
+#define reset_password config_doc["reset_password"].as<const char*>()
+#define input_type config_doc["input_type"].as<const char*>()
+#define ntp_server config_doc["ntp_server"].as<const char*>()
+#define timezone config_doc["timezone"].as<const char*>() 
+#define phase_number config_doc["phase_number"].as<const char*>()
+#define power_offset config_doc["power_offset"].as <const char*>()
+#define mqtt_server config_doc["mqtt_server"].as<const char*>()
+#define mqtt_port config_doc["mqtt_port"].as<const char*>()
+#define mqtt_topic config_doc["mqtt_topic"].as<const char*>()
+#define mqtt_user config_doc["mqtt_user"].as<const char*>()
+#define mqtt_passwd config_doc["mqtt_passwd"].as<const char*>()
 
 // JSON path settings
-extern char power_path[60];
-extern char pwr_export_path[60];
-extern char power_l1_path[60];
-extern char power_l2_path[60];
-extern char power_l3_path[60];
-extern char energy_in_path[60];
-extern char energy_out_path[60];
+#define power_path config_doc["power_path"].as<const char*>()
+#define pwr_export_path config_doc["pwr_export_path"].as<const char*>()
+#define power_l1_path config_doc["power_l1_path"].as<const char*>()
+#define power_l2_path config_doc["power_l2_path"].as<const char*>()
+#define power_l3_path config_doc["power_l3_path"].as<const char*>()
+#define energy_in_path config_doc["energy_in_path"].as<const char*>()
+#define energy_out_path config_doc["energy_out_path"].as<const char*>()
 
 // Shelly device settings
-extern char shelly_gen[2];
-extern char shelly_fw_id[32];
-extern char shelly_mac[13];
-extern char shelly_name[26];
-extern char shelly_port[6];
+#define shelly_gen config_doc["shelly_gen"].as<const char*>()
+#define shelly_fw_id config_doc["shelly_fw_id"].as<const char*>()
+#define shelly_mac config_doc["shelly_mac"].as<const char*>()
+#define shelly_name config_doc["shelly_name"].as<const char*>()
+#define shelly_port config_doc["shelly_port"].as<const char*>()
 
 // Query and protocol settings
-extern char query_period[10];
-extern char modbus_dev[10];
-extern char sma_id[17];
+#define query_period config_doc["query_period"].as<const char*>()
+#define modbus_dev config_doc["modbus_dev"].as<const char*>()
+#define sma_id config_doc["sma_id"].as<const char*>()
 extern uint16_t sunspec_port_int; // default port
-extern uint8_t modbusdev_int; // default device id for KSEM
-
+extern uint8_t modbusdev_int; 
 
 // RCT Power settings
-extern char rct_host[41];
-extern char rct_port[6];
+#define rct_host config_doc["rct_host"].as<const char*>()
+#define rct_port config_doc["rct_port"].as<const char*>()
 
-extern char tibber_host[41];
-extern char tibber_user[11];
-extern char tibber_password[10];
+#define tibber_host config_doc["tibber_host"].as<const char*>()
+#define tibber_user config_doc["tibber_user"].as<const char*>()
+#define tibber_password config_doc["tibber_password"].as<const char*>()
+#define tibber_nodeid config_doc["tibber_nodeid"].as<const char*>()
 extern char tibber_rpc[2][26];
-extern char tibber_nodeid[2];
-
 // LED settings
-extern char led_gpio[3];
-extern char led_gpio_i[6];
+#define led_gpio config_doc["led_gpio"].as<const char*>()
+#define led_gpio_i config_doc["led_gpio_i"].as<const char*>()
+
 extern unsigned long ledOffTime;
 extern uint8_t led;
 extern bool led_i;
@@ -333,5 +333,6 @@ void handleblinkled();
 void saveConfigCallback();
 void WifiManagerSetup(bool stationmode);
 void setupMdns();
+void interprete_parameters();
 
 #endif // CONFIGURATION_H

@@ -1,66 +1,62 @@
 #include "Configuration.h"
 #include "../utils/utils.h"
+#include "load_save_parameters.h"
 unsigned long startMillis = 0;
 unsigned long currentMillis;
 // for time synchronization
 time_t now;
 tm timeinfo;
+JsonDocument config_doc;
 
 // ============================================================================
 // CONFIGURATION VARIABLES (stored in Preferences)
 // ============================================================================
 
 // Data source and server settings
-char reset_password[33] = "admin-changeMe"; // default reset password
-char input_type[40];
-char ntp_server[40] = "de.pool.ntp.org";
-char timezone[64] = "CET-1CEST,M3.5.0/2,M10.5.0/3"; // Central European Time
-char phase_number[2] = "3";                         // number of phases: 1 for monophase or 3 for triphase
-char power_offset[10] = "0";                        // Default: no offset
-char mqtt_server[160];
-char mqtt_port[6] = "1883";
-char mqtt_topic[90] = "tele/meter/SENSOR";
-char mqtt_user[40] = "";
-char mqtt_passwd[40] = "";
 
-// JSON path settings
-char power_path[60] = "";
-char pwr_export_path[60] = "";
-char power_l1_path[60] = "";
-char power_l2_path[60] = "";
-char power_l3_path[60] = "";
-char energy_in_path[60] = "";
-char energy_out_path[60] = "";
 
-// Shelly device settings
-char shelly_gen[2] = "2";
-char shelly_fw_id[32] = "20241011-114455/1.4.4-g6d2a586";
-char shelly_mac[13];
-char shelly_name[26] = "shellypro3em-";
-char shelly_port[6] = "2220"; // old: 1010; new (FW>=226): 2220; Venus A and E 3.0 use 1010 again
-
-// Query and protocol settings
-char query_period[10] = "1000";
-char modbus_dev[10] = "71"; // default for KSEM
-char sma_id[17] = "";
 uint16_t sunspec_port_int; // default port
 uint8_t modbusdev_int;     // default device id for KSEM
 
-// Tibber related
-char tibber_host[41] = "x.x.x.x[:xxxx]";     // IP / HOSTNAME [and PORT] of Tibber Pulse Bridge
-char tibber_user[11] = "admin";              // fixed user
-char tibber_password[10] = "xxxx-xxxx";      // replace with password printed on Tibber Pulse Bridge device
 char tibber_rpc[2][26] = {"/data.json?node_id=","/node_data.json?node_id="}; // fixed rpc path
 
-char tibber_nodeid[2] = "1";                 // node id of the Pulse IR device, defaults to 1. if reparing this might change, check the node id in the web interface of the Tibber Pulse Bridge device
 
-// RCT Power settings
-char rct_host[41] = "192.168.0.1"; // IP / HOSTNAME of the RCT Power device
-char rct_port[6] = "8899";         // TCP port (8899 is the standard RCT Power port)
+void setup_json_config_doc()
+{
+config_doc["reset_password"] = "admin-changeMe";
+config_doc["input_type"] = "";
+config_doc["ntp_server"] = "de.pool.ntp.org";
+config_doc["timezone"] =  "CET-1CEST,M3.5.0/2,M10.5.0/3";
+config_doc["phase_number"] = "3";
+config_doc["power_offset"] = "0";
+config_doc["mqtt_server"] = "";
+config_doc["mqtt_port"] =  "1883";
+config_doc["mqtt_topic"] = "tele/meter/SENSOR";
+config_doc["mqtt_user"] = "";
+config_doc["mqtt_passwd"] = "";
+config_doc["power_path"] = "";
+config_doc["pwr_export_path"] = "";
+config_doc["power_l1_path"] = "";
+config_doc["power_l2_path"] = "";
+config_doc["power_l3_path"] = "";
+config_doc["energy_in_path"] = "";
+config_doc["energy_out_path"] = "";
+config_doc["shelly_gen"] = "2";
+config_doc["shelly_fw_id"] = "20241011-114455/1.4.4-g6d2a586";
+config_doc["shelly_mac"] = "";
+config_doc["shelly_name"] = "shellypro3em-";
+config_doc["shelly_port"] = "2220";
+config_doc["query_period"] = "1000";
+config_doc["modbus_dev"] = "71";
+config_doc["sma_id"] = "";
+config_doc["tibber_host"] = "x.x.x.x[:xxxx]";
+config_doc["tibber_user"] = "admin";
+config_doc["tibber_password"] = "xxxx-xxxx";
+config_doc["tibber_nodeid"] = "1";
+config_doc["rct_host"] = "192.168.0.1";
+config_doc["rct_port"] = "8899";
+}
 
-// LED settings
-char led_gpio[3] = "";
-char led_gpio_i[6];
 unsigned long ledOffTime = 0;
 uint8_t led = 0;
 bool led_i = false;
@@ -161,6 +157,65 @@ void handleblinkled()
   }
 }
 
+
+void interprete_parameters()
+{
+  // Interpret the loaded parameters and set flags accordingly
+  if (strcmp(input_type, "SMA") == 0)
+  {
+    dataSMA = true;
+    DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
+  }
+  else if (strcmp(input_type, "SHRDZM") == 0)
+  {
+    dataSHRDZM = true;
+    DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
+  }
+  else if (strcmp(input_type, "HTTP") == 0)
+  {
+    dataHTTP = true;
+    DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
+  }
+  else if (strcmp(input_type, "SUNSPEC") == 0)
+  {
+    dataSUNSPEC = true;
+    DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
+  }
+  else if (strcmp(input_type, "TIBBERPULSE") == 0)
+  {
+    dataTIBBERPULSE = true;
+    DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
+  }
+  else if (strcmp(input_type, "RCT") == 0)
+  {
+    dataRCT = true;
+    DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
+  }
+  else
+  {
+    dataMQTT = true;
+    DEBUG_SERIAL.println(F("Enabling MQTT data input"));
+  }
+
+  if (strcmp(led_gpio_i, "true") == 0)
+  {
+    led_i = true;
+  }
+  else
+  {
+    led_i = false;
+  }
+
+  // Convert string parameters to integers where necessary
+  modbusdev_int = config_doc["modbus_dev"].as<uint8_t>();
+  sunspec_port_int = config_doc["sunspec_port"].as<uint16_t>();
+
+  period = config_doc["query_period"].as<unsigned long>();
+  modbus_ip.fromString(config_doc["mqtt_server"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
+
+}
+
+
 // callback notifying us of the need to save WifiManager config
 void saveConfigCallback()
 {
@@ -190,43 +245,9 @@ void WifiManagerSetup(bool stationmode)
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
   WiFi.macAddress(mac);
-  sprintf(shelly_mac, "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  config_doc["shelly_mac"] = String(mac[0], HEX) + String(mac[1], HEX) + String(mac[2], HEX) + String(mac[3], HEX) + String(mac[4], HEX) + String(mac[5], HEX);
 
-  preferences.begin("e2s_config", false);
-  strcpy(reset_password, preferences.getString("reset_password", reset_password).c_str());
-  strcpy(input_type, preferences.getString("input_type", input_type).c_str());
-  strcpy(mqtt_server, preferences.getString("mqtt_server", mqtt_server).c_str());
-  strcpy(ntp_server, preferences.getString("ntp_server", ntp_server).c_str());
-  strcpy(timezone, preferences.getString("timezone", timezone).c_str());
-  strcpy(phase_number, preferences.getString("phase_number", phase_number).c_str());
-  strcpy(power_offset, preferences.getString("power_offset", power_offset).c_str());
-  strcpy(query_period, preferences.getString("query_period", query_period).c_str());
-  strcpy(led_gpio, preferences.getString("led_gpio", led_gpio).c_str());
-  strcpy(led_gpio_i, preferences.getString("led_gpio_i", led_gpio_i).c_str());
-  strcpy(shelly_mac, preferences.getString("shelly_mac", shelly_mac).c_str());
-  strcpy(mqtt_port, preferences.getString("mqtt_port", mqtt_port).c_str());
-  strcpy(mqtt_topic, preferences.getString("mqtt_topic", mqtt_topic).c_str());
-  strcpy(mqtt_user, preferences.getString("mqtt_user", mqtt_user).c_str());
-  strcpy(mqtt_passwd, preferences.getString("mqtt_passwd", mqtt_passwd).c_str());
-  strcpy(modbus_dev, preferences.getString("modbus_dev", modbus_dev).c_str());
-  strcpy(power_path, preferences.getString("power_path", power_path).c_str());
-  strcpy(pwr_export_path, preferences.getString("pwr_export_path", pwr_export_path).c_str());
-  strcpy(power_l1_path, preferences.getString("power_l1_path", power_l1_path).c_str());
-  strcpy(power_l2_path, preferences.getString("power_l2_path", power_l2_path).c_str());
-  strcpy(power_l3_path, preferences.getString("power_l3_path", power_l3_path).c_str());
-  strcpy(energy_in_path, preferences.getString("energy_in_path", energy_in_path).c_str());
-  strcpy(energy_out_path, preferences.getString("energy_out_path", energy_out_path).c_str());
-  strcpy(shelly_port, preferences.getString("shelly_port", shelly_port).c_str());
-  strcpy(sma_id, preferences.getString("sma_id", sma_id).c_str());
-  // TibberPulse settings
-  strcpy(tibber_host, preferences.getString("tibber_host", tibber_host).c_str());
-  strcpy(tibber_nodeid, preferences.getString("tibber_nodeid", tibber_nodeid).c_str());
-  strcpy(tibber_user, preferences.getString("tibber_user", tibber_user).c_str());
-  strcpy(tibber_password, preferences.getString("tibber_password", tibber_password).c_str());
-  // RCT Power settings
-  strcpy(rct_host, preferences.getString("rct_host", rct_host).c_str());
-  strcpy(rct_port, preferences.getString("rct_port", rct_port).c_str());
-
+  load_parameters(); // Load parameters from Preferences
   const char *show_pwd_str = "<input type=\"checkbox\" onclick=\"t('%s')\">&nbsp;<label>Show password</label><br/>";
 
   // ESP8266 has only a 4 KB cont stack — keep these large objects in BSS
@@ -375,39 +396,39 @@ void WifiManagerSetup(bool stationmode)
   DEBUG_SERIAL.println(F("connected"));
 
   // read updated parameters
-  strcpy(reset_password, param_reset_password.getValue());
-  strcpy(input_type, custom_input_type.getValue());
-  strcpy(mqtt_server, custom_mqtt_server.getValue());
-  strcpy(mqtt_port, custom_mqtt_port.getValue());
-  strcpy(ntp_server, param_ntp_server.getValue());
-  strcpy(timezone, param_timezone.getValue());
-  strcpy(phase_number, param_phase_number.getValue());
-  strcpy(power_offset, custom_power_offset.getValue());
-  strcpy(query_period, custom_query_period.getValue());
-  strcpy(led_gpio, custom_led_gpio.getValue());
-  strcpy(led_gpio_i, custom_led_gpio_i.getValue());
-  strcpy(shelly_mac, custom_shelly_mac.getValue());
-  strcpy(mqtt_topic, custom_mqtt_topic.getValue());
-  strcpy(mqtt_user, custom_mqtt_user.getValue());
-  strcpy(mqtt_passwd, custom_mqtt_passwd.getValue());
-  strcpy(modbus_dev, custom_modbus_dev.getValue());
-  strcpy(power_path, custom_power_path.getValue());
-  strcpy(pwr_export_path, custom_pwr_export_path.getValue());
-  strcpy(power_l1_path, custom_power_l1_path.getValue());
-  strcpy(power_l2_path, custom_power_l2_path.getValue());
-  strcpy(power_l3_path, custom_power_l3_path.getValue());
-  strcpy(energy_in_path, custom_energy_in_path.getValue());
-  strcpy(energy_out_path, custom_energy_out_path.getValue());
-  strcpy(shelly_port, custom_shelly_port.getValue());
-  strcpy(sma_id, custom_sma_id.getValue());
+  config_doc["reset_password"] = param_reset_password.getValue();
+  config_doc["input_type"] = custom_input_type.getValue();
+  config_doc["mqtt_server"] = custom_mqtt_server.getValue();
+  config_doc["mqtt_port"] = custom_mqtt_port.getValue();
+  config_doc["ntp_server"] = param_ntp_server.getValue();
+  config_doc["timezone"] = param_timezone.getValue();
+  config_doc["phase_number"] = param_phase_number.getValue();
+  config_doc["power_offset"] = custom_power_offset.getValue();
+  config_doc["query_period"] = custom_query_period.getValue();
+  config_doc["led_gpio"] = custom_led_gpio.getValue();
+  config_doc["led_gpio_i"] = custom_led_gpio_i.getValue();
+  config_doc["shelly_mac"] = custom_shelly_mac.getValue();
+  config_doc["mqtt_topic"] = custom_mqtt_topic.getValue();
+  config_doc["mqtt_user"] = custom_mqtt_user.getValue();
+  config_doc["mqtt_passwd"] = custom_mqtt_passwd.getValue();
+  config_doc["modbus_dev"] = custom_modbus_dev.getValue();
+  config_doc["power_path"] = custom_power_path.getValue();
+  config_doc["pwr_export_path"] = custom_pwr_export_path.getValue();
+  config_doc["power_l1_path"] = custom_power_l1_path.getValue();
+  config_doc["power_l2_path"] = custom_power_l2_path.getValue();
+  config_doc["power_l3_path"] = custom_power_l3_path.getValue();
+  config_doc["energy_in_path"] = custom_energy_in_path.getValue();
+  config_doc["energy_out_path"] = custom_energy_out_path.getValue();
+  config_doc["shelly_port"] = custom_shelly_port.getValue();
+  config_doc["sma_id"] = custom_sma_id.getValue();
   // TibberPulse
-  strcpy(tibber_host, param_tibber_host_port.getValue());
-  strcpy(tibber_nodeid, param_tibber_node_id.getValue());
-  strcpy(tibber_user, param_tibber_user.getValue());
-  strcpy(tibber_password, param_tibber_password.getValue());
+  config_doc["tibber_host"] = param_tibber_host_port.getValue();
+  config_doc["tibber_nodeid"] = param_tibber_node_id.getValue();
+  config_doc["tibber_user"] = param_tibber_user.getValue();
+  config_doc["tibber_password"] = param_tibber_password.getValue();
   // RCT Power
-  strcpy(rct_host, custom_rct_host.getValue());
-  strcpy(rct_port, custom_rct_port.getValue());
+  config_doc["rct_host"] = custom_rct_host.getValue();
+  config_doc["rct_port"] = custom_rct_port.getValue();
 
   offsetPerPhase = String(power_offset).toDouble() / 3.0; // distribute offset equally across phases
 
@@ -474,86 +495,12 @@ void WifiManagerSetup(bool stationmode)
   DEBUG_SERIAL.print(F("\t - rct_port: "));
   DEBUG_SERIAL.println(String(rct_port));
 
-  if (strcmp(input_type, "SMA") == 0)
-  {
-    dataSMA = true;
-    DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
-  }
-  else if (strcmp(input_type, "SHRDZM") == 0)
-  {
-    dataSHRDZM = true;
-    DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
-  }
-  else if (strcmp(input_type, "HTTP") == 0)
-  {
-    dataHTTP = true;
-    DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
-  }
-  else if (strcmp(input_type, "SUNSPEC") == 0)
-  {
-    dataSUNSPEC = true;
-    DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
-  }
-  else if (strcmp(input_type, "TIBBERPULSE") == 0)
-  {
-    dataTIBBERPULSE = true;
-    DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
-  }
-  else if (strcmp(input_type, "RCT") == 0)
-  {
-    dataRCT = true;
-    DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
-  }
-  else
-  {
-    dataMQTT = true;
-    DEBUG_SERIAL.println(F("Enabling MQTT data input"));
-  }
 
-  if (strcmp(led_gpio_i, "true") == 0)
-  {
-    led_i = true;
-  }
-  else
-  {
-    led_i = false;
-  }
-
+  interprete_parameters();
   if (shouldSaveConfig)
   {
     DEBUG_SERIAL.println(F("saving config"));
-    preferences.putString("reset_password", reset_password);
-    preferences.putString("input_type", input_type);
-    preferences.putString("mqtt_server", mqtt_server);
-    preferences.putString("mqtt_port", mqtt_port);
-    preferences.putString("ntp_server", ntp_server);
-    preferences.putString("timezone", timezone);
-    preferences.putString("phase_number", phase_number);
-    preferences.putString("power_offset", power_offset);
-    preferences.putString("query_period", query_period);
-    preferences.putString("led_gpio", led_gpio);
-    preferences.putString("led_gpio_i", led_gpio_i);
-    preferences.putString("shelly_mac", shelly_mac);
-    preferences.putString("mqtt_topic", mqtt_topic);
-    preferences.putString("mqtt_user", mqtt_user);
-    preferences.putString("mqtt_passwd", mqtt_passwd);
-    preferences.putString("modbus_dev", modbus_dev);
-    preferences.putString("power_path", power_path);
-    preferences.putString("pwr_export_path", pwr_export_path);
-    preferences.putString("power_l1_path", power_l1_path);
-    preferences.putString("power_l2_path", power_l2_path);
-    preferences.putString("power_l3_path", power_l3_path);
-    preferences.putString("energy_in_path", energy_in_path);
-    preferences.putString("energy_out_path", energy_out_path);
-    preferences.putString("shelly_port", shelly_port);
-    preferences.putString("sma_id", sma_id);
-    preferences.putString("tibber_host", tibber_host);
-    preferences.putString("tibber_nodeid", tibber_nodeid);
-    preferences.putString("tibber_user", tibber_user);
-    preferences.putString("tibber_password", tibber_password);
-    preferences.putString("rct_host", rct_host);
-    preferences.putString("rct_port", rct_port);
-    
+    save_parameters();   
     wifiManager.reboot();
   }
   DEBUG_SERIAL.println(F("local ip"));
@@ -563,9 +510,14 @@ void WifiManagerSetup(bool stationmode)
 void setupMdns()
 {
   // Set up mDNS responder
-  strncat(shelly_name, shelly_mac, sizeof(shelly_name) - strlen(shelly_name) - 1);
+  String name_str = config_doc["shelly_name"] | "";
+  String mac_str  = config_doc["shelly_mac"] | "";
+  String cat_name = name_str + mac_str;
 
-  if (!MDNS.begin(shelly_name))
+ if (cat_name.length() > 128) {
+    cat_name = cat_name.substring(0, 128);
+ }
+  if (!MDNS.begin(cat_name.c_str( )))
   {
     DEBUG_SERIAL.println(F("Error setting up MDNS responder!"));
   }
@@ -578,16 +530,16 @@ void setupMdns()
       {"gen", shelly_gen},
       {"fw_id", shelly_fw_id},
       {"id", shelly_name}};
-  mdns_service_instance_name_set("_http", "_tcp", shelly_name);
+  mdns_service_instance_name_set("_http", "_tcp", cat_name.c_str());
   mdns_service_txt_set("_http", "_tcp", serviceTxtData, 4);
-  mdns_service_instance_name_set("_shelly", "_tcp", shelly_name);
+  mdns_service_instance_name_set("_shelly", "_tcp", cat_name.c_str());
   mdns_service_txt_set("_shelly", "_tcp", serviceTxtData, 4);
 #else
   hMDNSService = MDNS.addService(0, "http", "tcp", 80);
   hMDNSService2 = MDNS.addService(0, "shelly", "tcp", 80);
   if (hMDNSService)
   {
-    MDNS.setServiceName(hMDNSService, shelly_name);
+    MDNS.setServiceName(hMDNSService, cat_name.c_str());
     MDNS.addServiceTxt(hMDNSService, "arch", "esp8266");
     MDNS.addServiceTxt(hMDNSService, "gen", shelly_gen);
     MDNS.addServiceTxt(hMDNSService, "fw_id", shelly_fw_id);
@@ -595,7 +547,7 @@ void setupMdns()
   }
   if (hMDNSService2)
   {
-    MDNS.setServiceName(hMDNSService2, shelly_name);
+    MDNS.setServiceName(hMDNSService2, cat_name.c_str());
     MDNS.addServiceTxt(hMDNSService2, "arch", "esp8266");
     MDNS.addServiceTxt(hMDNSService2, "gen", shelly_gen);
     MDNS.addServiceTxt(hMDNSService2, "fw_id", shelly_fw_id);

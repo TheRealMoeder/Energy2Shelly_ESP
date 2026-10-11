@@ -6,7 +6,7 @@
 
 // Configuration & setup
 #include "config/Configuration.h"
-
+#include "config/load_save_parameters.h"
 // Data structures & processing
 #include "data/DataStructures.h"
 #include "data/DataProcessing.h"
@@ -27,6 +27,16 @@
 #define WiFicheckInterval 60000 // Check every 60 seconds
 
 unsigned long updateTimestamp = 0; 
+bool parametersUpdated = false; 
+
+bool isNotAuthorized(AsyncWebServerRequest *request) {
+    if (!request->authenticate("", reset_password)) {
+        request->requestAuthentication(); 
+        return true;
+    }
+    return false;
+}
+
 
 void setup(void)
 {
@@ -249,7 +259,59 @@ void setup(void)
         request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
     } });
 
-  // Shelly RPC endpoints called via HTTP GET method
+  server.on("/json_preferences", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+   
+    if (isNotAuthorized(request)) {
+            return request->requestAuthentication(); 
+        }
+    serializeJson(config_doc, json_prefs_string);   
+    request->send(200, "application/json", json_prefs_string); 
+  });
+
+
+  server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST, 
+    [](AsyncWebServerRequest *request) {
+      
+        
+    },
+    NULL, 
+    
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        if (index == 0) {
+            json_prefs_string = "";
+          
+        }
+
+        for (size_t i = 0; i < len; i++) {
+            json_prefs_string += (char)data[i];
+        }
+
+        if (len + index >= total) {
+            if (isNotAuthorized(request)) {
+                request->send(401, "text/plain", "Unauthorized");
+                json_prefs_string = ""; 
+                return;
+            }
+            DeserializationError error = deserializeJson(update_config_doc, json_prefs_string);
+            json_prefs_string = ""; 
+
+            if (error) {
+                AsyncWebServerResponse *response = request->beginResponse(400, "application/json", "{\"status\":\"JSON Error\"}");
+                response->addHeader("Connection", "close"); 
+                request->send(response);
+            } else {
+                AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\":\"OK\"}");
+                response->addHeader("Connection", "close");
+                request->send(response);
+                parametersUpdated = true;
+            }       
+          }
+    }
+);
+
+
+
+// Shelly RPC endpoints called via HTTP GET method
   server.on("/rpc/EM.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
     EMGetConfig();
@@ -354,11 +416,7 @@ void setup(void)
   // Set Up Modbus TCP for SUNSPEC register query
   if (dataSUNSPEC)
   {
-    period = atol(query_period);
     modbus1.client();
-    modbus_ip.fromString(mqtt_server); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
-    sunspec_port_int = atol(mqtt_port);
-    modbusdev_int = atol(modbus_dev);
     DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
     modbus1.connect(modbus_ip, sunspec_port_int);
   }
@@ -366,7 +424,6 @@ void setup(void)
   // Set Up HTTP query
   if (dataHTTP)
   {
-    period = atol(query_period);
     http.useHTTP10(true);
   }
 
@@ -492,6 +549,12 @@ void loop()
   {
     DEBUG_SERIAL.println(F("Lost WiFi connection or SSID changed!"));
     all_esp_reset(Energy2Shelly_ResetReason::WIFI_DISCONNECT);
+  }
+  if (parametersUpdated) {
+    mergeJson(config_doc.as<JsonObject>(), update_config_doc.as<JsonObjectConst>());
+    interprete_parameters();
+    save_parameters();
+    parametersUpdated = false;
   }
 
   handleblinkled();
