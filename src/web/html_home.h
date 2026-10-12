@@ -42,7 +42,7 @@ const char HTML_HOME[] PROGMEM = R"=====(
   <h1>Energy2Shelly ESP</h1>
   <p>This device emulates a Shelly Pro 3EM to integrate various energy meters.</p>
   <div class="nav">
-    <a href="/status">View Status</a>
+    <a href="/status">Status</a>
     <a href="/config">Configuration</a>
     <a href="/console">Console</a>
     <a href="/plot">Plot Data</a>
@@ -279,7 +279,6 @@ const char CONFIG_HTML[] PROGMEM = R"rawhtml(
     .nav a:hover { background-color: #0056b3; }
     .nav a.reset { background-color: #d9534f; }
     .nav a.reset:hover { background-color: #c9302c; }
-
     .wrap { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); text-align: left; }
     .wrap h2 { color: #0056b3; margin: 0 0 6px 0; }
     .note { color: #6b7280; margin-bottom: 12px; }
@@ -287,8 +286,10 @@ const char CONFIG_HTML[] PROGMEM = R"rawhtml(
     input[type="text"], input[type="password"], select, textarea { width:100%; padding:10px; margin-top:6px; box-sizing:border-box; border:1px solid #d1d5db; border-radius:6px; font-size:14px; color:#111827; background:#ffffff; }
     .row { display:flex; gap:12px; }
     .col { flex:1; }
-    .btn { display:inline-block; margin-top:16px; padding:10px 18px; background: #0ea5a4; color:#fff; border-radius:8px; text-decoration:none; border:none; cursor:pointer; font-weight:600; }
-    .btn.secondary { background:#f3f4f6; color:#111827; border:1px solid #e5e7eb; }
+    .btn {padding:10px 20px;margin:10px;cursor:pointer;text-decoration:none;display:inline-block;border-radius:5px;font-size:16px;}
+    .btn-yes {background-color:#d9534f;color:white;border:none;}
+    .btn-no {background-color:#5bc0de;color:white;border:none;}
+    
     .form-footer { display:flex; gap:12px; align-items:center; margin-top:18px; }
     .helper { font-size:0.9rem; color:#6b7280; margin-top:8px; }
     .password-row { display:flex; align-items:center; gap:8px; margin-top:6px; }
@@ -316,12 +317,12 @@ const char CONFIG_HTML[] PROGMEM = R"rawhtml(
 
 const char CONFIG_HTML_END[] PROGMEM = R"rawhtml(
       <div class="form-footer">
-        <button type="submit" class="btn">Save Configuration</button>
-        <a href="/" class="btn secondary">Back</a>
+        <button type="submit" class="btn btn-yes">Save Configuration</button>
+        <a href="/" class="btn btn-no">Back</a>
         <div style="flex:1;"></div>
       </div>
     </form>
-  </div> <!-- /wrap -->
+  </div>
 </body>
 </html>
 )rawhtml";

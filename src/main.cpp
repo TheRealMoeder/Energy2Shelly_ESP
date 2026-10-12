@@ -281,98 +281,7 @@ void setup(void)
 
     html += FPSTR(CONFIG_HTML);
 
-/* Backup for config Parameters from WifiManager
-static WiFiManagerParameter custom_section1("<h3>General settings</h3><script>function t(s) { var x = document.getElementById(s); x.type === \"password\" ? x.type = \"text\" : x.type = \"password\"; }</script>");
-  static WiFiManagerParameter param_reset_password("reset_password", "Reset Password <span title=\"For resetting the WiFi configuration and putting the device in AP / config mode\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", reset_password, 32, "type='password'");
-  static WiFiManagerParameter param_reset_password_show_password(buf_rst_pwd_show_pwd);
-  static WiFiManagerParameter custom_input_type("type", "<hr><b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data<br><code>TIBBERPULSE</code> for TibberPulse SML data<br><code>RCT</code> for RCT Power grid data", input_type, 40);
-  static WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 160);
-  static WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
-  static WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
-  static WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
-  static WiFiManagerParameter param_phase_number("phase_number", "Number of phases <span title=\"Number of phases (e.g. 1 or 3)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", phase_number, 1);
-  static WiFiManagerParameter custom_power_offset("power_offset", "Power offset <span title=\"optional offset value in Watts added to the emulated output\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", power_offset, 10);
-  static WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
-  static WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
-  static WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
-  static WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
-  static WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> or <code>2220</code> depending on Marstek Venus model and firmware version", shelly_port, 6);
-  static WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
-  static WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
-  static WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", mqtt_topic, 90);
-  static WiFiManagerParameter custom_mqtt_user("user", "<b>MQTT user</b> (optional)", mqtt_user, 40);
-  static WiFiManagerParameter custom_mqtt_passwd("passwd", "<b>MQTT password</b> (optional)", mqtt_passwd, 40, "type='password'");
-  static WiFiManagerParameter param_mqtt_passwd_show_password(buf_mqtt_pwd_show_pwd);
-  static WiFiManagerParameter custom_section3("<hr><h3>Modbus TCP options</h3>");
-  static WiFiManagerParameter custom_modbus_dev("modbus_dev", "<b>Modbus device ID</b><br><code>71</code> for Kostal SEM", modbus_dev, 60);
-  static WiFiManagerParameter custom_section4("<hr><h3>JSON paths for MQTT and generic HTTP</h3>");
-  static WiFiManagerParameter custom_power_path("power_path", "<b>Total power JSON path</b><br>e.g. <code>ENERGY.Power</code> or <code>TRIPHASE</code> for tri-phase data", power_path, 60);
-  static WiFiManagerParameter custom_pwr_export_path("pwr_export_path", "<b>Export power JSON path</b><br>Optional, for net calc (e.g. \"i-e\"", pwr_export_path, 60);
-  static WiFiManagerParameter custom_power_l1_path("power_l1_path", "<b>Phase 1 power JSON path</b><br>optional", power_l1_path, 60);
-  static WiFiManagerParameter custom_power_l2_path("power_l2_path", "<b>Phase 2 power JSON path</b><br>optional", power_l2_path, 60);
-  static WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>optional", power_l3_path, 60);
-  static WiFiManagerParameter custom_energy_in_path("energy_in_path", "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>", energy_in_path, 60);
-  static WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
-  // TibberPulse section
-  static WiFiManagerParameter param_section_tibberpulse("<hr><h3>TibberPulse options</h3>");
-  static WiFiManagerParameter param_tibber_host_port("tibber_host_port", "Hostname/IP[:port] <span title=\"e.g.: 192.168.0.1:8080\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_host, 40);
-  static WiFiManagerParameter param_tibber_node_id("tibber_node_id", "Node ID <span title=\"defaults to: 1, check the bridge web interface for the right nodeId\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_nodeid, 1);
-  static WiFiManagerParameter param_tibber_user("tibber_user", "User <span title=\"defaults to: admin\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_user, 10);
-  static WiFiManagerParameter param_tibber_password("tibber_password", "Password <span title=\"as printed on bridge device: xxxx-xxxx\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_password, 10, "type='password'");
-  static WiFiManagerParameter param_tibber_password_show_password(buf_tibber_pwd_show_pwd);
-
-  // RCT Power section
-  static WiFiManagerParameter custom_section_rct("<hr><h3>RCT Power options</h3>");
-  static WiFiManagerParameter custom_rct_host("rct_host", "<b>RCT host</b><br>IP address or hostname of the RCT Power device (with integrated grid sensor)", rct_host, 41);
-  static WiFiManagerParameter custom_rct_port("rct_port", "<b>RCT port</b><br><code>8899</code> default", rct_port, 6);
-*/
-
-    html += "<label>MQTT Server</label>\n";
-    html += "<input type='text' name='mqtt_server' value='";
-    html += htmlEscape(mqtt_server);
-    html += "'>\n";
-
-    html += "<label>MQTT Port</label>\n";
-    html += "<input type='text' name='mqtt_port' value='";
-    html += htmlEscape(mqtt_port);
-    html += "'>\n";
-
-    html += "<label>MQTT User</label>\n";
-    html += "<input type='text' name='mqtt_user' value='";
-    html += htmlEscape(mqtt_user);
-    html += "'>\n";
-
-    html += "<label>MQTT Password</label>\n";
-    html += "<input id='mqtt_passwd' type='password' name='mqtt_passwd' value=''>\n";
-    html += "<label style='font-weight:normal; display:flex; align-items:center; gap:8px; margin-top:8px;'>\n";
-    html += "  <input type='checkbox' onclick=\"togglePassword('mqtt_passwd')\"> Show password\n";
-    html += "</label>\n";
-
-    html += "<label>NTP Server</label>\n";
-    html += "<input type='text' name='ntp_server' value='";
-    html += htmlEscape(ntp_server);
-    html += "'>\n";
-
-    html += "<label>Timezone</label>\n";
-    html += "<input type='text' name='timezone' value='";
-    html += htmlEscape(timezone);
-    html += "'>\n";
-
-    html += "<label>Query Period (seconds)</label>\n";
-    html += "<input type='text' name='query_period' value='";
-    html += htmlEscape(query_period);
-    html += "'>\n";
-
-    html += "<label>LED GPIO</label>\n";
-    html += "<input type='text' name='led_gpio' value='";
-    html += htmlEscape(led_gpio);
-    html += "'>\n";
-
-    html += "<label>Shelly Port</label>\n";
-    html += "<input type='text' name='shelly_port' value='";
-    html += htmlEscape(shelly_port);
-    html += "'>\n";
-
+    html += "<h3>General Settings</h3>\n";
     html += "<label>Input Type</label>\n";
     html += "<select name='input_type'>\n";
     const char *types[] = {"MQTT", "SMA", "HTTP", "TIBBERPULSE", "RCT"};
@@ -387,9 +296,166 @@ static WiFiManagerParameter custom_section1("<h3>General settings</h3><script>fu
     }
     html += "</select>\n";
 
+    html += "<label>Number of phases (e.g. 1 or 3)</label>\n";
+    html += "<input type='text' name='phase_number' value='";
+    html += htmlEscape(phase_number);
+    html += "'>\n";
+
+    html += "<label>Power offset value in Watts added to the emulated output\n";
+    html += "<input type='text' name='power_offset' value='";
+    html += htmlEscape(power_offset);
+    html += "'>\n";
+
+    html += "<label>Query period for generic HTTP and SUNSPEC, in milliseconds</label>\n";
+    html += "<input type='text' name='query_period' value='";
+    html += htmlEscape(query_period);
+    html += "'>\n";
+
+    html += "<label>GPIO of internal LED</label>\n";
+    html += "<input type='text' name='led_gpio' value='";
+    html += htmlEscape(led_gpio);
+    html += "'>\n";
+
+    html += "<label>True if GPIO of internal LED is inverted</label>\n";
+    html += "<input type='text' name='led_gpio_i' value='";
+    html += htmlEscape(led_gpio_i);
+    html += "'>\n";
+
+    html += "<label>Shelly ID (12 char hexadecimal, defaults to MAC address of ESP)</label>\n";
+    html += "<input type='text' name='shelly_mac' value='";
+    html += htmlEscape(shelly_mac);
+    html += "'>\n";
+
+    html += "<label>Shelly UDP port (<code>1010</code> or <code>2220</code> depending on Marstek Venus model and firmware version)</label>\n";
+    html += "<input type='text' name='shelly_port' value='";
+    html += htmlEscape(shelly_port);
+    html += "'>\n";
+
+    html += "<label>SMA serial number (if you have more than one SMA EM/HM in your network)</label>\n";
+    html += "<input type='text' name='sma_id' value='";
+    html += htmlEscape(sma_id);
+    html += "'>\n";
+
+    html += "<label>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC</label>\n";
+    html += "<input type='text' name='mqtt_server' value='";
+    html += htmlEscape(mqtt_server);
+    html += "'>\n";
+
+    html += "<label>Port for MQTT or Modbus TCP (SUNSPEC)</label>\n";
+    html += "<input type='text' name='mqtt_port' value='";
+    html += htmlEscape(mqtt_port);
+    html += "'>\n";
+    
+    html += "<label>NTP Server for time synchronization</label>\n";
+    html += "<input type='text' name='ntp_server' value='";
+    html += htmlEscape(ntp_server);
+    html += "'>\n";
+
+    html += "<label>Timezone e.g. <code>UTC0</code>, <code>UTC+1</code>, <code>UTC-3</code>, <code>UTC+1CET-1CEST</code>,<code>M3.5.0/2,M10.5.0/3</code></label>\n";
+    html += "<input type='text' name='timezone' value='";
+    html += htmlEscape(timezone);
+    html += "'>\n";
+
+    html += "<h3>MQTT options</h3>\n";
+
+    html += "<label>MQTT topic</label>\n";
+    html += "<input type='text' name='mqtt_topic' value='";
+    html += htmlEscape(mqtt_topic);
+    html += "'>\n";
+
+    html += "<label>MQTT User</label>\n";
+    html += "<input type='text' name='mqtt_user' value='";
+    html += htmlEscape(mqtt_user);
+    html += "'>\n";
+
+    html += "<label>MQTT Password</label>\n";
+    html += "<input id='mqtt_passwd' type='password' name='mqtt_passwd' value=''>\n";
+    html += "<label style='font-weight:normal; display:flex; align-items:center; gap:8px; margin-top:8px;'>\n";
+    html += "  <input type='checkbox' onclick=\"togglePassword('mqtt_passwd')\"> Show password\n";
+    html += "</label>\n";
+
+    html += "<h3>Modbus TCP options</h3>\n";
+
+    html += "<label>Modbus device ID (<code>71</code> for Kostal SEM)</label>\n";
+    html += "<input type='text' name='modbus_dev' value='";
+    html += htmlEscape(modbus_dev);
+    html += "'>\n";
+    
+    html += "<h3>JSON paths for MQTT and generic HTTP</h3>\n";
+
+    html += "<label>Total power JSON path (e.g. <code>ENERGY.Power</code> or <code>TRIPHASE</code> for tri-phase data</label>\n";
+    html += "<input type='text' name='power_path' value='";
+    html += htmlEscape(power_path);
+    html += "'>\n";
+
+    html += "<label>Export power JSON path (Optional, for net calc e.g. \"i-e\")</label>\n";
+    html += "<input type='text' name='pwr_export_path' value='";
+    html += htmlEscape(pwr_export_path);
+    html += "'>\n";
+
+    html += "<label>Phase 1 power JSON path (optional)</label>\n";
+    html += "<input type='text' name='power_l1_path' value='";
+    html += htmlEscape(power_l1_path);
+    html += "'>\n";
+
+    html += "<label>Phase 2 power JSON path (optional)</label>\n";
+    html += "<input type='text' name='power_l2_path' value='";
+    html += htmlEscape(power_l2_path);
+    html += "'>\n";
+
+    html += "<label>Phase 3 power JSON path (optional)</label>\n";
+    html += "<input type='text' name='power_l3_path' value='";
+    html += htmlEscape(power_l3_path);
+    html += "'>\n";
+
+    html += "<label>Energy from grid JSON path e.g. <code>ENERGY.Grid</code></label>\n";
+    html += "<input type='text' name='energy_in_path' value='";
+    html += htmlEscape(energy_in_path);
+    html += "'>\n";
+
+    html += "<label>Energy to grid JSON path e.g. <code>ENERGY.FeedIn</code></label>\n";
+    html += "<input type='text' name='energy_out_path' value='";
+    html += htmlEscape(energy_out_path);
+    html += "'>\n";
+
+    html += "<h3>TibberPulse options</h3>\n";
+
+    html += "<label></label>\n";
+    html += "<input type='text' name='tibber_host' value='";
+    html += htmlEscape(tibber_host);
+    html += "'>\n";
+
+    html += "<label></label>\n";
+    html += "<input type='text' name='tibber_nodeid' value='";
+    html += htmlEscape(tibber_nodeid);
+    html += "'>\n";
+
+    html += "<label></label>\n";
+    html += "<input type='text' name='tibber_user' value='";
+    html += htmlEscape(tibber_user);
+    html += "'>\n";
+
+    html += "<label>Tibber Password</label>\n";
+    html += "<input id='tibber_password' type='password' name='tibber_password' value=''>\n";
+    html += "<label style='font-weight:normal; display:flex; align-items:center; gap:8px; margin-top:8px;'>\n";
+    html += "  <input type='checkbox' onclick=\"togglePassword('tibber_password')\"> Show password\n";
+    html += "</label>\n";
+
+    html += "<h3>RCT Power options</h3>\n";
+
+    html += "<label></label>\n";
+    html += "<input type='text' name='rct_host' value='";
+    html += htmlEscape(rct_host);
+    html += "'>\n";
+
+    html += "<label></label>\n";
+    html += "<input type='text' name='rct_port' value='";
+    html += htmlEscape(rct_port);
+    html += "'>\n<br>";
+
     if (hasPassword) {
       html += "<label>Reset Password</label>\n";
-      html += "<input id='reset_password' type='password' name='reset_password' placeholder='Enter reset password'>\n";
+      html += "<input id='reset_password' type='password' name='reset_password' placeholder='Enter reset password to save configuration'>\n";
       html += "<label style='font-weight:normal; display:flex; align-items:center; gap:8px; margin-top:8px;'>\n";
       html += "  <input type='checkbox' onclick=\"togglePassword('reset_password')\"> Show password\n";
       html += "</label>\n";
@@ -432,16 +498,37 @@ static WiFiManagerParameter custom_section1("<h3>General settings</h3><script>fu
     };
 
     Field fields[] = {
-      {"mqtt_server", mqtt_server, sizeof(mqtt_server)},
-      {"mqtt_port", mqtt_port, sizeof(mqtt_port)},
-      {"mqtt_user", mqtt_user, sizeof(mqtt_user)},
-      {"mqtt_passwd", mqtt_passwd, sizeof(mqtt_passwd)},
-      {"ntp_server", ntp_server, sizeof(ntp_server)},
-      {"timezone", timezone, sizeof(timezone)},
+      {"input_type", input_type, sizeof(input_type)},
+      {"phase_number", phase_number, sizeof(phase_number)},
+      {"power_offset", power_offset, sizeof(power_offset)},
       {"query_period", query_period, sizeof(query_period)},
       {"led_gpio", led_gpio, sizeof(led_gpio)},
+      {"led_gpio_i", led_gpio_i, sizeof(led_gpio_i)},
+      {"shelly_mac", shelly_mac, sizeof(shelly_mac)},
       {"shelly_port", shelly_port, sizeof(shelly_port)},
-      {"input_type", input_type, sizeof(input_type)},
+      {"sma_id", sma_id, sizeof(sma_id)},
+      {"mqtt_server", mqtt_server, sizeof(mqtt_server)},
+      {"mqtt_port", mqtt_port, sizeof(mqtt_port)},
+      {"ntp_server", ntp_server, sizeof(ntp_server)},
+      {"timezone", timezone, sizeof(timezone)},
+      {"mqtt_topic", mqtt_topic, sizeof(mqtt_topic)},
+      {"mqtt_user", mqtt_user, sizeof(mqtt_user)},
+      {"mqtt_passwd", mqtt_passwd, sizeof(mqtt_passwd)},
+      {"modbus_dev", modbus_dev, sizeof(modbus_dev)},
+      {"power_path", power_path, sizeof(power_path)},
+      {"pwr_export_path", pwr_export_path, sizeof(pwr_export_path)},
+      {"power_l1_path", power_l1_path, sizeof(power_l1_path)},
+      {"power_l2_path", power_l2_path, sizeof(power_l2_path)},
+      {"power_l3_path", power_l3_path, sizeof(power_l3_path)},
+      {"energy_in_path", energy_in_path, sizeof(energy_in_path)},
+      {"energy_out_path", energy_out_path, sizeof(energy_out_path)},
+      {"modbus_dev", modbus_dev, sizeof(modbus_dev)},
+      {"tibber_host", tibber_host, sizeof(tibber_host)},
+      {"tibber_nodeid", tibber_nodeid, sizeof(tibber_nodeid)},
+      {"tibber_user", tibber_user, sizeof(tibber_user)},
+      {"tibber_password", tibber_password, sizeof(tibber_password)},
+      {"rct_host", rct_host, sizeof(rct_host)},
+      {"rct_port", rct_port, sizeof(rct_port)},
       {"reset_password", reset_password, sizeof(reset_password)}
     };
     const size_t fieldCount = sizeof(fields) / sizeof(fields[0]);
