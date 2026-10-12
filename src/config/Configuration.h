@@ -328,6 +328,10 @@ extern void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 // FUNCTION DECLARATIONS
 // ============================================================================
 
+void printConfig();
+void readConfig();
+void writeConfig();
+void handleConfigData();
 void blinkled(int duration);
 void handleblinkled();
 void saveConfigCallback();

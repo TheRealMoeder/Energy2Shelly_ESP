@@ -26,7 +26,26 @@
 
 #define WiFicheckInterval 60000 // Check every 60 seconds
 
-unsigned long updateTimestamp = 0; 
+unsigned long updateTimestamp = 0;
+
+static String htmlEscape(const char *s)
+{
+  if (!s) return String();
+  String out;
+  out.reserve(strlen(s) * 2 + 8);
+  for (size_t i = 0; s[i] != '\0'; ++i) {
+    char c = s[i];
+    switch (c) {
+      case '&': out += F("&amp;"); break;
+      case '<': out += F("&lt;"); break;
+      case '>': out += F("&gt;"); break;
+      case '"': out += F("&quot;"); break;
+      case '\'': out += F("&#39;"); break;
+      default: out += c; break;
+    }
+  }
+  return out;
+}
 
 void setup(void)
 {
@@ -121,32 +140,35 @@ void setup(void)
         memcpy_P(buffer, webplotter_html + index, maxLen); return maxLen;
     });
     request->send(response); });
- server.on("/chart.min.js", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+
+  server.on("/chart.min.js", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse("application/javascript", chart_js_len, [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-        size_t remaining = chart_js_len - index;
-        size_t toCopy = (remaining < maxLen) ? remaining : maxLen;
-        
-        memcpy_P(buffer, chart_js + index, toCopy); 
-        return toCopy;
+      size_t remaining = chart_js_len - index;
+      size_t toCopy = (remaining < maxLen) ? remaining : maxLen;
+
+      memcpy_P(buffer, chart_js + index, toCopy);
+      return toCopy;
     });
-    
+
     response->addHeader("Content-Encoding", "gzip");
-    request->send(response); 
-});
+    request->send(response);
+  });
+
   server.on("/favicon.ico", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
               request->send(204); // 204 "No Content"
             });
-  //Reloads of wifi manager page, redirect to main page 
-   server.on("/exit", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-   {
-    request->redirect("/");
-   });
 
-   server.on("/close", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-   {
+  // Reloads of wifi manager page, redirect to main page
+  server.on("/exit", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+  {
     request->redirect("/");
-   });
+  });
+
+  server.on("/close", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+    request->redirect("/");
+  });
 
   server.on("/console", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
@@ -168,30 +190,30 @@ void setup(void)
 
   server.on("/reset", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
-    bool hasPassword = (reset_password != nullptr && strlen(reset_password) > 0);  
-    
+    bool hasPassword = (reset_password != nullptr && strlen(reset_password) > 0);
+
     size_t maxNeededLength = (sizeof(RESET_HTML) - 1) + (sizeof(RESET_HTML_END) - 1);
-    
+
     if (hasPassword) {
         maxNeededLength += (sizeof(PASSWORD_INPUT_HTML) - 1);
-    }   
+    }
     String html;
-    html.reserve(maxNeededLength); 
-    
+    html.reserve(maxNeededLength);
+
     html += FPSTR(RESET_HTML);
     if (hasPassword) {
         html += FPSTR(PASSWORD_INPUT_HTML);
     }
     html += FPSTR(RESET_HTML_END);
-    
+
     request->send(200, "text/html", html); });
 
   server.on("/reset", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request)
             {
     if (reset_password != nullptr && strlen(reset_password) > 0) {
-        if (request->hasParam("reset_password", true)) {            
+        if (request->hasParam("reset_password", true)) {
             const char* submitted_pw = request->getParam("reset_password", true)->value().c_str();
-            
+
             if (strcmp(reset_password, submitted_pw) == 0) {
                 shouldResetConfig = true;
                 request->send(200, "text/plain", PSTR("Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n"));
@@ -201,30 +223,30 @@ void setup(void)
         } else {
             request->send(400, "text/plain", PSTR("Reset password missing.\r\n"));
         }
-    } else {        
+    } else {
         shouldResetConfig = true;
         request->send(200, "text/plain", PSTR("Resetting WiFi configuration...\r\n"));
     } });
-  
-    server.on("/update", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+
+  server.on("/update", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
     bool hasPassword = (reset_password != nullptr && strlen(reset_password) > 0);
-    
+
     size_t maxNeededLength = (sizeof(UPDATE_HTML) - 1) + (sizeof(UPDATE_HTML_END) - 1);
-    
+
     if (hasPassword) {
         maxNeededLength += (sizeof(PASSWORD_INPUT_HTML) - 1);
     }
-    
+
     String html;
-    html.reserve(maxNeededLength); 
-    
+    html.reserve(maxNeededLength);
+
     html += FPSTR(UPDATE_HTML);
     if (hasPassword) {
         html += FPSTR(PASSWORD_INPUT_HTML);
     }
     html += FPSTR(UPDATE_HTML_END);
-    
+
     request->send(200, "text/html", html); });
 
   server.on("/update", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request)
@@ -232,7 +254,7 @@ void setup(void)
     if (reset_password != nullptr && strlen(reset_password) > 0) {
         if (request->hasParam("reset_password", true)) {
             const char* submitted_pw = request->getParam("reset_password", true)->value().c_str();
-            
+
             if (strcmp(reset_password, submitted_pw) == 0) {
                   shouldupdate = true;
                   updateTimestamp=millis();
@@ -248,6 +270,211 @@ void setup(void)
         updateTimestamp=millis();
         request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
     } });
+
+  // Config page
+  server.on("/config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+  {
+    bool hasPassword = (reset_password != nullptr && strlen(reset_password) > 0);
+
+    String html;
+    html.reserve(4096);
+
+    html += FPSTR(CONFIG_HTML);
+
+/* Backup for config Parameters from WifiManager
+static WiFiManagerParameter custom_section1("<h3>General settings</h3><script>function t(s) { var x = document.getElementById(s); x.type === \"password\" ? x.type = \"text\" : x.type = \"password\"; }</script>");
+  static WiFiManagerParameter param_reset_password("reset_password", "Reset Password <span title=\"For resetting the WiFi configuration and putting the device in AP / config mode\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", reset_password, 32, "type='password'");
+  static WiFiManagerParameter param_reset_password_show_password(buf_rst_pwd_show_pwd);
+  static WiFiManagerParameter custom_input_type("type", "<hr><b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data<br><code>TIBBERPULSE</code> for TibberPulse SML data<br><code>RCT</code> for RCT Power grid data", input_type, 40);
+  static WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 160);
+  static WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
+  static WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
+  static WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
+  static WiFiManagerParameter param_phase_number("phase_number", "Number of phases <span title=\"Number of phases (e.g. 1 or 3)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", phase_number, 1);
+  static WiFiManagerParameter custom_power_offset("power_offset", "Power offset <span title=\"optional offset value in Watts added to the emulated output\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", power_offset, 10);
+  static WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
+  static WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
+  static WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
+  static WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
+  static WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> or <code>2220</code> depending on Marstek Venus model and firmware version", shelly_port, 6);
+  static WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
+  static WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
+  static WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", mqtt_topic, 90);
+  static WiFiManagerParameter custom_mqtt_user("user", "<b>MQTT user</b> (optional)", mqtt_user, 40);
+  static WiFiManagerParameter custom_mqtt_passwd("passwd", "<b>MQTT password</b> (optional)", mqtt_passwd, 40, "type='password'");
+  static WiFiManagerParameter param_mqtt_passwd_show_password(buf_mqtt_pwd_show_pwd);
+  static WiFiManagerParameter custom_section3("<hr><h3>Modbus TCP options</h3>");
+  static WiFiManagerParameter custom_modbus_dev("modbus_dev", "<b>Modbus device ID</b><br><code>71</code> for Kostal SEM", modbus_dev, 60);
+  static WiFiManagerParameter custom_section4("<hr><h3>JSON paths for MQTT and generic HTTP</h3>");
+  static WiFiManagerParameter custom_power_path("power_path", "<b>Total power JSON path</b><br>e.g. <code>ENERGY.Power</code> or <code>TRIPHASE</code> for tri-phase data", power_path, 60);
+  static WiFiManagerParameter custom_pwr_export_path("pwr_export_path", "<b>Export power JSON path</b><br>Optional, for net calc (e.g. \"i-e\"", pwr_export_path, 60);
+  static WiFiManagerParameter custom_power_l1_path("power_l1_path", "<b>Phase 1 power JSON path</b><br>optional", power_l1_path, 60);
+  static WiFiManagerParameter custom_power_l2_path("power_l2_path", "<b>Phase 2 power JSON path</b><br>optional", power_l2_path, 60);
+  static WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>optional", power_l3_path, 60);
+  static WiFiManagerParameter custom_energy_in_path("energy_in_path", "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>", energy_in_path, 60);
+  static WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
+  // TibberPulse section
+  static WiFiManagerParameter param_section_tibberpulse("<hr><h3>TibberPulse options</h3>");
+  static WiFiManagerParameter param_tibber_host_port("tibber_host_port", "Hostname/IP[:port] <span title=\"e.g.: 192.168.0.1:8080\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_host, 40);
+  static WiFiManagerParameter param_tibber_node_id("tibber_node_id", "Node ID <span title=\"defaults to: 1, check the bridge web interface for the right nodeId\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_nodeid, 1);
+  static WiFiManagerParameter param_tibber_user("tibber_user", "User <span title=\"defaults to: admin\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_user, 10);
+  static WiFiManagerParameter param_tibber_password("tibber_password", "Password <span title=\"as printed on bridge device: xxxx-xxxx\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_password, 10, "type='password'");
+  static WiFiManagerParameter param_tibber_password_show_password(buf_tibber_pwd_show_pwd);
+
+  // RCT Power section
+  static WiFiManagerParameter custom_section_rct("<hr><h3>RCT Power options</h3>");
+  static WiFiManagerParameter custom_rct_host("rct_host", "<b>RCT host</b><br>IP address or hostname of the RCT Power device (with integrated grid sensor)", rct_host, 41);
+  static WiFiManagerParameter custom_rct_port("rct_port", "<b>RCT port</b><br><code>8899</code> default", rct_port, 6);
+*/
+
+    html += "<label>MQTT Server</label>\n";
+    html += "<input type='text' name='mqtt_server' value='";
+    html += htmlEscape(mqtt_server);
+    html += "'>\n";
+
+    html += "<label>MQTT Port</label>\n";
+    html += "<input type='text' name='mqtt_port' value='";
+    html += htmlEscape(mqtt_port);
+    html += "'>\n";
+
+    html += "<label>MQTT User</label>\n";
+    html += "<input type='text' name='mqtt_user' value='";
+    html += htmlEscape(mqtt_user);
+    html += "'>\n";
+
+    html += "<label>MQTT Password</label>\n";
+    html += "<input id='mqtt_passwd' type='password' name='mqtt_passwd' value=''>\n";
+    html += "<label style='font-weight:normal; display:flex; align-items:center; gap:8px; margin-top:8px;'>\n";
+    html += "  <input type='checkbox' onclick=\"togglePassword('mqtt_passwd')\"> Show password\n";
+    html += "</label>\n";
+
+    html += "<label>NTP Server</label>\n";
+    html += "<input type='text' name='ntp_server' value='";
+    html += htmlEscape(ntp_server);
+    html += "'>\n";
+
+    html += "<label>Timezone</label>\n";
+    html += "<input type='text' name='timezone' value='";
+    html += htmlEscape(timezone);
+    html += "'>\n";
+
+    html += "<label>Query Period (seconds)</label>\n";
+    html += "<input type='text' name='query_period' value='";
+    html += htmlEscape(query_period);
+    html += "'>\n";
+
+    html += "<label>LED GPIO</label>\n";
+    html += "<input type='text' name='led_gpio' value='";
+    html += htmlEscape(led_gpio);
+    html += "'>\n";
+
+    html += "<label>Shelly Port</label>\n";
+    html += "<input type='text' name='shelly_port' value='";
+    html += htmlEscape(shelly_port);
+    html += "'>\n";
+
+    html += "<label>Input Type</label>\n";
+    html += "<select name='input_type'>\n";
+    const char *types[] = {"MQTT", "SMA", "HTTP", "TIBBERPULSE", "RCT"};
+    for (size_t t = 0; t < sizeof(types) / sizeof(types[0]); ++t) {
+      html += "<option value='";
+      html += types[t];
+      html += "'";
+      if (strcmp(input_type, types[t]) == 0) html += " selected";
+      html += ">";
+      html += types[t];
+      html += "</option>\n";
+    }
+    html += "</select>\n";
+
+    if (hasPassword) {
+      html += "<label>Reset Password</label>\n";
+      html += "<input id='reset_password' type='password' name='reset_password' placeholder='Enter reset password'>\n";
+      html += "<label style='font-weight:normal; display:flex; align-items:center; gap:8px; margin-top:8px;'>\n";
+      html += "  <input type='checkbox' onclick=\"togglePassword('reset_password')\"> Show password\n";
+      html += "</label>\n";
+    }
+
+    html += "<script>\n";
+    html += "function togglePassword(id) {\n";
+    html += "  const el = document.getElementById(id);\n";
+    html += "  if (!el) return;\n";
+    html += "  el.type = (el.type === 'password') ? 'text' : 'password';\n";
+    html += "}\n";
+    html += "</script>\n";
+
+    html += FPSTR(CONFIG_HTML_END);
+
+    request->send(200, "text/html", html);
+  });
+
+  server.on("/config", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request)
+  {
+    if (reset_password != nullptr && strlen(reset_password) > 0) {
+      if (request->hasParam("reset_password", true)) {
+        const char* submitted_pw = request->getParam("reset_password", true)->value().c_str();
+        if (strcmp(reset_password, submitted_pw) != 0) {
+          request->send(403, "text/plain", PSTR("Unauthorized: Invalid reset password.\r\n"));
+          return;
+        }
+      } else {
+        request->send(400, "text/plain", PSTR("Reset password missing.\r\n"));
+        return;
+      }
+    }
+
+    bool changed = false;
+
+    struct Field {
+      const char* name;
+      char* dest;
+      size_t maxlen;
+    };
+
+    Field fields[] = {
+      {"mqtt_server", mqtt_server, sizeof(mqtt_server)},
+      {"mqtt_port", mqtt_port, sizeof(mqtt_port)},
+      {"mqtt_user", mqtt_user, sizeof(mqtt_user)},
+      {"mqtt_passwd", mqtt_passwd, sizeof(mqtt_passwd)},
+      {"ntp_server", ntp_server, sizeof(ntp_server)},
+      {"timezone", timezone, sizeof(timezone)},
+      {"query_period", query_period, sizeof(query_period)},
+      {"led_gpio", led_gpio, sizeof(led_gpio)},
+      {"shelly_port", shelly_port, sizeof(shelly_port)},
+      {"input_type", input_type, sizeof(input_type)},
+      {"reset_password", reset_password, sizeof(reset_password)}
+    };
+    const size_t fieldCount = sizeof(fields) / sizeof(fields[0]);
+
+    for (size_t i = 0; i < request->params(); ++i) {
+      const AsyncWebParameter* p = request->getParam(i);
+      if (!p || !p->isPost()) continue;
+
+      const String &pname = p->name();
+      const String &pvalue = p->value();
+
+      for (size_t f = 0; f < fieldCount; ++f) {
+        if (pname.equals(fields[f].name)) {
+          size_t copyLen = (pvalue.length() < (fields[f].maxlen - 1))
+            ? pvalue.length()
+            : (fields[f].maxlen - 1);
+
+          pvalue.toCharArray(fields[f].dest, copyLen + 1);
+          fields[f].dest[copyLen] = '\0';
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    if (changed) {
+      writeConfig();
+      delay(500);
+      ESP.restart();
+    }
+
+    request->send(200, "text/html", FPSTR(CONFIG_SUCCESS_HTML));
+  });
 
   // Shelly RPC endpoints called via HTTP GET method
   server.on("/rpc/EM.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
@@ -376,7 +603,7 @@ void setup(void)
   startMillis = millis();
 }
 
-/* main worker loop, in case of WiFi connection*/
+// main worker loop, in case of WiFi connection
 void worker_loop(int currentMillis)
 {
 #ifndef ESP32

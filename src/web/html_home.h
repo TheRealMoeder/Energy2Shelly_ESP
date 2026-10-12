@@ -43,6 +43,7 @@ const char HTML_HOME[] PROGMEM = R"=====(
   <p>This device emulates a Shelly Pro 3EM to integrate various energy meters.</p>
   <div class="nav">
     <a href="/status">View Status</a>
+    <a href="/config">Configuration</a>
     <a href="/console">Console</a>
     <a href="/plot">Plot Data</a>
     <a href="/update" class="reset">Update SW</a>
@@ -262,6 +263,93 @@ const char* htmlPage_console PROGMEM  = R"rawliteral(
 
 const char PASSWORD_INPUT_HTML[] PROGMEM = "<input type='password' name='reset_password' placeholder='Enter reset password' required><br/>";
 
+const char CONFIG_HTML[] PROGMEM = R"rawhtml(
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Energy2Shelly ESP - Configuration</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; color: #333; }
+    h1 { color: #0056b3; margin-bottom: 6px; }
+    p.lead { color: #6b7280; margin-top: 0; margin-bottom: 18px; }
+    .nav { margin: 20px 0 28px 0; }
+    .nav a { display: inline-block; padding: 10px 18px; margin: 6px; background-color: #007bff; color: white; text-decoration: none; border-radius: 6px; transition: background-color 0.2s; }
+    .nav a:hover { background-color: #0056b3; }
+    .nav a.reset { background-color: #d9534f; }
+    .nav a.reset:hover { background-color: #c9302c; }
+
+    .wrap { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); text-align: left; }
+    .wrap h2 { color: #0056b3; margin: 0 0 6px 0; }
+    .note { color: #6b7280; margin-bottom: 12px; }
+    label { display:block; margin-top:12px; font-weight:600; color: #374151; }
+    input[type="text"], input[type="password"], select, textarea { width:100%; padding:10px; margin-top:6px; box-sizing:border-box; border:1px solid #d1d5db; border-radius:6px; font-size:14px; color:#111827; background:#ffffff; }
+    .row { display:flex; gap:12px; }
+    .col { flex:1; }
+    .btn { display:inline-block; margin-top:16px; padding:10px 18px; background: #0ea5a4; color:#fff; border-radius:8px; text-decoration:none; border:none; cursor:pointer; font-weight:600; }
+    .btn.secondary { background:#f3f4f6; color:#111827; border:1px solid #e5e7eb; }
+    .form-footer { display:flex; gap:12px; align-items:center; margin-top:18px; }
+    .helper { font-size:0.9rem; color:#6b7280; margin-top:8px; }
+    .password-row { display:flex; align-items:center; gap:8px; margin-top:6px; }
+    @media (max-width:600px) { .row { flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <h1>Energy2Shelly ESP</h1>
+  <p class="lead">Edit device settings below and click Save Configuration.</p>
+
+  <div class="nav">
+    <a href="/">Home</a>
+    <a href="/status">Status</a>
+    <a href="/console">Console</a>
+    <a href="/plot">Plot</a>
+    <a href="/update" class="reset">Update SW</a>
+  </div>
+
+  <div class="wrap">
+    <h2>Device Configuration</h2>
+    <p class="note">Fields left blank will remain unchanged. Password fields are empty for security.</p>
+
+    <form method='POST' accept-charset='UTF-8'>
+)rawhtml";
+
+const char CONFIG_HTML_END[] PROGMEM = R"rawhtml(
+      <div class="form-footer">
+        <button type="submit" class="btn">Save Configuration</button>
+        <a href="/" class="btn secondary">Back</a>
+        <div style="flex:1;"></div>
+      </div>
+    </form>
+  </div> <!-- /wrap -->
+</body>
+</html>
+)rawhtml";
+
+const char CONFIG_SUCCESS_HTML[] PROGMEM = R"rawhtml(
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Configuration Saved</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <style>
+    body{font-family:Arial,sans-serif;text-align:center;padding:24px;background:#f4f4f4;color:#333;}
+    .card{max-width:720px;margin:32px auto;background:#fff;padding:24px;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.06);}
+    h2{color:#0056b3;margin-bottom:6px;}
+    p{color:#6b7280;}
+    .btn{display:inline-block;margin-top:16px;padding:10px 16px;background:#0ea5a4;color:#fff;border-radius:8px;text-decoration:none;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Configuration saved</h2>
+    <p>The device configuration has been updated.</p>
+    <a class="btn" href="/">Return to home</a>
+  </div>
+</body>
+</html>
+)rawhtml";
 
 const char RESET_HTML[] PROGMEM = R"rawhtml(
 <!DOCTYPE html><html><head><title>Reset Confirmation</title>
@@ -282,7 +370,6 @@ const char RESET_HTML_END[] PROGMEM = R"rawhtml(
 </body></html>
 )rawhtml";
 
-
 const char UPDATE_HTML[] PROGMEM = R"rawhtml(
 <!DOCTYPE html><html><head><title>Update Confirmation</title>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
@@ -302,8 +389,6 @@ const char UPDATE_HTML_END[] PROGMEM = R"rawhtml(
 </body></html>
 )rawhtml";
 
-
-  
 const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -543,8 +628,5 @@ const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
   <div class='countdown'>Redirecting in <span id='count'>20</span> seconds...</div>
 </body></html>
 )rawhtml";
-
-  
-
 
 #endif // HTML_HOME_H
