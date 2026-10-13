@@ -596,7 +596,11 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                     label.innerText = key; // Parameter name as label
 
                     const input = document.createElement('input');
-                    input.type = 'text';
+                     if (key.toLowerCase().includes('password')) {
+                        input.type = 'password';
+                    } else {
+                        input.type = 'text';
+                    }
                     input.id = 'input_' + key;
                     input.value = currentConfig[key]; // Current value
 
