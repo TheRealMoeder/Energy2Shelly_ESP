@@ -544,7 +544,112 @@ const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
 </body></html>
 )rawhtml";
 
-  
+const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy2Shelly Config Editor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #333; }
+        input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        #status { margin-top: 15px; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Energy2Shelly Config Editor</h2>
+        
+        <!-- Input fields will be dynamically inserted here by JavaScript -->
+        <div id="configForm">Loading configuration...</div>
+        
+        <button id="saveBtn" style="margin-top: 15px;">Save Changes</button>
+        <p id="status"></p>
+    </div>
 
+    <script>
+        const formContainer = document.getElementById('configForm');
+        const saveBtn = document.getElementById('saveBtn');
+        const statusText = document.getElementById('status');
+        let currentConfig = {};
+
+        async function loadConfig() {
+            try {
+                const res = await fetch('/json_preferences');
+                if (res.status === 401) return; // Browser triggers the Basic Auth login prompt
+                
+                currentConfig = await res.json();
+                formContainer.innerHTML = ''; 
+
+                // Loop through all keys in the JSON config
+                Object.keys(currentConfig).forEach(key => {
+                    const group = document.createElement('div');
+                    group.className = 'form-group';
+
+                    const label = document.createElement('label');
+                    label.innerText = key; // Parameter name as label
+
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = 'input_' + key;
+                    input.value = currentConfig[key]; // Current value
+
+                    group.appendChild(label);
+                    group.appendChild(input);
+                    formContainer.appendChild(group);
+                });
+                
+                statusText.innerText = "Configuration successfully loaded.";
+                statusText.style.color = "green";
+            } catch (err) {
+                statusText.innerText = "Error loading parameters.";
+                statusText.style.color = "red";
+            }
+        }
+
+        async function saveConfig() {
+            // Loop through keys and grab new values from the input fields
+            Object.keys(currentConfig).forEach(key => {
+                const inputField = document.getElementById('input_' + key);
+                if (inputField) {
+                    currentConfig[key] = inputField.value;
+                }
+            });
+
+            try {
+                statusText.innerText = "Saving to device...";
+                statusText.style.color = "orange";
+
+                const res = await fetch('/json_preferences', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentConfig)
+                });
+
+                if (res.ok) {
+                    statusText.innerText = "Successfully saved to flash storage!";
+                    statusText.style.color = "green";
+                } else {
+                    statusText.innerText = "Device rejected the save request.";
+                    statusText.style.color = "red";
+                }
+            } catch (err) {
+                statusText.innerText = "Network error while saving.";
+                statusText.style.color = "red";
+            }
+        }
+
+        saveBtn.addEventListener('click', saveConfig);
+        window.addEventListener('DOMContentLoaded', loadConfig);
+    </script>
+</body>
+</html>
+)rawhtml";
 
 #endif // HTML_HOME_H

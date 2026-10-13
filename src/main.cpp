@@ -166,6 +166,15 @@ void setup(void)
     });
     request->send(response); });
 
+  server.on("/config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(CONFIG_PAGE_HTML), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+        // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
+        memcpy_P(buffer, CONFIG_PAGE_HTML + index, maxLen); return maxLen;
+    });
+    request->send(response); });
+
+    
   server.on("/shelly", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
     shellyGetDeviceInfo();
