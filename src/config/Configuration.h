@@ -213,7 +213,7 @@ extern  JsonDocument config_doc;
 #define mqtt_port config_doc["mqtt_port"].as<const char*>()
 #define mqtt_topic config_doc["mqtt_topic"].as<const char*>()
 #define mqtt_user config_doc["mqtt_user"].as<const char*>()
-#define mqtt_passwd config_doc["mqtt_passwd"].as<const char*>()
+#define mqtt_passwd config_doc["mqtt_password"].as<const char*>()
 
 // JSON path settings
 #define power_path config_doc["power_path"].as<const char*>()

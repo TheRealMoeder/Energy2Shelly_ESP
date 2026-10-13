@@ -248,116 +248,16 @@ void WifiManagerSetup(bool stationmode)
   config_doc["shelly_mac"] = String(mac[0], HEX) + String(mac[1], HEX) + String(mac[2], HEX) + String(mac[3], HEX) + String(mac[4], HEX) + String(mac[5], HEX);
 
   load_parameters(); // Load parameters from Preferences
-  const char *show_pwd_str = "<input type=\"checkbox\" onclick=\"t('%s')\">&nbsp;<label>Show password</label><br/>";
-
-  // ESP8266 has only a 4 KB cont stack — keep these large objects in BSS
-  // (function is called only once from setup(), so static is safe).
-  static char buf_rst_pwd_show_pwd[150];
-  static char buf_mqtt_pwd_show_pwd[150];
-  static char buf_tibber_pwd_show_pwd[150];
-  sprintf(buf_rst_pwd_show_pwd, show_pwd_str, "reset_password");
-  sprintf(buf_mqtt_pwd_show_pwd, show_pwd_str, "passwd");
-  sprintf(buf_tibber_pwd_show_pwd, show_pwd_str, "tibber_password");
-
-  static WiFiManagerParameter custom_section1("<h3>General settings</h3><script>function t(s) { var x = document.getElementById(s); x.type === \"password\" ? x.type = \"text\" : x.type = \"password\"; }</script>");
-  static WiFiManagerParameter param_reset_password("reset_password", "Reset Password <span title=\"For resetting the WiFi configuration and putting the device in AP / config mode\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", reset_password, 32, "type='password'");
-  static WiFiManagerParameter param_reset_password_show_password(buf_rst_pwd_show_pwd);
-  static WiFiManagerParameter custom_input_type("type", "<hr><b>Data source</b><br><code>MQTT</code> for MQTT<br><code>HTTP</code> for generic HTTP<br><code>SMA</code> for SMA EM/HM multicast<br><code>SHRDZM</code> for SHRDZM UDP data<br><code>SUNSPEC</code> for Modbus TCP SUNSPEC data<br><code>TIBBERPULSE</code> for TibberPulse SML data<br><code>RCT</code> for RCT Power grid data", input_type, 40);
-  static WiFiManagerParameter custom_mqtt_server("server", "<b>Server</b><br>MQTT Server IP, query url for generic HTTP or Modbus TCP server IP for SUNSPEC", mqtt_server, 160);
-  static WiFiManagerParameter custom_mqtt_port("port", "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)", mqtt_port, 6);
-  static WiFiManagerParameter param_ntp_server("ntp_server", "NTP server <span title=\"for time synchronization\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", ntp_server, 40);
-  static WiFiManagerParameter param_timezone("timezone", "Timezone <span title=\"e.g. UTC0, UTC+1, UTC-3, UTC+1CET-1CEST,M3.5.0/02:00:00,M10.5.0/03:00:00\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", timezone, 64);
-  static WiFiManagerParameter param_phase_number("phase_number", "Number of phases <span title=\"Number of phases (e.g. 1 or 3)\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", phase_number, 1);
-  static WiFiManagerParameter custom_power_offset("power_offset", "Power offset <span title=\"optional offset value in Watts added to the emulated output\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", power_offset, 10);
-  static WiFiManagerParameter custom_query_period("query_period", "<b>Query period</b><br>for generic HTTP and SUNSPEC, in milliseconds", query_period, 10);
-  static WiFiManagerParameter custom_led_gpio("led_gpio", "<b>GPIO</b><br>of internal LED", led_gpio, 3);
-  static WiFiManagerParameter custom_led_gpio_i("led_gpio_i", "<b>GPIO is inverted</b><br><code>true</code> or <code>false</code>", led_gpio_i, 6);
-  static WiFiManagerParameter custom_shelly_mac("mac", "<b>Shelly ID</b><br>12 char hexadecimal, defaults to MAC address of ESP", shelly_mac, 13);
-  static WiFiManagerParameter custom_shelly_port("shelly_port", "<b>Shelly UDP port</b><br><code>1010</code> or <code>2220</code> depending on Marstek Venus model and firmware version", shelly_port, 6);
-  static WiFiManagerParameter custom_sma_id("sma_id", "<b>SMA serial number</b><br>optional serial number if you have more than one SMA EM/HM in your network", sma_id, 16);
-  static WiFiManagerParameter custom_section2("<hr><h3>MQTT options</h3>");
-  static WiFiManagerParameter custom_mqtt_topic("topic", "<b>MQTT Topic</b>", mqtt_topic, 90);
-  static WiFiManagerParameter custom_mqtt_user("user", "<b>MQTT user</b> (optional)", mqtt_user, 40);
-  static WiFiManagerParameter custom_mqtt_passwd("passwd", "<b>MQTT password</b> (optional)", mqtt_passwd, 40, "type='password'");
-  static WiFiManagerParameter param_mqtt_passwd_show_password(buf_mqtt_pwd_show_pwd);
-  static WiFiManagerParameter custom_section3("<hr><h3>Modbus TCP options</h3>");
-  static WiFiManagerParameter custom_modbus_dev("modbus_dev", "<b>Modbus device ID</b><br><code>71</code> for Kostal SEM", modbus_dev, 60);
-  static WiFiManagerParameter custom_section4("<hr><h3>JSON paths for MQTT and generic HTTP</h3>");
-  static WiFiManagerParameter custom_power_path("power_path", "<b>Total power JSON path</b><br>e.g. <code>ENERGY.Power</code> or <code>TRIPHASE</code> for tri-phase data", power_path, 60);
-  static WiFiManagerParameter custom_pwr_export_path("pwr_export_path", "<b>Export power JSON path</b><br>Optional, for net calc (e.g. \"i-e\"", pwr_export_path, 60);
-  static WiFiManagerParameter custom_power_l1_path("power_l1_path", "<b>Phase 1 power JSON path</b><br>optional", power_l1_path, 60);
-  static WiFiManagerParameter custom_power_l2_path("power_l2_path", "<b>Phase 2 power JSON path</b><br>optional", power_l2_path, 60);
-  static WiFiManagerParameter custom_power_l3_path("power_l3_path", "<b>Phase 3 power JSON path</b><br>optional", power_l3_path, 60);
-  static WiFiManagerParameter custom_energy_in_path("energy_in_path", "<b>Energy from grid JSON path</b><br>e.g. <code>ENERGY.Grid</code>", energy_in_path, 60);
-  static WiFiManagerParameter custom_energy_out_path("energy_out_path", "<b>Energy to grid JSON path</b><br>e.g. <code>ENERGY.FeedIn</code>", energy_out_path, 60);
-  // TibberPulse section
-  static WiFiManagerParameter param_section_tibberpulse("<hr><h3>TibberPulse options</h3>");
-  static WiFiManagerParameter param_tibber_host_port("tibber_host_port", "Hostname/IP[:port] <span title=\"e.g.: 192.168.0.1:8080\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_host, 40);
-  static WiFiManagerParameter param_tibber_node_id("tibber_node_id", "Node ID <span title=\"defaults to: 1, check the bridge web interface for the right nodeId\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_nodeid, 1);
-  static WiFiManagerParameter param_tibber_user("tibber_user", "User <span title=\"defaults to: admin\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_user, 10);
-  static WiFiManagerParameter param_tibber_password("tibber_password", "Password <span title=\"as printed on bridge device: xxxx-xxxx\" style=\"cursor: help;\" aria-label=\"Help\" tabindex=\"0\">(?)</span>", tibber_password, 10, "type='password'");
-  static WiFiManagerParameter param_tibber_password_show_password(buf_tibber_pwd_show_pwd);
-
-  // RCT Power section
-  static WiFiManagerParameter custom_section_rct("<hr><h3>RCT Power options</h3>");
-  static WiFiManagerParameter custom_rct_host("rct_host", "<b>RCT host</b><br>IP address or hostname of the RCT Power device (with integrated grid sensor)", rct_host, 41);
-  static WiFiManagerParameter custom_rct_port("rct_port", "<b>RCT port</b><br><code>8899</code> default", rct_port, 6);
 
   static WiFiManager wifiManager;
   wifiManager.setDebugOutput(false);
   wifiManager.setShowStaticFields(true);
 
-  // Move custom parameters to seperate menu to avoid issues with too many custom parameters and too many results from AP scan
-  wifiManager.setParamsPage(true);
-
   wifiManager.setTitle(String("Energy2Shelly for ESP ") + VERSION_BUILD);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
-  // add all your parameters here
-  wifiManager.addParameter(&custom_section1);
-  wifiManager.addParameter(&param_reset_password);
-  wifiManager.addParameter(&param_reset_password_show_password);
-  wifiManager.addParameter(&custom_input_type);
-  wifiManager.addParameter(&custom_mqtt_server);
-  wifiManager.addParameter(&param_ntp_server);
-  wifiManager.addParameter(&param_timezone);
-  wifiManager.addParameter(&param_phase_number);
-  wifiManager.addParameter(&custom_power_offset);
-  wifiManager.addParameter(&custom_query_period);
-  wifiManager.addParameter(&custom_led_gpio);
-  wifiManager.addParameter(&custom_led_gpio_i);
-  wifiManager.addParameter(&custom_shelly_mac);
-  wifiManager.addParameter(&custom_shelly_port);
-  wifiManager.addParameter(&custom_sma_id);
-  wifiManager.addParameter(&custom_section2);
-  wifiManager.addParameter(&custom_mqtt_port);
-  wifiManager.addParameter(&custom_mqtt_topic);
-  wifiManager.addParameter(&custom_mqtt_user);
-  wifiManager.addParameter(&custom_mqtt_passwd);
-  wifiManager.addParameter(&param_mqtt_passwd_show_password);
-  wifiManager.addParameter(&custom_section3);
-  wifiManager.addParameter(&custom_modbus_dev);
-  wifiManager.addParameter(&custom_section4);
-  wifiManager.addParameter(&custom_power_path);
-  wifiManager.addParameter(&custom_pwr_export_path);
-  wifiManager.addParameter(&custom_power_l1_path);
-  wifiManager.addParameter(&custom_power_l2_path);
-  wifiManager.addParameter(&custom_power_l3_path);
-  wifiManager.addParameter(&custom_energy_in_path);
-  wifiManager.addParameter(&custom_energy_out_path);
-  // TibberPulse section
-  wifiManager.addParameter(&param_section_tibberpulse);
-  wifiManager.addParameter(&param_tibber_host_port);
-  wifiManager.addParameter(&param_tibber_node_id);
-  wifiManager.addParameter(&param_tibber_user);
-  wifiManager.addParameter(&param_tibber_password);
-  wifiManager.addParameter(&param_tibber_password_show_password);
-  // RCT Power
-  wifiManager.addParameter(&custom_section_rct);
-  wifiManager.addParameter(&custom_rct_host);
-  wifiManager.addParameter(&custom_rct_port);
   wifiManager.setConfigPortalTimeout(180);
-  std::vector<const char *> usermenu = {"wifi","info","param","exit","sep","update"};
+  std::vector<const char *> usermenu = {"wifi","info","exit","sep","update"};
   wifiManager.setMenu(usermenu);
   if (stationmode)
   {
@@ -395,41 +295,7 @@ void WifiManagerSetup(bool stationmode)
   }
   DEBUG_SERIAL.println(F("connected"));
 
-  // read updated parameters
-  config_doc["reset_password"] = param_reset_password.getValue();
-  config_doc["input_type"] = custom_input_type.getValue();
-  config_doc["mqtt_server"] = custom_mqtt_server.getValue();
-  config_doc["mqtt_port"] = custom_mqtt_port.getValue();
-  config_doc["ntp_server"] = param_ntp_server.getValue();
-  config_doc["timezone"] = param_timezone.getValue();
-  config_doc["phase_number"] = param_phase_number.getValue();
-  config_doc["power_offset"] = custom_power_offset.getValue();
-  config_doc["query_period"] = custom_query_period.getValue();
-  config_doc["led_gpio"] = custom_led_gpio.getValue();
-  config_doc["led_gpio_i"] = custom_led_gpio_i.getValue();
-  config_doc["shelly_mac"] = custom_shelly_mac.getValue();
-  config_doc["mqtt_topic"] = custom_mqtt_topic.getValue();
-  config_doc["mqtt_user"] = custom_mqtt_user.getValue();
-  config_doc["mqtt_passwd"] = custom_mqtt_passwd.getValue();
-  config_doc["modbus_dev"] = custom_modbus_dev.getValue();
-  config_doc["power_path"] = custom_power_path.getValue();
-  config_doc["pwr_export_path"] = custom_pwr_export_path.getValue();
-  config_doc["power_l1_path"] = custom_power_l1_path.getValue();
-  config_doc["power_l2_path"] = custom_power_l2_path.getValue();
-  config_doc["power_l3_path"] = custom_power_l3_path.getValue();
-  config_doc["energy_in_path"] = custom_energy_in_path.getValue();
-  config_doc["energy_out_path"] = custom_energy_out_path.getValue();
-  config_doc["shelly_port"] = custom_shelly_port.getValue();
-  config_doc["sma_id"] = custom_sma_id.getValue();
-  // TibberPulse
-  config_doc["tibber_host"] = param_tibber_host_port.getValue();
-  config_doc["tibber_nodeid"] = param_tibber_node_id.getValue();
-  config_doc["tibber_user"] = param_tibber_user.getValue();
-  config_doc["tibber_password"] = param_tibber_password.getValue();
-  // RCT Power
-  config_doc["rct_host"] = custom_rct_host.getValue();
-  config_doc["rct_port"] = custom_rct_port.getValue();
-
+ 
   offsetPerPhase = String(power_offset).toDouble() / 3.0; // distribute offset equally across phases
 
   DEBUG_SERIAL.println(F("The values in the preferences are: "));
@@ -500,7 +366,7 @@ void WifiManagerSetup(bool stationmode)
   if (shouldSaveConfig)
   {
     DEBUG_SERIAL.println(F("saving config"));
-    save_parameters();   
+    //save_parameters();   
     wifiManager.reboot();
   }
   DEBUG_SERIAL.println(F("local ip"));

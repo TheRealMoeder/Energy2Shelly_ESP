@@ -39,7 +39,7 @@ void save_parameters() {
     preferences.putString("shelly_mac", config_doc["shelly_mac"].as<String>());
     preferences.putString("mqtt_topic", config_doc["mqtt_topic"].as<String>());
     preferences.putString("mqtt_user", config_doc["mqtt_user"].as<String>());
-    preferences.putString("mqtt_passwd", config_doc["mqtt_passwd"].as<String>());
+    preferences.putString("mqtt_passwd", config_doc["mqtt_password"].as<String>());
     preferences.putString("modbus_dev", config_doc["modbus_dev"].as<String>());
     preferences.putString("power_path", config_doc["power_path"].as<String>());
     preferences.putString("pwr_export_path", config_doc["pwr_export_path"].as<String>());
@@ -76,7 +76,7 @@ void load_parameters() {
   config_doc["shelly_mac"] = preferences.getString("shelly_mac", shelly_mac);
   config_doc["mqtt_topic"] = preferences.getString("mqtt_topic", mqtt_topic);
   config_doc["mqtt_user"] = preferences.getString("mqtt_user", mqtt_user);
-  config_doc["mqtt_passwd"] = preferences.getString("mqtt_passwd", mqtt_passwd);
+  config_doc["mqtt_password"] = preferences.getString("mqtt_passwd", mqtt_passwd);
   config_doc["modbus_dev"] = preferences.getString("modbus_dev", modbus_dev);
   config_doc["power_path"] = preferences.getString("power_path", power_path);
   config_doc["pwr_export_path"] = preferences.getString("pwr_export_path", pwr_export_path);

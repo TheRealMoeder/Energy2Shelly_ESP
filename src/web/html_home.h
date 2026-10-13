@@ -46,6 +46,7 @@ const char HTML_HOME[] PROGMEM = R"=====(
     <a href="/console">Console</a>
     <a href="/plot">Plot Data</a>
     <a href="/update" class="reset">Update SW</a>
+    <a href="/config" class="reset">Configure Parameters</a>
   </div>
 
   <div class="data-container">
@@ -587,13 +588,133 @@ const CONFIG_DICTIONARY = {
     },
     "reset_password": {
         label: "Reset Password",
-        description: "The password used to reset the device."
+        description: "For resetting the WiFi configuration and putting the device in AP / config mode"
     },
     "input_type": {
         label: "Input Type",
         description: "Defines the type of input for the device.",
-        options: ["MQTT", "HTTP", "SMA",  "SUNSPEC", "RCT", "SHRDZM"] 
-    }    
+        options: ["MQTT", "HTTP", "SMA",  "SUNSPEC", "RCT", "SHRDZM", "TIBBERPULSE"] 
+    }, 
+    "mqtt_server": {
+        label: "Custom MQTT Server",
+        description: "Specify a custom MQTT/SUNSPEC server."
+    },
+    "mqtt_port": {
+        label: "Custom MQTT Port",
+        description: "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)" 
+    },
+    "ntp_server": {
+        label: "NTP Server",
+        description: "The NTP server used for time synchronization."
+    },
+    "ntp_port": {
+        label: "NTP Port",
+        description: "The port used for NTP communication."
+    },
+    "timezone": {
+        label: "Timezone",
+        description: "The timezone for the device."
+    },
+    "mqtt_user": {
+        label: "MQTT Username",
+        description: "Username for MQTT authentication."
+    },
+    "mqtt_password": {
+        label: "MQTT Password",
+        description: "Password for MQTT authentication."
+    },
+    "mqtt_topic": {
+        label: "MQTT Topic",
+        description: "The topic used for MQTT communication."
+    },
+    "phase_number": {
+        label: "Phase Number",
+        description: "The number of phases (1, 2, or 3)."
+    },
+    "power_offset": {
+        label: "Power Offset",
+        description: "Offset value for power measurement calibration."
+    },
+    "query_period": {
+        label: "Query Period", 
+        description: "The period (in milli seconds) for querying data from the device."
+    },
+    "led_gpio": {
+        label: "LED GPIO Pin",
+        description: "The GPIO pin number for the LED indicator."
+    },
+    "led_gpio_i": {
+        label: "LED GPIO Inverted",
+        description: "Set to true if the LED GPIO is inverted."
+    },
+    "shelly_mac": {
+        label: "Shelly MAC Address",
+        description: "The MAC address of the Shelly device."
+    },
+    "modbus_dev": {
+        label: "Modbus Device",
+        description: "The Modbus device address or identifier."
+    },
+    "power_path": {
+        label: "Power Path",
+        description: "The path to the power measurement data."
+    },
+    "pwr_export_path": {
+        label: "Power Export Path",
+        description: "The path to the power export data."
+    },
+    "power_l1_path": {
+        label: "Power L1 Path",
+        description: "The path to the power measurement data for phase L1."
+    },
+    "power_l2_path": {
+        label: "Power L2 Path",
+        description: "The path to the power measurement data for phase L2."
+    },
+    "power_l3_path": {
+        label: "Power L3 Path",
+        description: "The path to the power measurement data for phase L3."
+    },
+    "energy_in_path": {
+        label: "Energy In Path",
+        description: "The path to the energy input data."
+    },
+    "energy_out_path": {
+        label: "Energy Out Path",
+        description: "The path to the energy output data."
+    },
+    "shelly_port": {
+        label: "Shelly Port",
+        description: "The port number for the Shelly device."
+    },
+    "sma_id": {
+        label: "SMA ID",
+        description: "The identifier for the SMA device."
+    },
+    "tibber_host": {
+        label: "Tibber Host",
+        description: "The host address for the Tibber service."
+    },
+    "tibber_nodeid": {
+        label: "Tibber Node ID",
+        description: "The node ID for the Tibber service."
+    },
+    "tibber_user": {
+        label: "Tibber User",
+        description: "The username for the Tibber service."
+    },
+    "tibber_password": {
+        label: "Tibber Password",
+        description: "The password for the Tibber service." 
+    },
+    "rct_host": {
+        label: "RCT Host",
+        description: "The host address for the RCT service."
+    },
+    "rct_port": {
+        label: "RCT Port",
+        description: "The port number for the RCT service."
+    }
 };
 
 async function loadConfig() {
