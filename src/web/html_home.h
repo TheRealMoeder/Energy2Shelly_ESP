@@ -591,9 +591,9 @@ const CONFIG_DICTIONARY = {
     },
     "input_type": {
         label: "Input Type",
-        description: "Defines the type of input for the device."
-    }
-   
+        description: "Defines the type of input for the device.",
+        options: ["MQTT", "HTTP", "SMA",  "SUNSPEC", "RCT", "SHRDZM"] 
+    }    
 };
 
 async function loadConfig() {
@@ -605,78 +605,101 @@ async function loadConfig() {
         formContainer.innerHTML = ''; 
 
         // Loop through all keys in the JSON config
-        Object.keys(currentConfig).forEach(key => {
-            const group = document.createElement('div');
-            group.className = 'form-group';
-            group.style.marginBottom = '20px'; // Adds spacing between form elements
+ Object.keys(currentConfig).forEach(key => {
+    const group = document.createElement('div');
+    group.className = 'form-group';
+    group.style.marginBottom = '20px'; // Adds spacing between form elements
 
-            // Wrapper for Input + Toggle Button (keeps them inline)
-            const inputWrapper = document.createElement('div');
-            inputWrapper.style.display = 'flex';
-            inputWrapper.style.alignItems = 'center';
+    // Wrapper for Input + Toggle Button (keeps them inline)
+    const inputWrapper = document.createElement('div');
+    inputWrapper.style.display = 'flex';
+    inputWrapper.style.alignItems = 'center';
 
-            // Look up the translation from our "database" (falls back to the raw key)
-            const dictEntry = CONFIG_DICTIONARY[key];
-            const displayLabel = dictEntry ? dictEntry.label : key;
-            const displayDesc = dictEntry ? dictEntry.description : '';
+    // Look up the translation from our "database" (falls back to the raw key)
+    const dictEntry = CONFIG_DICTIONARY[key];
+    const displayLabel = dictEntry ? dictEntry.label : key;
+    const displayDesc = dictEntry ? dictEntry.description : '';
 
-            // Create the Label
-            const label = document.createElement('label');
-            label.innerText = displayLabel;
-            label.style.fontWeight = 'bold';
-            label.style.display = 'block';
+    // Create the Label
+    const label = document.createElement('label');
+    label.innerText = displayLabel;
+    label.style.fontWeight = 'bold';
+    label.style.display = 'block';
 
-            // Create the Description (if it exists in the dictionary)
-            let descElement = null;
-            if (displayDesc) {
-                descElement = document.createElement('small');
-                descElement.innerText = displayDesc;
-                descElement.style.display = 'block';
-                descElement.style.color = '#666';
-                descElement.style.marginBottom = '4px';
+    // Create the Description (if it exists in the dictionary)
+    let descElement = null;
+    if (displayDesc) {
+        descElement = document.createElement('small');
+        descElement.innerText = displayDesc;
+        descElement.style.display = 'block';
+        descElement.style.color = '#666';
+        descElement.style.marginBottom = '4px';
+    }
+
+    // Build the layout structure (Labels und Description)
+    group.appendChild(label);
+    if (descElement) group.appendChild(descElement); // Insert description right under the label
+    group.appendChild(inputWrapper);
+
+    let input;
+
+    // Check if the dictionary entry provides dropdown options
+    if (dictEntry && dictEntry.options) {
+        // Create the Dropdown Selection Field
+        input = document.createElement('select');
+        input.id = 'input_' + key;
+
+        dictEntry.options.forEach(optValue => {
+            const option = document.createElement('option');
+            option.value = optValue;
+            option.text = optValue;
+
+            // Pre-select the current configuration value
+            if (currentConfig[key] === optValue) {
+                option.selected = true;
             }
-
-            // Create the Input Field
-            const input = document.createElement('input');
-            input.id = 'input_' + key;
-            input.value = currentConfig[key];
-
-            // Build the layout structure
-            group.appendChild(label);
-            if (descElement) group.appendChild(descElement); // Insert description right under the label
-            group.appendChild(inputWrapper);
-            inputWrapper.appendChild(input);
-
-            // Password handling (including the toggle eye button)
-            if (key.toLowerCase().includes('password')) {
-                input.type = 'password';
-
-                const toggleBtn = document.createElement('button');
-                toggleBtn.type = 'button'; // Prevents unexpected form submissions
-                toggleBtn.innerText = '👁️';
-                toggleBtn.style.marginLeft = '8px';
-                toggleBtn.style.cursor = 'pointer';
-                toggleBtn.style.background = 'none';
-                toggleBtn.style.border = 'none';
-
-                // Toggle visibility on click
-                toggleBtn.addEventListener('click', () => {
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        toggleBtn.innerText = '🔒';
-                    } else {
-                        input.type = 'password';
-                        toggleBtn.innerText = '👁️';
-                    }
-                });
-
-                inputWrapper.appendChild(toggleBtn);
-            } else {
-                input.type = 'text';
-            }
-
-            formContainer.appendChild(group);
+            input.appendChild(option);
         });
+
+        inputWrapper.appendChild(input);
+    } else {
+        // Fallback: Create the standard Input Field
+        input = document.createElement('input');
+        input.id = 'input_' + key;
+        input.value = currentConfig[key] || '';
+        inputWrapper.appendChild(input);
+
+        // Password handling (including the toggle eye button)
+        if (key.toLowerCase().includes('password')) {
+            input.type = 'password';
+
+            const toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button'; // Prevents unexpected form submissions
+            toggleBtn.innerText = '👁️';
+            toggleBtn.style.marginLeft = '8px';
+            toggleBtn.style.cursor = 'pointer';
+            toggleBtn.style.background = 'none';
+            toggleBtn.style.border = 'none';
+
+            // Toggle visibility on click
+            toggleBtn.addEventListener('click', () => {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    toggleBtn.innerText = '🔒';
+                } else {
+                    input.type = 'password';
+                    toggleBtn.innerText = '👁️';
+                }
+            });
+
+            inputWrapper.appendChild(toggleBtn);
+        } else {
+            input.type = 'text';
+        }
+    }
+
+    formContainer.appendChild(group);
+});
         
         statusText.innerText = "Configuration successfully loaded.";
         statusText.style.color = "green";
