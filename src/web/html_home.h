@@ -579,248 +579,41 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
         const saveBtn = document.getElementById('saveBtn');
         const statusText = document.getElementById('status');
         let currentConfig = {};
+        const CONFIG_DICTIONARY = {
+            basic: {
+                _label: "Basic Settings",
+                _description: "General settings for the device.",
+                reset_password: {
+                    label: "Reset Password",
+                    description: "For resetting the WiFi configuration and putting the device in AP / config mode"
+                },
+                input_type: {
+                    label: "Input Type",
+                    description: "Defines the type of input for the device.",
+                    options: ["MQTT", "HTTP", "SMA", "SUNSPEC", "RCT", "SHRDZM", "TIBBERPULSE"] 
+                }
+            },
 
-// 1. The "database" for your labels and descriptions
-const CONFIG_DICTIONARY = {
-    "shelly_mac": {
-        label: "Shelly MAC Address",
-        description: "The MAC address of the Shelly device."
-    },
-    "reset_password": {
-        label: "Reset Password",
-        description: "For resetting the WiFi configuration and putting the device in AP / config mode"
-    },
-    "input_type": {
-        label: "Input Type",
-        description: "Defines the type of input for the device.",
-        options: ["MQTT", "HTTP", "SMA",  "SUNSPEC", "RCT", "SHRDZM", "TIBBERPULSE"] 
-    }, 
-    "mqtt_server": {
-        label: "Custom MQTT Server",
-        description: "Specify a custom MQTT/SUNSPEC server."
-    },
-    "mqtt_port": {
-        label: "Custom MQTT Port",
-        description: "<b>Port</b><br> for MQTT or Modbus TCP (SUNSPEC)" 
-    },
-    "ntp_server": {
-        label: "NTP Server",
-        description: "The NTP server used for time synchronization."
-    },
-    "ntp_port": {
-        label: "NTP Port",
-        description: "The port used for NTP communication."
-    },
-    "timezone": {
-        label: "Timezone",
-        description: "The timezone for the device."
-    },
-    "mqtt_user": {
-        label: "MQTT Username",
-        description: "Username for MQTT authentication."
-    },
-    "mqtt_password": {
-        label: "MQTT Password",
-        description: "Password for MQTT authentication."
-    },
-    "mqtt_topic": {
-        label: "MQTT Topic",
-        description: "The topic used for MQTT communication."
-    },
-    "phase_number": {
-        label: "Phase Number",
-        description: "The number of phases (1, 2, or 3)."
-    },
-    "power_offset": {
-        label: "Power Offset",
-        description: "Offset value for power measurement calibration."
-    },
-    "query_period": {
-        label: "Query Period", 
-        description: "The period (in milli seconds) for querying data from the device."
-    },
-    "led_gpio": {
-        label: "LED GPIO Pin",
-        description: "The GPIO pin number for the LED indicator."
-    },
-    "led_gpio_i": {
-        label: "LED GPIO Inverted",
-        description: "Set to true if the LED GPIO is inverted."
-    },
-    "shelly_mac": {
-        label: "Shelly MAC Address",
-        description: "The MAC address of the Shelly device."
-    },
-    "modbus_dev": {
-        label: "Modbus Device",
-        description: "The Modbus device address or identifier."
-    },
-    "power_path": {
-        label: "Power Path",
-        description: "The path to the power measurement data."
-    },
-    "pwr_export_path": {
-        label: "Power Export Path",
-        description: "The path to the power export data."
-    },
-    "power_l1_path": {
-        label: "Power L1 Path",
-        description: "The path to the power measurement data for phase L1."
-    },
-    "power_l2_path": {
-        label: "Power L2 Path",
-        description: "The path to the power measurement data for phase L2."
-    },
-    "power_l3_path": {
-        label: "Power L3 Path",
-        description: "The path to the power measurement data for phase L3."
-    },
-    "energy_in_path": {
-        label: "Energy In Path",
-        description: "The path to the energy input data."
-    },
-    "energy_out_path": {
-        label: "Energy Out Path",
-        description: "The path to the energy output data."
-    },
-    "shelly_port": {
-        label: "Shelly Port",
-        description: "The port number for the Shelly device."
-    },
-    "sma_id": {
-        label: "SMA ID",
-        description: "The identifier for the SMA device."
-    },
-    "tibber_host": {
-        label: "Tibber Host",
-        description: "The host address for the Tibber service."
-    },
-    "tibber_nodeid": {
-        label: "Tibber Node ID",
-        description: "The node ID for the Tibber service."
-    },
-    "tibber_user": {
-        label: "Tibber User",
-        description: "The username for the Tibber service."
-    },
-    "tibber_password": {
-        label: "Tibber Password",
-        description: "The password for the Tibber service." 
-    },
-    "rct_host": {
-        label: "RCT Host",
-        description: "The host address for the RCT service."
-    },
-    "rct_port": {
-        label: "RCT Port",
-        description: "The port number for the RCT service."
-    }
-};
+            shelly: {
+                shelly_mac: {
+                    label: "Shelly MAC Address",
+                    description: "The MAC address of the Shelly device."
+                }
+            }
+        };
 
-async function loadConfig() {
+   async function loadConfig() {
     try {
         const res = await fetch('/json_preferences');
-        if (res.status === 401) return; // Browser triggers the Basic Auth login prompt
+        if (res.status === 401) {
+            setTimeout(loadConfig, 500); 
+            return; 
+        }
         
         currentConfig = await res.json();
+       
         formContainer.innerHTML = ''; 
-
-        // Loop through all keys in the JSON config
- Object.keys(currentConfig).forEach(key => {
-    const group = document.createElement('div');
-    group.className = 'form-group';
-    group.style.marginBottom = '20px'; // Adds spacing between form elements
-
-    // Wrapper for Input + Toggle Button (keeps them inline)
-    const inputWrapper = document.createElement('div');
-    inputWrapper.style.display = 'flex';
-    inputWrapper.style.alignItems = 'center';
-
-    // Look up the translation from our "database" (falls back to the raw key)
-    const dictEntry = CONFIG_DICTIONARY[key];
-    const displayLabel = dictEntry ? dictEntry.label : key;
-    const displayDesc = dictEntry ? dictEntry.description : '';
-
-    // Create the Label
-    const label = document.createElement('label');
-    label.innerText = displayLabel;
-    label.style.fontWeight = 'bold';
-    label.style.display = 'block';
-
-    // Create the Description (if it exists in the dictionary)
-    let descElement = null;
-    if (displayDesc) {
-        descElement = document.createElement('small');
-        descElement.innerText = displayDesc;
-        descElement.style.display = 'block';
-        descElement.style.color = '#666';
-        descElement.style.marginBottom = '4px';
-    }
-
-    // Build the layout structure (Labels und Description)
-    group.appendChild(label);
-    if (descElement) group.appendChild(descElement); // Insert description right under the label
-    group.appendChild(inputWrapper);
-
-    let input;
-
-    // Check if the dictionary entry provides dropdown options
-    if (dictEntry && dictEntry.options) {
-        // Create the Dropdown Selection Field
-        input = document.createElement('select');
-        input.id = 'input_' + key;
-
-        dictEntry.options.forEach(optValue => {
-            const option = document.createElement('option');
-            option.value = optValue;
-            option.text = optValue;
-
-            // Pre-select the current configuration value
-            if (currentConfig[key] === optValue) {
-                option.selected = true;
-            }
-            input.appendChild(option);
-        });
-
-        inputWrapper.appendChild(input);
-    } else {
-        // Fallback: Create the standard Input Field
-        input = document.createElement('input');
-        input.id = 'input_' + key;
-        input.value = currentConfig[key] || '';
-        inputWrapper.appendChild(input);
-
-        // Password handling (including the toggle eye button)
-        if (key.toLowerCase().includes('password')) {
-            input.type = 'password';
-
-            const toggleBtn = document.createElement('button');
-            toggleBtn.type = 'button'; // Prevents unexpected form submissions
-            toggleBtn.innerText = '👁️';
-            toggleBtn.style.marginLeft = '8px';
-            toggleBtn.style.cursor = 'pointer';
-            toggleBtn.style.background = 'none';
-            toggleBtn.style.border = 'none';
-
-            // Toggle visibility on click
-            toggleBtn.addEventListener('click', () => {
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    toggleBtn.innerText = '🔒';
-                } else {
-                    input.type = 'password';
-                    toggleBtn.innerText = '👁️';
-                }
-            });
-
-            inputWrapper.appendChild(toggleBtn);
-        } else {
-            input.type = 'text';
-        }
-    }
-
-    formContainer.appendChild(group);
-});
+        generateFormFromDictionary(CONFIG_DICTIONARY, currentConfig, formContainer);
         
         statusText.innerText = "Configuration successfully loaded.";
         statusText.style.color = "green";
@@ -829,6 +622,139 @@ async function loadConfig() {
         statusText.innerText = "Error loading configuration.";
         statusText.style.color = "red";
     }
+}
+ function generateFormFromDictionary(dictionary, currentConfig, container, currentConfigNode = currentConfig) {
+    Object.keys(dictionary).forEach(key => {
+        const entry = dictionary[key];
+        
+        // Subgroup
+        // Descision: Subgroup or config object
+        if (entry && typeof entry === 'object' && !entry.label && !entry.options) {
+            
+            
+            const fieldset = document.createElement('fieldset');
+            fieldset.className = 'form-group-sub';
+            fieldset.style.marginBottom = '25px';
+            fieldset.style.padding = '15px';
+            fieldset.style.border = '1px solid #ccc';
+            fieldset.style.borderRadius = '5px';
+
+            
+            const legend = document.createElement('legend');
+            legend.innerText = entry._label || key;
+            legend.style.fontWeight = 'bold';
+            legend.style.padding = '0 10px';
+            fieldset.appendChild(legend);
+
+            
+            if (entry._description) {
+                const desc = document.createElement('small');
+                desc.innerText = entry._description;
+                desc.style.display = 'block';
+                desc.style.color = '#666';
+                desc.style.marginBottom = '10px';
+                fieldset.appendChild(desc);
+            }
+
+            
+            const nextConfigNode = (currentConfigNode && currentConfigNode[key]) ? currentConfigNode[key] : {};
+
+            // recursive call to handle nested structure
+            generateFormFromDictionary(entry, currentConfig, fieldset, nextConfigNode);
+            
+            container.appendChild(fieldset);
+            return;
+        }
+
+        // skip meta keys
+        if (key.startsWith('_')) return;
+
+        // normal entry
+        const group = document.createElement('div');
+        group.className = 'form-group';
+        group.style.marginBottom = '20px';
+
+        const inputWrapper = document.createElement('div');
+        inputWrapper.style.display = 'flex';
+        inputWrapper.style.alignItems = 'center';
+
+        const displayLabel = entry.label || key;
+        const displayDesc = entry.description || '';
+
+        const label = document.createElement('label');
+        label.innerText = displayLabel;
+        label.style.fontWeight = 'bold';
+        label.style.display = 'block';
+
+        let descElement = null;
+        if (displayDesc) {
+            descElement = document.createElement('small');
+            descElement.innerText = displayDesc;
+            descElement.style.display = 'block';
+            descElement.style.color = '#666';
+            descElement.style.marginBottom = '4px';
+        }
+
+        group.appendChild(label);
+        if (descElement) group.appendChild(descElement);
+        group.appendChild(inputWrapper);
+
+        let input;
+        
+        const configValue = (currentConfigNode && currentConfigNode[key] !== undefined) ? currentConfigNode[key] : '';
+
+        if (entry.options) {
+            input = document.createElement('select');
+            input.id = 'input_' + key;
+
+            entry.options.forEach(optValue => {
+                const option = document.createElement('option');
+                option.value = optValue;
+                option.text = optValue;
+
+                if (configValue === optValue) {
+                    option.selected = true;
+                }
+                input.appendChild(option);
+            });
+
+            inputWrapper.appendChild(input);
+        } 
+        else {
+            input = document.createElement('input');
+            input.id = 'input_' + key;
+            input.value = configValue;
+            inputWrapper.appendChild(input);
+
+            if (key.toLowerCase().includes('password')) {
+                input.type = 'password';
+
+                const toggleBtn = document.createElement('button');
+                toggleBtn.type = 'button';
+                toggleBtn.innerText = '👁️';
+                toggleBtn.style.marginLeft = '8px';
+                toggleBtn.style.cursor = 'pointer';
+                toggleBtn.style.background = 'none';
+                toggleBtn.style.border = 'none';
+
+                toggleBtn.addEventListener('click', () => {
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        toggleBtn.innerText = '🔒';
+                    } else {
+                        input.type = 'password';
+                        toggleBtn.innerText = '👁️';
+                    }
+                });
+
+                inputWrapper.appendChild(toggleBtn);
+            } else {
+                input.type = 'text';
+            }
+        }
+
+        container.appendChild(group);
+    });
 }
 
         async function saveConfig() {
@@ -865,6 +791,7 @@ async function loadConfig() {
 
         saveBtn.addEventListener('click', saveConfig);
         window.addEventListener('DOMContentLoaded', loadConfig);
+        loadConfig(); // Initial load
     </script>
 </body>
 </html>
