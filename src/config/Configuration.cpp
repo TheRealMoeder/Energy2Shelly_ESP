@@ -207,11 +207,11 @@ void interprete_parameters()
   }
 
   // Convert string parameters to integers where necessary
-  modbusdev_int = config_doc["modbus_dev"].as<uint8_t>();
-  sunspec_port_int = config_doc["sunspec_port"].as<uint16_t>();
+  modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
+  sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
 
-  period = config_doc["query_period"].as<unsigned long>();
-  modbus_ip.fromString(config_doc["mqtt_server"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
+  period = config_doc["http"]["query_period"].as<unsigned long>();
+  modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
 
 }
 
@@ -245,10 +245,10 @@ void WifiManagerSetup(bool stationmode)
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
   WiFi.macAddress(mac);
-  config_doc["shelly_mac"] = String(mac[0], HEX) + String(mac[1], HEX) + String(mac[2], HEX) + String(mac[3], HEX) + String(mac[4], HEX) + String(mac[5], HEX);
-
+   
   load_parameters(); // Load parameters from Preferences
-
+  config_doc["shelly"]["shelly_mac"] = String(mac[0], HEX) + String(mac[1], HEX) + String(mac[2], HEX) + String(mac[3], HEX) + String(mac[4], HEX) + String(mac[5], HEX);
+ 
   static WiFiManager wifiManager;
   wifiManager.setDebugOutput(false);
   wifiManager.setShowStaticFields(true);
@@ -295,74 +295,11 @@ void WifiManagerSetup(bool stationmode)
   }
   DEBUG_SERIAL.println(F("connected"));
 
+  offsetPerPhase = power_offset_double / 3.0; // distribute offset equally across phases
+
  
-  offsetPerPhase = String(power_offset).toDouble() / 3.0; // distribute offset equally across phases
-
-  DEBUG_SERIAL.println(F("The values in the preferences are: "));
-  DEBUG_SERIAL.println(F("\treset_password: ********"));
-  DEBUG_SERIAL.print(F("\tinput_type : "));
-  DEBUG_SERIAL.println(String(input_type));
-  DEBUG_SERIAL.print(F("\tmqtt_server : "));
-  DEBUG_SERIAL.println(String(mqtt_server));
-  DEBUG_SERIAL.print(F("\tmqtt_port : "));
-  DEBUG_SERIAL.println(String(mqtt_port));
-  DEBUG_SERIAL.print(F("\tntp_server: "));
-  DEBUG_SERIAL.println(String(ntp_server));
-  DEBUG_SERIAL.print(F("\ttimezone: "));
-  DEBUG_SERIAL.println(String(timezone));
-  DEBUG_SERIAL.print(F("\tphase_number : "));
-  DEBUG_SERIAL.println(String(phase_number));
-  DEBUG_SERIAL.print(F("\tpower_offset : "));
-  DEBUG_SERIAL.println(String(power_offset));
-  DEBUG_SERIAL.print(F("\tquery_period : "));
-  DEBUG_SERIAL.println(String(query_period));
-  DEBUG_SERIAL.print(F("\tled_gpio : "));
-  DEBUG_SERIAL.println(String(led_gpio));
-  DEBUG_SERIAL.print(F("\tled_gpio_i : "));
-  DEBUG_SERIAL.println(String(led_gpio_i));
-  DEBUG_SERIAL.print(F("\tshelly_mac : "));
-  DEBUG_SERIAL.println(String(shelly_mac));
-  DEBUG_SERIAL.print(F("\tmqtt_topic : "));
-  DEBUG_SERIAL.println(String(mqtt_topic));
-  DEBUG_SERIAL.print(F("\tmqtt_user : "));
-  DEBUG_SERIAL.println(String(mqtt_user));
-  DEBUG_SERIAL.println(F("\tmqtt_passwd : ********"));
-  DEBUG_SERIAL.print(F("\tmodbus_dev : "));
-  DEBUG_SERIAL.println(String(modbus_dev));
-  DEBUG_SERIAL.print(F("\tpower_path : "));
-  DEBUG_SERIAL.println(String(power_path));
-  DEBUG_SERIAL.print(F("\tpwr_export_path : "));
-  DEBUG_SERIAL.println(String(pwr_export_path));
-  DEBUG_SERIAL.print(F("\tpower_l1_path : "));
-  DEBUG_SERIAL.println(String(power_l1_path));
-  DEBUG_SERIAL.print(F("\tpower_l2_path : "));
-  DEBUG_SERIAL.println(String(power_l2_path));
-  DEBUG_SERIAL.print(F("\tpower_l3_path : "));
-  DEBUG_SERIAL.println(String(power_l3_path));
-  DEBUG_SERIAL.print(F("\tenergy_in_path : "));
-  DEBUG_SERIAL.println(String(energy_in_path));
-  DEBUG_SERIAL.print(F("\tenergy_out_path : "));
-  DEBUG_SERIAL.println(String(energy_out_path));
-  DEBUG_SERIAL.print(F("\tshelly_port : "));
-  DEBUG_SERIAL.println(String(shelly_port));
-  DEBUG_SERIAL.print(F("\tsma_id : "));
-  DEBUG_SERIAL.println(String(sma_id));
-  DEBUG_SERIAL.println(F("\tTibberPulse options:"));
-  DEBUG_SERIAL.print(F("\t - tibber_host: "));
-  DEBUG_SERIAL.println(String(tibber_host));
-  DEBUG_SERIAL.print(F("\t - tibber_nodeid: "));
-  DEBUG_SERIAL.println(String(tibber_nodeid));
-  DEBUG_SERIAL.print(F("\t - tibber_user: "));
-  DEBUG_SERIAL.println(String(tibber_user));
-  DEBUG_SERIAL.println(F("\t - tibber_password: ********"));
-  DEBUG_SERIAL.println(F("\tRCT Power options:"));
-  DEBUG_SERIAL.print(F("\t - rct_host: "));
-  DEBUG_SERIAL.println(String(rct_host));
-  DEBUG_SERIAL.print(F("\t - rct_port: "));
-  DEBUG_SERIAL.println(String(rct_port));
-
-
   interprete_parameters();
+ 
   if (shouldSaveConfig)
   {
     DEBUG_SERIAL.println(F("saving config"));
@@ -376,8 +313,8 @@ void WifiManagerSetup(bool stationmode)
 void setupMdns()
 {
   // Set up mDNS responder
-  String name_str = config_doc["shelly_name"] | "";
-  String mac_str  = config_doc["shelly_mac"] | "";
+  String name_str = config_doc["shelly"]["shelly_name"] | "";
+  String mac_str  = config_doc["shelly"]["shelly_mac"] | "";
   String cat_name = name_str + mac_str;
 
  if (cat_name.length() > 128) {

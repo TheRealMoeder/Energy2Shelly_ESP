@@ -203,53 +203,67 @@ extern  JsonDocument config_doc;
 // ============================================================================
 
 // Data source and server settings
-#define reset_password config_doc["reset_password"].as<const char*>()
-#define input_type config_doc["input_type"].as<const char*>()
-#define ntp_server config_doc["ntp_server"].as<const char*>()
-#define timezone config_doc["timezone"].as<const char*>() 
-#define phase_number config_doc["phase_number"].as<const char*>()
-#define power_offset config_doc["power_offset"].as <const char*>()
-#define mqtt_server config_doc["mqtt_server"].as<const char*>()
-#define mqtt_port config_doc["mqtt_port"].as<const char*>()
-#define mqtt_topic config_doc["mqtt_topic"].as<const char*>()
-#define mqtt_user config_doc["mqtt_user"].as<const char*>()
-#define mqtt_passwd config_doc["mqtt_password"].as<const char*>()
+#define reset_password (config_doc["basic"]["reset_password"]| "")
+#define input_type config_doc["basic"]["input_type"]
+#define ntp_server (config_doc["basic"]["ntp_server"]| "de.pool.ntp.org")
+#define timezone (config_doc["basic"]["timezone"] | "CET-1CEST,M3.5.0/2,M10.5.0/3")
+#define phase_number (config_doc["basic"]["phase_number"] | "3")
+#define power_offset (config_doc["basic"]["power_offset"] | "0")
+#define power_offset_double (config_doc["basic"]["power_offset"] | 0.0)
+
+#define mqtt_server config_doc["mqtt"]["mqtt_server"].as<const char*>()
+#define mqtt_port config_doc["mqtt"]["mqtt_port"].as<const char*>()
+#define mqtt_topic config_doc["mqtt"]["mqtt_topic"].as<const char*>()
+#define mqtt_user config_doc["mqtt"]["mqtt_user"].as<const char*>()
+#define mqtt_passwd config_doc["mqtt"]["mqtt_password"].as<const char*>()
 
 // JSON path settings
-#define power_path config_doc["power_path"].as<const char*>()
-#define pwr_export_path config_doc["pwr_export_path"].as<const char*>()
-#define power_l1_path config_doc["power_l1_path"].as<const char*>()
-#define power_l2_path config_doc["power_l2_path"].as<const char*>()
-#define power_l3_path config_doc["power_l3_path"].as<const char*>()
-#define energy_in_path config_doc["energy_in_path"].as<const char*>()
-#define energy_out_path config_doc["energy_out_path"].as<const char*>()
+#define power_path config_doc["http"]["power_path"].as<const char*>()
+#define pwr_export_path config_doc["http"]["pwr_export_path"].as<const char*>()
+#define power_l1_path config_doc["http"]["power_l1_path"].as<const char*>()
+#define power_l2_path config_doc["http"]["power_l2_path"].as<const char*>()
+#define power_l3_path config_doc["http"]["power_l3_path"].as<const char*>()
+#define energy_in_path config_doc["http"]["energy_in_path"].as<const char*>()
+#define energy_out_path config_doc["http"]["energy_out_path"].as<const char*>()
+#define query_period_http config_doc["http"]["query_period"].as<const char*>()
+#define query_period_http_u32 config_doc["http"]["query_period"].as<uint32_t>()
 
 // Shelly device settings
-#define shelly_gen config_doc["shelly_gen"].as<const char*>()
-#define shelly_fw_id config_doc["shelly_fw_id"].as<const char*>()
-#define shelly_mac config_doc["shelly_mac"].as<const char*>()
-#define shelly_name config_doc["shelly_name"].as<const char*>()
-#define shelly_port config_doc["shelly_port"].as<const char*>()
+#define shelly_gen config_doc["shelly"]["shelly_gen"].as<const char*>()
+#define shelly_fw_id config_doc["shelly"]["shelly_fw_id"].as<const char*>()
+#define shelly_mac config_doc["shelly"]["shelly_mac"].as<const char*>()
+#define shelly_name config_doc["shelly"]["shelly_name"].as<const char*>()
+#define shelly_port config_doc["shelly"]["shelly_port"].as<const char*>()
+
+#define sunspec_modbus_dev config_doc["sunspec"]["modbus_dev"].as<const char*>()
+#define sunspec_modbus_server config_doc["sunspec"]["modbus_ip"].as<const char*>()
+#define sunspec_modbus_port config_doc["sunspec"]["modbus_port"].as<const char*>()
+#define query_period_modbus config_doc["sunspec"]["query_period"].as<const char*>()
+#define query_period_modbus_u32 config_doc["sunspec"]["query_period"].as<uint32_t>()
 
 // Query and protocol settings
-#define query_period config_doc["query_period"].as<const char*>()
-#define modbus_dev config_doc["modbus_dev"].as<const char*>()
-#define sma_id config_doc["sma_id"].as<const char*>()
+#define sma_id config_doc["sma"]["sma_id"].as<const char*>()
 extern uint16_t sunspec_port_int; // default port
 extern uint8_t modbusdev_int; 
 
 // RCT Power settings
-#define rct_host config_doc["rct_host"].as<const char*>()
-#define rct_port config_doc["rct_port"].as<const char*>()
+#define rct_host config_doc["rct"]["rct_host"].as<const char*>()
+#define rct_port config_doc["rct"]["rct_port"].as<const char*>()
+#define query_period_rct config_doc["rct"]["query_period"].as<const char*>()
+#define query_period_rct_u32 config_doc["rct"]["query_period"].as<uint32_t>()
 
-#define tibber_host config_doc["tibber_host"].as<const char*>()
-#define tibber_user config_doc["tibber_user"].as<const char*>()
-#define tibber_password config_doc["tibber_password"].as<const char*>()
-#define tibber_nodeid config_doc["tibber_nodeid"].as<const char*>()
+
+#define tibber_host config_doc["tibber"]["tibber_host"].as<const char*>()
+#define tibber_user config_doc["tibber"]["tibber_user"].as<const char*>()
+#define tibber_password config_doc["tibber"]["tibber_password"].as<const char*>()
+#define tibber_nodeid config_doc["tibber"]["tibber_nodeid"].as<const char*>()
+#define query_period_tibber config_doc["tibber"]["query_period"].as<const char*>()
+#define query_period_tibber_u32 config_doc["tibber"]["query_period"].as<uint32_t>()
+
 extern char tibber_rpc[2][26];
 // LED settings
-#define led_gpio config_doc["led_gpio"].as<const char*>()
-#define led_gpio_i config_doc["led_gpio_i"].as<const char*>()
+#define led_gpio config_doc["led"]["led_gpio"].as<const char*>()
+#define led_gpio_i config_doc["led"]["led_gpio_i"].as<const char*>()
 
 extern unsigned long ledOffTime;
 extern uint8_t led;

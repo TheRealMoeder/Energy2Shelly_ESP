@@ -24,7 +24,9 @@ void mergeJson(JsonObject target, JsonObjectConst source) {
 
 
 void save_parameters() {
+    return;
     preferences.begin("e2s_config", false);
+#if 0
     preferences.putString("reset_password", config_doc["reset_password"].as<String>());
     preferences.putString("input_type", config_doc["input_type"].as<String>());
     preferences.putString("mqtt_server", config_doc["mqtt_server"].as<String>());
@@ -56,44 +58,74 @@ void save_parameters() {
     preferences.putString("tibber_password", config_doc["tibber_password"].as<String>());
     preferences.putString("rct_host", config_doc["rct_host"].as<String>());
     preferences.putString("rct_port", config_doc["rct_port"].as<String>());
+    #else
+    serializeJson(config_doc, json_prefs_string);
+    preferences.putString("config_doc", json_prefs_string);
+    #endif
     preferences.end();
 
 }
 
 void load_parameters() {
   preferences.begin("e2s_config", true);
-  config_doc["reset_password"] = preferences.getString("reset_password", reset_password);
-  config_doc["input_type"] = preferences.getString("input_type", input_type);
-  config_doc["mqtt_server"] = preferences.getString("mqtt_server", mqtt_server);
-  config_doc["mqtt_port"] = preferences.getString("mqtt_port", mqtt_port);
-  config_doc["ntp_server"] = preferences.getString("ntp_server", ntp_server);
-  config_doc["timezone"] = preferences.getString("timezone", timezone);
-  config_doc["phase_number"] = preferences.getString("phase_number", phase_number);
-  config_doc["power_offset"] = preferences.getString("power_offset", power_offset);
-  config_doc["query_period"] = preferences.getString("query_period", query_period);
-  config_doc["led_gpio"] = preferences.getString("led_gpio", led_gpio);
-  config_doc["led_gpio_i"] = preferences.getString("led_gpio_i", led_gpio_i);
-  config_doc["shelly_mac"] = preferences.getString("shelly_mac", shelly_mac);
-  config_doc["mqtt_topic"] = preferences.getString("mqtt_topic", mqtt_topic);
-  config_doc["mqtt_user"] = preferences.getString("mqtt_user", mqtt_user);
-  config_doc["mqtt_password"] = preferences.getString("mqtt_passwd", mqtt_passwd);
-  config_doc["modbus_dev"] = preferences.getString("modbus_dev", modbus_dev);
-  config_doc["power_path"] = preferences.getString("power_path", power_path);
-  config_doc["pwr_export_path"] = preferences.getString("pwr_export_path", pwr_export_path);
-  config_doc["power_l1_path"] = preferences.getString("power_l1_path", power_l1_path);
-  config_doc["power_l2_path"] = preferences.getString("power_l2_path", power_l2_path);
-  config_doc["power_l3_path"] = preferences.getString("power_l3_path", power_l3_path);
-  config_doc["energy_in_path"] = preferences.getString("energy_in_path", energy_in_path);
-  config_doc["energy_out_path"] = preferences.getString("energy_out_path", energy_out_path);
-  config_doc["shelly_port"] = preferences.getString("shelly_port", shelly_port);
-  config_doc["sma_id"] = preferences.getString("sma_id", sma_id);
-  config_doc["tibber_host"] = preferences.getString("tibber_host", tibber_host);
-  config_doc["tibber_nodeid"] = preferences.getString("tibber_nodeid", tibber_nodeid);
-  config_doc["tibber_user"] = preferences.getString("tibber_user", tibber_user);
-  config_doc["tibber_password"] = preferences.getString("tibber_password", tibber_password);
-  config_doc["rct_host"] = preferences.getString("rct_host", rct_host);
-  config_doc["rct_port"] = preferences.getString("rct_port", rct_port);
-  preferences.end();
+  if (preferences.isKey("config_doc")) {
+    json_prefs_string = preferences.getString("config_doc", "");
+    deserializeJson(config_doc, json_prefs_string);
+  } else {
+    // Load individual parameters if the combined config_doc is not present
+    config_doc.clear();
+    config_doc["basic"]["reset_password"] = preferences.getString("reset_password", "");
+    config_doc["basic"]["input_type"] = preferences.getString("input_type", "");
+    config_doc["basic"]["ntp_server"] = preferences.getString("ntp_server", "");
+    config_doc["basic"]["timezone"] = preferences.getString("timezone", "");
+    config_doc["basic"]["phase_number"] = preferences.getString("phase_number", "");
+    config_doc["basic"]["power_offset"] = preferences.getString("power_offset", "");
+
+
+    config_doc["mqtt"]["mqtt_server"] = preferences.getString("mqtt_server", "");
+    config_doc["mqtt"]["mqtt_port"] = preferences.getString("mqtt_port", "");
+    config_doc["mqtt"]["mqtt_topic"] = preferences.getString("mqtt_topic", "");
+    config_doc["mqtt"]["mqtt_user"] = preferences.getString("mqtt_user", "");
+    config_doc["mqtt"]["mqtt_password"] = preferences.getString("mqtt_passwd", "");
+
+    config_doc["sunspec"]["modbus_dev"] = preferences.getString("modbus_dev", "");
+    config_doc["sunspec"]["modbus_ip"] = preferences.getString("mqtt_server", "");
+    config_doc["sunspec"]["modbus_port"] = preferences.getString("mqtt_port", "");
+    config_doc["sunspec"]["query_period"] = preferences.getString("query_period", "");
+   
+
+    config_doc["led"]["led_gpio"] = preferences.getString("led_gpio", "");
+    config_doc["led"]["led_gpio_i"] = preferences.getString("led_gpio_i", "");
+
+   // config_doc["shelly"]["shelly_mac"] = preferences.getString("shelly_mac", shelly_mac);
+    config_doc["shelly"]["shelly_port"] = preferences.getString("shelly_port", "2220");
+    config_doc["shelly"]["shelly_gen"] = "2";
+    config_doc["shelly"]["shelly_fw_id"] = "20241011-114455/1.4.4-g6d2a586";
+    config_doc["shelly"]["shelly_name"] = "shellypro3em-";
+
+    config_doc["http"]["power_path"] = preferences.getString("power_path", "");
+    config_doc["http"]["pwr_export_path"] = preferences.getString("pwr_export_path", "");
+    config_doc["http"]["power_l1_path"] = preferences.getString("power_l1_path", "");
+    config_doc["http"]["power_l2_path"] = preferences.getString("power_l2_path", "");
+    config_doc["http"]["power_l3_path"] = preferences.getString("power_l3_path", "");
+    config_doc["http"]["energy_in_path"] = preferences.getString("energy_in_path", "");
+    config_doc["http"]["energy_out_path"] = preferences.getString("energy_out_path", "");
+    config_doc["http"]["query_period"] = preferences.getString("query_period", "");
+
+    config_doc["sma"]["sma_id"] = preferences.getString("sma_id", "");
+    
+    
+    config_doc["tibber"]["tibber_host"] = preferences.getString("tibber_host", "");
+    config_doc["tibber"]["tibber_nodeid"] = preferences.getString("tibber_nodeid", "");
+    config_doc["tibber"]["tibber_user"] = preferences.getString("tibber_user", "");
+    config_doc["tibber"]["tibber_password"] = preferences.getString("tibber_password", "");
+    config_doc["tibber"]["query_period"] = preferences.getString("query_period", "");
+
+    config_doc["rct"]["rct_host"] = preferences.getString("rct_host", "");
+    config_doc["rct"]["rct_port"] = preferences.getString("rct_port", "");
+    config_doc["rct"]["query_period"] = preferences.getString("query_period", "");
+  }
+    preferences.end();
 }
 
 

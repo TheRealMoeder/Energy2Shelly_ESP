@@ -42,7 +42,7 @@ void setup(void)
 {
   DEBUG_SERIAL.begin(115200);
   WifiManagerSetup(clear_rtc_power_on() == Energy2Shelly_ResetReason::RECONFIGURE);
-
+ 
   // Initialize watchdog timer (30s timeout)
 #ifdef ESP32
   // check SDK version.
@@ -487,7 +487,7 @@ void worker_loop(int currentMillis)
   if (dataSUNSPEC)
   {
     modbus1.task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
-    if (currentMillis - startMillis >= period)
+    if (currentMillis - startMillis >= query_period_modbus_u32)
     {
       parseSUNSPEC();
       startMillis = currentMillis;
@@ -495,7 +495,7 @@ void worker_loop(int currentMillis)
   }
   if (dataHTTP)
   {
-    if (currentMillis - startMillis >= period)
+    if (currentMillis - startMillis >= query_period_http_u32)
     {
       queryHTTP();
       startMillis = currentMillis;
@@ -503,7 +503,7 @@ void worker_loop(int currentMillis)
   }
   if (dataTIBBERPULSE)
   {
-    if (currentMillis - startMillis >= period)
+    if (currentMillis - startMillis >= query_period_tibber_u32)
     {
       parseTibberPulse();
       startMillis = currentMillis;
@@ -511,7 +511,7 @@ void worker_loop(int currentMillis)
   }
   if (dataRCT)
   {
-    if (currentMillis - startMillis >= period)
+    if (currentMillis - startMillis >= query_period_rct_u32)
     {
       parseRCT();
       startMillis = currentMillis;
@@ -560,7 +560,7 @@ void loop()
     all_esp_reset(Energy2Shelly_ResetReason::WIFI_DISCONNECT);
   }
   if (parametersUpdated) {
-    mergeJson(config_doc.as<JsonObject>(), update_config_doc.as<JsonObjectConst>());
+    //mergeJson(config_doc.as<JsonObject>(), update_config_doc.as<JsonObjectConst>());
     interprete_parameters();
     save_parameters();
     parametersUpdated = false;

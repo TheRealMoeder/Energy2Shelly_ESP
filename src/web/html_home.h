@@ -591,6 +591,43 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                     label: "Input Type",
                     description: "Defines the type of input for the device.",
                     options: ["MQTT", "HTTP", "SMA", "SUNSPEC", "RCT", "SHRDZM", "TIBBERPULSE"] 
+                },
+                ntp_server: {
+                    label: "NTP Server",
+                    description: "The NTP server used for time synchronization."
+                },
+                timezone: {
+                    label: "Timezone",
+                    description: "The timezone setting for the device."
+                },
+                phase_number: {
+                    label: "Phase Number",
+                    description: "The number of phases for the device (e.g., 1, 2, or 3)."
+                },
+                power_offset: {
+                    label: "Power Offset",
+                    description: "The power offset value for calibration."
+                }
+            },
+
+           sunspec: {
+                _label: "SUNSPEC Settings",
+                _description: "Settings related to SUNSPEC Modbus communication.",
+                modbus_dev: {
+                    label: "Modbus Device",
+                    description: "The device path for Modbus communication (e.g., /dev/ttyUSB0)."
+                },
+                modbus_ip: {
+                    label: "Modbus Server IP",
+                    description: "The IP address of the Modbus server."
+                },
+                modbus_port: {
+                    label: "Modbus Port",
+                    description: "The port number for Modbus communication."
+                },
+                query_period: {
+                    label: "Query Period (ms)",
+                    description: "The period in milliseconds for querying the Modbus server."
                 }
             },
 
@@ -598,8 +635,26 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 shelly_mac: {
                     label: "Shelly MAC Address",
                     description: "The MAC address of the Shelly device."
+                },
+                shelly_name: {
+                    label: "Shelly Device Name",
+                    description: "The name of the Shelly device."
+                },
+                shelly_gen: {
+                    label: "Shelly Generation",
+                    description: "The generation of the Shelly device (e.g., 1, 2, 3)."
+                },
+                shelly_fw_id: {
+                    label: "Shelly Firmware ID",
+                    description: "The firmware ID of the Shelly device."
+                },
+                shelly_port: {
+                    label: "Shelly Port",
+                    description: "The port number for communication with the Shelly device."
                 }
             }
+
+      
         };
 
    async function loadConfig() {
