@@ -632,6 +632,8 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
             },
 
             shelly: {
+                _label: "Shelly Settings",
+                _description: "Settings related to Shelly communication.",
                 shelly_mac: {
                     label: "Shelly MAC Address",
                     description: "The MAC address of the Shelly device."
@@ -652,9 +654,59 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                     label: "Shelly Port",
                     description: "The port number for communication with the Shelly device."
                 }
-            }
+            },
 
-      
+           rct: {
+                _label: "RCT Settings",
+                _description: "Settings related to RCT inverter communication.",
+
+                rct_host: {
+                    label: "RCT hostname/IP",
+                    description: "IP address or hostname of the RCT Power device (with integrated grid sensor)."
+                },
+                rct_port: {
+                    label: "RCT port",
+                    description: "Defaults to 8899."
+                },
+                query_period: {
+                    label: "Query Period (ms)",
+                    description: "The period in milliseconds for querying the RCT inverter."
+                }
+            },
+
+           sma: {
+                _label: "SMA Settings",
+                _description: "Settings related to SMA Speedwire communication.",
+                sma_id: {
+                    label: "SMA serial number",
+                    description: "Optional serial number if you have more than one SMA EM/HM in your network"
+                }
+            },
+
+           tibber: {
+                _label: "TibberPulse Settings",
+                _description: "Settings related to TibberPulse communication.",
+                tibber_host: {
+                    label: "Tibber Hostnane/IP[:port]",
+                    description: "The address of the  Tibber device (e.g. 192.168.0.1:8080)."
+                },
+                tibber_user: {
+                    label: "Tibber User",
+                    description: "Defaults to admin."
+                },
+                tibber_password: {
+                    label: "Tibber Password",
+                    description: "As Printed on bridge device: xxxx-xxxx."
+                },
+                tibber_nodeid: {
+                    label: "Tibber Node ID",
+                    description: "Defaults to 1, check the bridge web interface for the right nodeID."
+                },
+                query_period: {
+                    label: "Query Period (ms)",
+                    description: "The period in milliseconds for querying the Tibber device."
+                }
+            }
         };
 
    async function loadConfig() {
