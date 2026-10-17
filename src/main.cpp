@@ -556,7 +556,7 @@ void loop()
     }
     update_config_doc.clear();
     //save_parameters();
-    json_prefs_string="";
+    json_prefs_string = String();    
     parametersUpdated = false;
   }
 
