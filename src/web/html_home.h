@@ -961,7 +961,7 @@ async function saveConfig() {
         return result;
     }
 
-    const payload = buildPayload(currentConfig, CONFIG_DICTIONARY);perfekt ist!
+    const payload = buildPayload(currentConfig, CONFIG_DICTIONARY);
     //console.log("Gesendete Config an ESP32:", payload);
 
     try {
