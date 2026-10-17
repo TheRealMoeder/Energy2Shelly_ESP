@@ -279,7 +279,6 @@ void setup(void)
 
 server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST, 
     [](AsyncWebServerRequest *request) {
-        // Hier wird geantwortet, sobald alle Daten da sind
         if (isNotAuthorized(request)) {
             request->send(401, "text/plain", "Unauthorized");
             json_prefs_string = "";
@@ -292,15 +291,12 @@ server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST,
     },
     NULL, 
     [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-        // Hier werden die Daten gesammelt
         if (index == 0) {
             json_prefs_string = "";
-            // Verhindert Speicherfragmentierung auf dem ESP32
             json_prefs_string.reserve(total); 
         }
         
-        // Korrekte Methode für Arduino String:
-        // Wir erstellen einen temporären String aus dem Buffer mit der exakten Länge (len)
+        
         json_prefs_string += String((const char*)data).substring(0, len);
     }
 );
@@ -548,16 +544,13 @@ void loop()
   }
   if (parametersUpdated) {
     DEBUG_SERIAL.println("New Key");
-    DEBUG_SERIAL.handleQueue();
-    //mergeJson(config_doc.as<JsonObject>(), update_config_doc.as<JsonObjectConst>());
-    update_config_doc.clear(); 
-    //DeserializationError error = deserializeJson(update_config_doc, json_prefs_string);
-    //if (error) DEBUG_SERIAL.println("Fehler");
+    config_doc.clear(); 
+    DeserializationError error = deserializeJson(config_doc, json_prefs_string);
     DEBUG_SERIAL.handleQueue();
     
     DEBUG_SERIAL.println(json_prefs_string);
     DEBUG_SERIAL.handleQueue();
-    //DEBUG_SERIAL.println((uint32_t)update_config_doc["sunspec"]["query_period"]);
+    DEBUG_SERIAL.println((uint32_t)update_config_doc["sunspec"]["query_period"]);
     //interprete_parameters();
     //save_parameters();
     json_prefs_string="";
