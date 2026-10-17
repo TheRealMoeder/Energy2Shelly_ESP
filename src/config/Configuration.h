@@ -237,7 +237,7 @@ extern  JsonDocument config_doc;
 #define shelly_fw_id config_doc["shelly"]["shelly_fw_id"]
 #define shelly_mac config_doc["shelly"]["shelly_mac"]
 #define shelly_name config_doc["shelly"]["shelly_name"]
-#define shelly_port config_doc["shelly"]["shelly_port"]
+#define shelly_port (config_doc["shelly"]["shelly_port"].as<String>())
 
 #define sunspec_modbus_dev config_doc["sunspec"]["modbus_dev"]
 #define sunspec_modbus_server config_doc["sunspec"]["modbus_ip"]
