@@ -550,8 +550,8 @@ void loop()
     
     DEBUG_SERIAL.println(json_prefs_string);
     DEBUG_SERIAL.handleQueue();
-    DEBUG_SERIAL.println((uint32_t)update_config_doc["sunspec"]["query_period"]);
-    //interprete_parameters();
+    DEBUG_SERIAL.println((uint32_t)config_doc["sunspec"]["query_period"]);
+    interprete_parameters();
     //save_parameters();
     json_prefs_string="";
     parametersUpdated = false;
