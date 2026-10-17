@@ -157,7 +157,7 @@ void parseSUNSPEC()
 
   if (!modbus1.isConnected(modbus_ip))
   {
-    modbus_ip.fromString(sunspec_modbus_server);
+    modbus_ip.fromString(sunspec_modbus_server.as<const char*>());
     sunspec_port_int = atol(sunspec_modbus_port);
     modbusdev_int = atol(sunspec_modbus_dev);
     modbus1.connect(modbus_ip, sunspec_port_int);

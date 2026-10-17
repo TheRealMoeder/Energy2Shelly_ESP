@@ -103,13 +103,16 @@ void load_parameters() {
     config_doc["shelly"]["shelly_fw_id"] = "20241011-114455/1.4.4-g6d2a586";
     config_doc["shelly"]["shelly_name"] = "shellypro3em-";
 
-    config_doc["http"]["power_path"] = preferences.getString("power_path", "");
-    config_doc["http"]["pwr_export_path"] = preferences.getString("pwr_export_path", "");
-    config_doc["http"]["power_l1_path"] = preferences.getString("power_l1_path", "");
-    config_doc["http"]["power_l2_path"] = preferences.getString("power_l2_path", "");
-    config_doc["http"]["power_l3_path"] = preferences.getString("power_l3_path", "");
-    config_doc["http"]["energy_in_path"] = preferences.getString("energy_in_path", "");
-    config_doc["http"]["energy_out_path"] = preferences.getString("energy_out_path", "");
+    config_doc["json"]["power_path"] = preferences.getString("power_path", "");
+    config_doc["json"]["pwr_export_path"] = preferences.getString("pwr_export_path", "");
+    config_doc["json"]["power_l1_path"] = preferences.getString("power_l1_path", "");
+    config_doc["json"]["power_l2_path"] = preferences.getString("power_l2_path", "");
+    config_doc["json"]["power_l3_path"] = preferences.getString("power_l3_path", "");
+    config_doc["json"]["energy_in_path"] = preferences.getString("energy_in_path", "");
+    config_doc["json"]["energy_out_path"] = preferences.getString("energy_out_path", "");
+    
+    
+    config_doc["http"]["server_ip"] = preferences.getString("mqtt_server", ""); 
     config_doc["http"]["query_period"] = preferences.getString("query_period", "");
 
     config_doc["sma"]["sma_id"] = preferences.getString("sma_id", "");

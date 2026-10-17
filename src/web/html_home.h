@@ -615,7 +615,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 _description: "Settings related to SUNSPEC Modbus communication.",
                 modbus_dev: {
                     label: "Modbus Device",
-                    description: "The device path for Modbus communication (e.g., /dev/ttyUSB0)."
+                    description: "The device number for Modbus communication (e.g., 71)."
                 },
                 modbus_ip: {
                     label: "Modbus Server IP",
@@ -705,6 +705,77 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 query_period: {
                     label: "Query Period (ms)",
                     description: "The period in milliseconds for querying the Tibber device."
+                }
+            },
+
+
+            mqtt: {
+                _label: "MQTT Settings",
+                _description: "Settings related to MQTT communication.",
+                mqtt_server: {
+                    label: "MQTT Hostname/IP[:port]",
+                    description: "The address of the MQTT broker (e.g. 192.168.0.1:1883)."
+                },
+                mqtt_port: {
+                    label: "MQTT Port",
+                    description: "The port number for MQTT communication."
+                },
+                mqtt_user: {
+                    label: "MQTT User",
+                    description: "Defaults to admin."
+                },
+                mqtt_password: {
+                    label: "MQTT Password",
+                    description: "The password for the MQTT broker."
+                },
+                mqtt_topic: {
+                    label: "MQTT Topic",
+                    description: "The topic to which the device will publish data."
+                }
+                
+            },   
+            http: {
+                _label: "HTTP Settings",
+                _description: "Settings related to HTTP communication.",
+                server_ip: {
+                    label: "HTTP Hostname/IP[:port]",
+                    description: "The address of the HTTP server"
+                },
+                query_period: {
+                    label: "Query Period (ms)",
+                    description: "The period in milliseconds for querying the HTTP server."
+                }              
+            },
+            json: {
+                _label: "JSON Settings",
+                _description: "Settings related to JSON communication.",
+                power_path: {
+                    label: "Power Path",
+                    description: "The path to retrieve power data from the JSON server."
+                },
+                pwr_export_path: {
+                    label: "Power Export Path",
+                    description: "The path to retrieve power export data from the JSON server."
+                },
+                power_l1_path: {
+                    label: "Power L1 Path",
+                    description: "The path to retrieve power data for phase L1 from the JSON server."
+                },
+                power_l2_path: {
+                    label: "Power L2 Path",
+                    description: "The path to retrieve power data for phase L2 from the JSON server."
+                },
+                power_l3_path: {
+                    label: "Power L3 Path",
+                    description: "The path to retrieve power data for phase L3 from the JSON server."
+                },
+                energy_in_path: {
+                    label: "Energy In Path",
+                    description: "The path to retrieve energy input data from the JSON server."
+                },
+                energy_out_path: {  
+                    label: "Energy Out Path",
+                    description: "The path to retrieve energy output data from the JSON server."
                 }
             }
         };
@@ -864,39 +935,59 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
     });
 }
 
-        async function saveConfig() {
-            // Loop through keys and grab new values from the input fields
-            Object.keys(currentConfig).forEach(key => {
-                const inputField = document.getElementById('input_' + key);
-                if (inputField) {
-                    currentConfig[key] = inputField.value;
-                }
-            });
+async function saveConfig() {
+    const castValue = (val) => isNaN(val) || val.trim() === "" ? val : Number(val);
 
-            try {
-                statusText.innerText = "Saving to device...";
-                statusText.style.color = "orange";
+    function buildPayload(configObj, dictionaryObj, prefix = '') {
+        const result = {};
 
-                const res = await fetch('/json_preferences', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(currentConfig)
-                });
+        Object.keys(configObj).forEach(key => {
+            if (key.startsWith('_')) return;
 
-                if (res.ok) {
-                    statusText.innerText = "Successfully saved to flash storage!";
-                    statusText.style.color = "green";
-                } else {
-                    statusText.innerText = "Device rejected the save request.";
-                    statusText.style.color = "red";
-                }
-            } catch (err) {
-                statusText.innerText = "Network error while saving.";
-                statusText.style.color = "red";
+            const currentPath = prefix ? `${prefix}_${key}` : key;
+            
+            const inputField = document.getElementById('input_' + currentPath) || 
+                               document.getElementById('input_' + key);
+
+            if (inputField) {
+                result[key] = castValue(inputField.value);
+            } else if (typeof configObj[key] === 'object' && configObj[key] !== null) {
+                result[key] = buildPayload(configObj[key], dictionaryObj[key] || {}, currentPath);
+            } else {
+                result[key] = configObj[key];
             }
-        }
+        });
 
-        saveBtn.addEventListener('click', saveConfig);
+        return result;
+    }
+
+    const payload = buildPayload(currentConfig, CONFIG_DICTIONARY);perfekt ist!
+    //console.log("Gesendete Config an ESP32:", payload);
+
+    try {
+        statusText.innerText = "Saving to device...";
+        statusText.style.color = "orange";
+
+        const res = await fetch('/json_preferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload) 
+        });
+
+        if (res.ok) {
+            statusText.innerText = "Successfully saved to flash storage!";
+            statusText.style.color = "green";
+        } else {
+            statusText.innerText = "Device rejected the save request.";
+            statusText.style.color = "red";
+        }
+    } catch (err) {
+        console.error("Netzwerkfehler:", err);
+        statusText.innerText = "Network error while saving.";
+        statusText.style.color = "red";
+    }
+}
+            saveBtn.addEventListener('click', saveConfig);
         window.addEventListener('DOMContentLoaded', loadConfig);
         loadConfig(); // Initial load
     </script>

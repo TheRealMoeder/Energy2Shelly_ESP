@@ -211,35 +211,39 @@ extern  JsonDocument config_doc;
 #define power_offset (config_doc["basic"]["power_offset"] | "0")
 #define power_offset_double (config_doc["basic"]["power_offset"] | 0.0)
 
-#define mqtt_server config_doc["mqtt"]["mqtt_server"].as<const char*>()
-#define mqtt_port config_doc["mqtt"]["mqtt_port"].as<const char*>()
-#define mqtt_topic config_doc["mqtt"]["mqtt_topic"].as<const char*>()
-#define mqtt_user config_doc["mqtt"]["mqtt_user"].as<const char*>()
-#define mqtt_passwd config_doc["mqtt"]["mqtt_password"].as<const char*>()
+#define mqtt_server (config_doc["mqtt"]["mqtt_server"]|"")
+#define mqtt_port (config_doc["mqtt"]["mqtt_port"]|"")
+#define mqtt_topic (config_doc["mqtt"]["mqtt_topic"]|"")
+#define mqtt_user (config_doc["mqtt"]["mqtt_user"]|"")
+#define mqtt_passwd (config_doc["mqtt"]["mqtt_password"]|"")
+
+
 
 // JSON path settings
-#define power_path config_doc["http"]["power_path"].as<const char*>()
-#define pwr_export_path config_doc["http"]["pwr_export_path"].as<const char*>()
-#define power_l1_path config_doc["http"]["power_l1_path"].as<const char*>()
-#define power_l2_path config_doc["http"]["power_l2_path"].as<const char*>()
-#define power_l3_path config_doc["http"]["power_l3_path"].as<const char*>()
-#define energy_in_path config_doc["http"]["energy_in_path"].as<const char*>()
-#define energy_out_path config_doc["http"]["energy_out_path"].as<const char*>()
-#define query_period_http config_doc["http"]["query_period"].as<const char*>()
-#define query_period_http_u32 config_doc["http"]["query_period"].as<uint32_t>()
+#define power_path  (config_doc["json"]["power_path"]|"")
+#define pwr_export_path (config_doc["json"]["pwr_export_path"]|"")
+#define power_l1_path (config_doc["json"]["power_l1_path"]|"")
+#define power_l2_path (config_doc["json"]["power_l2_path"]|"")
+#define power_l3_path (config_doc["json"]["power_l3_path"]|"")
+#define energy_in_path (config_doc["json"]["energy_in_path"]|"")
+#define energy_out_path (config_doc["json"]["energy_out_path"]|"")
+
+#define http_server (config_doc["http"]["server_ip"]|"")
+#define query_period_http (config_doc["http"]["query_period"] | "5000")
+#define query_period_http_u32 (config_doc["http"]["query_period"] | 5000u)
 
 // Shelly device settings
-#define shelly_gen config_doc["shelly"]["shelly_gen"].as<const char*>()
-#define shelly_fw_id config_doc["shelly"]["shelly_fw_id"].as<const char*>()
-#define shelly_mac config_doc["shelly"]["shelly_mac"].as<const char*>()
-#define shelly_name config_doc["shelly"]["shelly_name"].as<const char*>()
-#define shelly_port config_doc["shelly"]["shelly_port"].as<const char*>()
+#define shelly_gen config_doc["shelly"]["shelly_gen"]
+#define shelly_fw_id config_doc["shelly"]["shelly_fw_id"]
+#define shelly_mac config_doc["shelly"]["shelly_mac"]
+#define shelly_name config_doc["shelly"]["shelly_name"]
+#define shelly_port config_doc["shelly"]["shelly_port"]
 
-#define sunspec_modbus_dev config_doc["sunspec"]["modbus_dev"].as<const char*>()
-#define sunspec_modbus_server config_doc["sunspec"]["modbus_ip"].as<const char*>()
-#define sunspec_modbus_port config_doc["sunspec"]["modbus_port"].as<const char*>()
-#define query_period_modbus config_doc["sunspec"]["query_period"].as<const char*>()
-#define query_period_modbus_u32 config_doc["sunspec"]["query_period"].as<uint32_t>()
+#define sunspec_modbus_dev config_doc["sunspec"]["modbus_dev"]
+#define sunspec_modbus_server config_doc["sunspec"]["modbus_ip"]
+#define sunspec_modbus_port config_doc["sunspec"]["modbus_port"]
+#define query_period_modbus config_doc["sunspec"]["query_period"] 
+#define query_period_modbus_u32 ((uint32)config_doc["sunspec"]["query_period"])
 
 // Query and protocol settings
 #define sma_id config_doc["sma"]["sma_id"].as<const char*>()

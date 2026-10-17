@@ -344,17 +344,17 @@ void setupMdns()
   {
     MDNS.setServiceName(hMDNSService, cat_name.c_str());
     MDNS.addServiceTxt(hMDNSService, "arch", "esp8266");
-    MDNS.addServiceTxt(hMDNSService, "gen", shelly_gen);
-    MDNS.addServiceTxt(hMDNSService, "fw_id", shelly_fw_id);
-    MDNS.addServiceTxt(hMDNSService, "id", shelly_name);
+    MDNS.addServiceTxt(hMDNSService, "gen", shelly_gen.as<const char*>());
+    MDNS.addServiceTxt(hMDNSService, "fw_id", shelly_fw_id.as<const char*>());
+    MDNS.addServiceTxt(hMDNSService, "id", shelly_name.as<const char*>());
   }
   if (hMDNSService2)
   {
     MDNS.setServiceName(hMDNSService2, cat_name.c_str());
     MDNS.addServiceTxt(hMDNSService2, "arch", "esp8266");
-    MDNS.addServiceTxt(hMDNSService2, "gen", shelly_gen);
-    MDNS.addServiceTxt(hMDNSService2, "fw_id", shelly_fw_id);
-    MDNS.addServiceTxt(hMDNSService2, "id", shelly_name);
+    MDNS.addServiceTxt(hMDNSService2, "gen", shelly_gen.as<const char*>());
+    MDNS.addServiceTxt(hMDNSService2, "fw_id", shelly_fw_id.as<const char*>());
+    MDNS.addServiceTxt(hMDNSService2, "id", shelly_name.as<const char*>());
   }
 #endif
   DEBUG_SERIAL.println(F("mDNS responder started"));
