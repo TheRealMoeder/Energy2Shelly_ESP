@@ -543,15 +543,17 @@ void loop()
     all_esp_reset(Energy2Shelly_ResetReason::WIFI_DISCONNECT);
   }
   if (parametersUpdated) {
-    DEBUG_SERIAL.println("New Key");
-    config_doc.clear(); 
-    DeserializationError error = deserializeJson(config_doc, json_prefs_string);
+    DEBUG_SERIAL.println(F("New Key"));
+    update_config_doc.clear(); 
+    DeserializationError error = deserializeJson(update_config_doc, json_prefs_string);
     DEBUG_SERIAL.handleQueue();
-    
     DEBUG_SERIAL.println(json_prefs_string);
     DEBUG_SERIAL.handleQueue();
-    DEBUG_SERIAL.println((uint32_t)config_doc["sunspec"]["query_period"]);
-    interprete_parameters();
+    if (!error) {
+      mergeJson(config_doc.as<JsonObject>(), update_config_doc.as<JsonObjectConst>());
+      update_config_doc.clear();
+      interprete_parameters();
+    }
     //save_parameters();
     json_prefs_string="";
     parametersUpdated = false;
