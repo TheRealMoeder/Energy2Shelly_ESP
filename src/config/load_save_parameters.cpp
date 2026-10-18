@@ -24,7 +24,6 @@ void mergeJson(JsonObject target, JsonObjectConst source) {
 
 
 void save_parameters() {
-    return;
     preferences.begin("e2s_config", false);
 #if 0
     preferences.putString("reset_password", config_doc["reset_password"].as<String>());
@@ -59,8 +58,11 @@ void save_parameters() {
     preferences.putString("rct_host", config_doc["rct_host"].as<String>());
     preferences.putString("rct_port", config_doc["rct_port"].as<String>());
     #else
+    //preferences.clear(); // clear all old settings
     serializeJson(config_doc, json_prefs_string);
     preferences.putString("config_doc", json_prefs_string);
+   
+
     #endif
     preferences.end();
 

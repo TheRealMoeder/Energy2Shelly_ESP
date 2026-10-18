@@ -543,7 +543,7 @@ void loop()
     all_esp_reset(Energy2Shelly_ResetReason::WIFI_DISCONNECT);
   }
   if (parametersUpdated) {
-    DEBUG_SERIAL.println(F("New Key"));
+    DEBUG_SERIAL.println(F("New keys"));
     update_config_doc.clear(); 
     DeserializationError error = deserializeJson(update_config_doc, json_prefs_string);
     DEBUG_SERIAL.handleQueue();
@@ -555,7 +555,7 @@ void loop()
       interprete_parameters();
     }
     update_config_doc.clear();
-    //save_parameters();
+    save_parameters();
     json_prefs_string = String();    
     parametersUpdated = false;
   }
