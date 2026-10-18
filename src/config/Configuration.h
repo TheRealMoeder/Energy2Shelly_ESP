@@ -205,10 +205,10 @@ extern  JsonDocument config_doc;
 // Data source and server settings
 #define reset_password (config_doc["basic"]["reset_password"]| "")
 #define input_type config_doc["basic"]["input_type"]
-#define ntp_server (config_doc["basic"]["ntp_server"]| "de.pool.ntp.org")
-#define timezone (config_doc["basic"]["timezone"] | "CET-1CEST,M3.5.0/2,M10.5.0/3")
-#define phase_number (config_doc["basic"]["phase_number"] | "3")
-#define power_offset (config_doc["basic"]["power_offset"] | "0")
+#define ntp_server (config_doc["basic"]["ntp_server"]| "")
+#define timezone (config_doc["basic"]["timezone"] | "")
+#define phase_number (config_doc["basic"]["phase_number"] | "")
+#define power_offset (config_doc["basic"]["power_offset"] | "")
 #define power_offset_double ((double)config_doc["basic"]["power_offset"])
 
 #define mqtt_server (config_doc["mqtt"]["mqtt_server"]|"")

@@ -99,12 +99,8 @@ void load_parameters() {
     config_doc["led"]["led_gpio"] = preferences.getString("led_gpio", "");
     config_doc["led"]["led_gpio_i"] = preferences.getString("led_gpio_i", "");
 
-   // config_doc["shelly"]["shelly_mac"] = preferences.getString("shelly_mac", shelly_mac);
     config_doc["shelly"]["shelly_port"] = preferences.getString("shelly_port", "2220");
-    config_doc["shelly"]["shelly_gen"] = "2";
-    config_doc["shelly"]["shelly_fw_id"] = "20241011-114455/1.4.4-g6d2a586";
-    config_doc["shelly"]["shelly_name"] = "shellypro3em-";
-
+   
     config_doc["json"]["power_path"] = preferences.getString("power_path", "");
     config_doc["json"]["pwr_export_path"] = preferences.getString("pwr_export_path", "");
     config_doc["json"]["power_l1_path"] = preferences.getString("power_l1_path", "");
@@ -131,6 +127,25 @@ void load_parameters() {
     config_doc["rct"]["query_period"] = preferences.getString("query_period", "");
   }
     preferences.end();
+
+
+   /* make sure default values are available */
+   config_doc["shelly"]["shelly_port"] = config_doc["shelly"]["shelly_port"] | "2220";
+   config_doc["shelly"]["shelly_gen"] = config_doc["shelly"]["shelly_gen"] | "2";
+   config_doc["shelly"]["shelly_fw_id"] = config_doc["shelly"]["shelly_fw_id"] | "20241011-114455/1.4.4-g6d2a586";
+   config_doc["shelly"]["shelly_name"] = config_doc["shelly"]["shelly_name"] | "shellypro3em-";
+
+   config_doc["basic"]["ntp_server"] = config_doc["basic"]["ntp_server"]| "de.pool.ntp.org";
+   config_doc["basic"]["timezone"] = config_doc["basic"]["timezone"] | "CET-1CEST,M3.5.0/2,M10.5.0/3";
+   config_doc["basic"]["phase_number"] = config_doc["basic"]["phase_number"] | "3";
+   config_doc["basic"]["input_type"] = config_doc["basic"]["input_type"] | "NONE";
+
+   config_doc["sunspec"]["query_period"] = config_doc["sunspec"]["query_period"] | "5000";
+   config_doc["tibber"]["query_period"] = config_doc["tibber"]["query_period"] | "5000";
+   config_doc["rct"]["query_period"] = config_doc["rct"]["query_period"] | "5000";
+   config_doc["http"]["query_period"] = config_doc["http"]["query_period"] | "5000";
+   
+
 }
 
 
