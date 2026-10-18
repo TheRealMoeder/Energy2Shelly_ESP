@@ -801,15 +801,13 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
         statusText.style.color = "red";
     }
 }
- function generateFormFromDictionary(dictionary, currentConfig, container, currentConfigNode = currentConfig) {
+function generateFormFromDictionary(dictionary, currentConfig, container, currentConfigNode = currentConfig, prefix = '') {
     Object.keys(dictionary).forEach(key => {
         const entry = dictionary[key];
-        
-        // Subgroup
-        // Descision: Subgroup or config object
+       
+        const currentPath = prefix ? `${prefix}_${key}` : key;
+
         if (entry && typeof entry === 'object' && !entry.label && !entry.options) {
-            
-            
             const fieldset = document.createElement('fieldset');
             fieldset.className = 'form-group-sub';
             fieldset.style.marginBottom = '25px';
@@ -817,14 +815,12 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
             fieldset.style.border = '1px solid #ccc';
             fieldset.style.borderRadius = '5px';
 
-            
             const legend = document.createElement('legend');
             legend.innerText = entry._label || key;
             legend.style.fontWeight = 'bold';
             legend.style.padding = '0 10px';
             fieldset.appendChild(legend);
 
-            
             if (entry._description) {
                 const desc = document.createElement('small');
                 desc.innerText = entry._description;
@@ -834,20 +830,15 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 fieldset.appendChild(desc);
             }
 
-            
             const nextConfigNode = (currentConfigNode && currentConfigNode[key]) ? currentConfigNode[key] : {};
 
-            // recursive call to handle nested structure
-            generateFormFromDictionary(entry, currentConfig, fieldset, nextConfigNode);
-            
+            generateFormFromDictionary(entry, currentConfig, fieldset, nextConfigNode, currentPath);
             container.appendChild(fieldset);
             return;
         }
 
-        // skip meta keys
         if (key.startsWith('_')) return;
 
-        // normal entry
         const group = document.createElement('div');
         group.className = 'form-group';
         group.style.marginBottom = '20px';
@@ -878,12 +869,11 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
         group.appendChild(inputWrapper);
 
         let input;
-        
         const configValue = (currentConfigNode && currentConfigNode[key] !== undefined) ? currentConfigNode[key] : '';
 
         if (entry.options) {
             input = document.createElement('select');
-            input.id = 'input_' + key;
+            input.id = 'input_' + currentPath; 
 
             entry.options.forEach(optValue => {
                 const option = document.createElement('option');
@@ -900,7 +890,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
         } 
         else {
             input = document.createElement('input');
-            input.id = 'input_' + key;
+            input.id = 'input_' + currentPath; 
             input.value = configValue;
             inputWrapper.appendChild(input);
 
@@ -946,9 +936,8 @@ async function saveConfig() {
 
             const currentPath = prefix ? `${prefix}_${key}` : key;
             
-            const inputField = document.getElementById('input_' + currentPath) || 
-                               document.getElementById('input_' + key);
-
+            const inputField = document.getElementById('input_' + currentPath);
+          
             if (inputField) {
                 result[key] = castValue(inputField.value);
             } else if (typeof configObj[key] === 'object' && configObj[key] !== null) {
