@@ -602,10 +602,10 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 },
                 phase_number: {
                     label: "Phase Number",
-                    description: "The number of phases for the device (e.g., 1, 2, or 3)."
+                    description: "The number of phases for the device (e.g., 1 or 3)."
                 },
                 power_offset: {
-                    label: "Power Offset",
+                    label: "Power Offset (Watt)",
                     description: "The power offset value for calibration."
                 }
             },
@@ -634,10 +634,10 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
             shelly: {
                 _label: "Shelly Settings",
                 _description: "Settings related to Shelly communication.",
-                shelly_mac: {
-                    label: "Shelly MAC Address",
-                    description: "The MAC address of the Shelly device."
-                },
+                //shelly_mac: {
+                //    label: "Shelly MAC Address",
+                //    description: "The MAC address of the Shelly device."
+                //},
                 shelly_name: {
                     label: "Shelly Device Name",
                     description: "The name of the Shelly device."
@@ -730,7 +730,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 },
                 mqtt_topic: {
                     label: "MQTT Topic",
-                    description: "The topic to which the device will publish data."
+                    description: "The topic to which the device will read published data."
                 }
                 
             },   
@@ -739,7 +739,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 _description: "Settings related to HTTP communication.",
                 server_ip: {
                     label: "HTTP Hostname/IP[:port]",
-                    description: "The address of the HTTP server"
+                    description: "The address of the HTTP server (e.g. 192.168.0.1:8080)."
                 },
                 query_period: {
                     label: "Query Period (ms)",
@@ -748,7 +748,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
             },
             json: {
                 _label: "JSON Settings",
-                _description: "Settings related to JSON communication.",
+                _description: "Settings related to JSON communication. (HTTP/MQTT)",
                 power_path: {
                     label: "Power Path",
                     description: "The path to retrieve power data from the JSON server."
