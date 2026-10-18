@@ -590,19 +590,20 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 input_type: {
                     label: "Input Type",
                     description: "Defines the type of input for the device.",
-                    options: ["MQTT", "HTTP", "SMA", "SUNSPEC", "RCT", "SHRDZM", "TIBBERPULSE"] 
+                    options: ["MQTT", "HTTP", "SMA", "SUNSPEC", "RCT", "SHRDZM", "TIBBERPULSE", "NONE"] 
                 },
                 ntp_server: {
                     label: "NTP Server",
-                    description: "The NTP server used for time synchronization."
+                    description: "The NTP server used for time synchronization. e.g. de.pool.ntp.org"
                 },
                 timezone: {
                     label: "Timezone",
-                    description: "The timezone setting for the device."
+                    description: "The timezone setting for the device. e.g. CET-1CEST,M3.5.0/2,M10.5.0/3"
                 },
                 phase_number: {
                     label: "Phase Number",
-                    description: "The number of phases for the device (e.g., 1 or 3)."
+                    description: "The number of phases for the device (e.g., 1 or 3).",
+                    options: ["1", "3"]
                 },
                 power_offset: {
                     label: "Power Offset (Watt)",
@@ -640,19 +641,20 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 //},
                 shelly_name: {
                     label: "Shelly Device Name",
-                    description: "The name of the Shelly device."
+                    description: "The name of the Shelly device. e.g. shellypro3em-"
                 },
                 shelly_gen: {
                     label: "Shelly Generation",
-                    description: "The generation of the Shelly device (e.g., 1, 2, 3)."
+                    description: "The generation of the Shelly device (e.g., 1, 2, 3).",
+                    options: ["1", "2" ,"3"]
                 },
                 shelly_fw_id: {
                     label: "Shelly Firmware ID",
-                    description: "The firmware ID of the Shelly device."
+                    description: "The firmware ID of the Shelly device. e.g. 20241011-114455/1.4.4-g6d2a586"
                 },
                 shelly_port: {
                     label: "Shelly Port",
-                    description: "The port number for communication with the Shelly device."
+                    description: "The port number for communication with the Shelly device. e.g. 2220"
                 }
             },
 
