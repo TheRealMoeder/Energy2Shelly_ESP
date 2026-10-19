@@ -29,20 +29,17 @@ jobs:
         with:
           python-version: '3.13'
           
-      # 1. HIER GEHÖRT DIE INSTALLATION HIN:
       - name: Install latest esptool
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade esptool
           
-      # 2. PlatformIO Core installieren & Build ausführen
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
         
       - name: Build firmware
         run: pio run
         
-      # 3. AUFRUF VON ESPTOOL KORRIGIERT (python3 -m esptool):
       - name: Merge ESP32 flash files
         run: |
           cd .pio/build/esp32
