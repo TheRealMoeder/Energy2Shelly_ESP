@@ -610,7 +610,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                     description: "The power offset value for calibration."
                 }
             },
-            basic: {
+            led: {
                 _label: "LED Settings",
                 _description: "LED settings for the device.",
                 led_gpio: {
