@@ -603,7 +603,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 phase_number: {
                     label: "Phase Number",
                     description: "The number of phases for the device (e.g., 1 or 3).",
-                    options: ["1", "3"]
+                    options: [1, 3]
                 },
                 power_offset: {
                     label: "Power Offset (Watt)",
@@ -658,7 +658,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 shelly_gen: {
                     label: "Shelly Generation",
                     description: "The generation of the Shelly device (e.g., 1, 2, 3).",
-                    options: ["1", "2" ,"3"]
+                    options: [1, 2, 3]
                 },
                 shelly_fw_id: {
                     label: "Shelly Firmware ID",
