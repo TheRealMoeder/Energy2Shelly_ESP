@@ -610,7 +610,19 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                     description: "The power offset value for calibration."
                 }
             },
-
+            basic: {
+                _label: "LED Settings",
+                _description: "LED settings for the device.",
+                led_gpio: {
+                    label: "LED Pin",
+                    description: "Please specify the LED pin number"
+                },
+                led_gpio_i: {
+                    label: "Inverse LED",
+                    description: "Invert LED on/off logic",
+                    options: ["false", "true"] 
+                }
+            },
            sunspec: {
                 _label: "SUNSPEC Settings",
                 _description: "Settings related to SUNSPEC Modbus communication.",

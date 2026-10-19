@@ -548,14 +548,14 @@ void loop()
     DeserializationError error = deserializeJson(update_config_doc, json_prefs_string);
     DEBUG_SERIAL.handleQueue();
     DEBUG_SERIAL.println(json_prefs_string);
+    json_prefs_string = String();
     DEBUG_SERIAL.handleQueue();
     if (!error) {
       mergeJson(config_doc.as<JsonObject>(), update_config_doc.as<JsonObjectConst>());  
       interprete_parameters();
       save_parameters();
     }
-    update_config_doc.clear();
-    json_prefs_string = String();    
+    update_config_doc.clear();        
     parametersUpdated = false;
   }
 

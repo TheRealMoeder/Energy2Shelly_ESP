@@ -61,8 +61,6 @@ void save_parameters() {
     //preferences.clear(); // clear all old settings
     serializeJson(config_doc, json_prefs_string);
     preferences.putString("config_doc", json_prefs_string);
-   
-
     #endif
     preferences.end();
 
@@ -130,22 +128,22 @@ void load_parameters() {
 
 
    /* make sure default values are available */
-   config_doc["shelly"]["shelly_port"] = config_doc["shelly"]["shelly_port"] | "2220";
-   config_doc["shelly"]["shelly_gen"] = config_doc["shelly"]["shelly_gen"] | "2";
+   config_doc["shelly"]["shelly_port"] = config_doc["shelly"]["shelly_port"].as<int>() ? config_doc["shelly"]["shelly_port"].as<int>() :  2220;
+   config_doc["shelly"]["shelly_gen"] = config_doc["shelly"]["shelly_gen"].as<int>() ? config_doc["shelly"]["shelly_gen"].as<int>() : 2;
    config_doc["shelly"]["shelly_fw_id"] = config_doc["shelly"]["shelly_fw_id"] | "20241011-114455/1.4.4-g6d2a586";
    config_doc["shelly"]["shelly_name"] = config_doc["shelly"]["shelly_name"] | "shellypro3em-";
 
    config_doc["basic"]["ntp_server"] = config_doc["basic"]["ntp_server"]| "de.pool.ntp.org";
    config_doc["basic"]["timezone"] = config_doc["basic"]["timezone"] | "CET-1CEST,M3.5.0/2,M10.5.0/3";
-   config_doc["basic"]["phase_number"] = config_doc["basic"]["phase_number"] | "3";
+   config_doc["basic"]["phase_number"] = config_doc["basic"]["phase_number"].as<int>() ? config_doc["basic"]["phase_number"].as<int>(): 3;
    config_doc["basic"]["input_type"] = config_doc["basic"]["input_type"] | "NONE";
 
-   config_doc["sunspec"]["query_period"] = config_doc["sunspec"]["query_period"] | "5000";
-   config_doc["tibber"]["query_period"] = config_doc["tibber"]["query_period"] | "5000";
-   config_doc["rct"]["query_period"] = config_doc["rct"]["query_period"] | "5000";
-   config_doc["http"]["query_period"] = config_doc["http"]["query_period"] | "5000";
-   
+   config_doc["sunspec"]["query_period"] = config_doc["sunspec"]["query_period"].as<int>() ? config_doc["sunspec"]["query_period"].as<int>() : 5000;
+   config_doc["tibber"]["query_period"] = config_doc["tibber"]["query_period"].as<int>() ? config_doc["tibber"]["query_period"].as<int>() : 5000;
+   config_doc["rct"]["query_period"]    = config_doc["rct"]["query_period"].as<int>() ? config_doc["rct"]["query_period"].as<int>() : 5000;
+   config_doc["http"]["query_period"]   = config_doc["http"]["query_period"].as<int>() ? config_doc["http"]["query_period"].as<int>() : 5000;
 
+ 
 }
 
 
