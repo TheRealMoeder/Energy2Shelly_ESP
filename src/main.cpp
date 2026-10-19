@@ -550,12 +550,11 @@ void loop()
     DEBUG_SERIAL.println(json_prefs_string);
     DEBUG_SERIAL.handleQueue();
     if (!error) {
-      mergeJson(config_doc.as<JsonObject>(), update_config_doc.as<JsonObjectConst>());
-     
+      mergeJson(config_doc.as<JsonObject>(), update_config_doc.as<JsonObjectConst>());  
       interprete_parameters();
+      save_parameters();
     }
     update_config_doc.clear();
-    save_parameters();
     json_prefs_string = String();    
     parametersUpdated = false;
   }
