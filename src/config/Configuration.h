@@ -209,7 +209,7 @@ extern  JsonDocument config_doc;
 #define timezone (config_doc["basic"]["timezone"] | "")
 #define phase_number (config_doc["basic"]["phase_number"] | "")
 #define power_offset (config_doc["basic"]["power_offset"] | "")
-#define power_offset_double ((double)config_doc["basic"]["power_offset"])
+#define power_offset_double (config_doc["basic"]["power_offset"].as<double_t>())
 
 #define mqtt_server (config_doc["mqtt"]["mqtt_server"]|"")
 #define mqtt_port (config_doc["mqtt"]["mqtt_port"]|"")
@@ -230,7 +230,7 @@ extern  JsonDocument config_doc;
 
 #define http_server (config_doc["http"]["server_ip"]|"")
 #define query_period_http (config_doc["http"]["query_period"])
-#define query_period_http_u32 ((uint32_t)config_doc["http"]["query_period"])
+#define query_period_http_u32 (config_doc["http"]["query_period"].as<uint32_t>())
 
 // Shelly device settings
 #define shelly_gen config_doc["shelly"]["shelly_gen"]
@@ -243,7 +243,7 @@ extern  JsonDocument config_doc;
 #define sunspec_modbus_server config_doc["sunspec"]["modbus_ip"]
 #define sunspec_modbus_port config_doc["sunspec"]["modbus_port"]
 #define query_period_modbus config_doc["sunspec"]["query_period"] 
-#define query_period_modbus_u32 ((uint32_t)config_doc["sunspec"]["query_period"])
+#define query_period_modbus_u32 (config_doc["sunspec"]["query_period"].as<uint32_t>())
 
 // Query and protocol settings
 #define sma_id config_doc["sma"]["sma_id"].as<const char*>()

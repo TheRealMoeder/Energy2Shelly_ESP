@@ -209,10 +209,10 @@ void interprete_parameters()
   // Convert string parameters to integers where necessary
   modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
   sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
-
-  period = config_doc["http"]["query_period"].as<unsigned long>();
   modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
 
+  period = config_doc["http"]["query_period"].as<unsigned long>();
+ 
 }
 
 
