@@ -411,7 +411,7 @@ void setupMdns()
   mdns_txt_item_t serviceTxtData[4] = {
       {"arch", "esp8266"},
       {"gen", shelly_gen.as<const char*>()},
-      {"fw_id", shelly_gen.as<const char*>()},
+      {"fw_id", shelly_fw_id.as<const char*>()},
       {"id", shelly_name.as<const char*>()}};
   mdns_service_instance_name_set("_http", "_tcp", cat_name.c_str());
   mdns_service_txt_set("_http", "_tcp", serviceTxtData, 4);
