@@ -291,6 +291,7 @@ void load_parameters() {
    config_doc["rct"]["query_period"]    = config_doc["rct"]["query_period"].as<int>() ? config_doc["rct"]["query_period"].as<int>() : 5000;
    config_doc["http"]["query_period"]   = config_doc["http"]["query_period"].as<int>() ? config_doc["http"]["query_period"].as<int>() : 5000;
 
+
  
 }
 
@@ -322,10 +323,18 @@ void WifiManagerSetup(bool stationmode)
   WiFi.macAddress(mac);
 
   load_parameters(); // Load parameters from Preferences
+ 
 
- 
-  config_doc["shelly"]["shelly_mac"] = String(mac[0], HEX) + String(mac[1], HEX) + String(mac[2], HEX) + String(mac[3], HEX) + String(mac[4], HEX) + String(mac[5], HEX);
- 
+  String currentMac = config_doc["shelly"]["shelly_mac"].as<String>();
+  if (currentMac == "null" || currentMac.length() == 0) {
+    char macStr[13];
+    snprintf(macStr, sizeof(macStr), "%02X%02X%02X%02X%02X%02X", 
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+             
+    config_doc["shelly"]["shelly_mac"] = String(macStr);
+  }
+
+
   static WiFiManager wifiManager;
   wifiManager.setDebugOutput(false);
   wifiManager.setShowStaticFields(true);

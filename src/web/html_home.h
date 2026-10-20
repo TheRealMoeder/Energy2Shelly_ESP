@@ -655,6 +655,10 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
             shelly: {
                 _label: "Shelly Settings",
                 _description: "Settings related to Shelly communication.",
+                shelly_mac: {
+                    label: "Shelly MAC Address",
+                    description: "The MAC address of the Shelly device."
+                },
                 shelly_name: {
                     label: "Shelly Device Name",
                     description: "The name of the Shelly device. e.g. shellypro3em-"
