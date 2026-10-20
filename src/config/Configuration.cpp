@@ -40,7 +40,7 @@ const uint8_t defaultPowerFactor = 1;
 double offsetPerPhase = 0;
 
 // RPC and query settings
-unsigned long period = 1000;
+//unsigned long period = 1000;
 int rpcId = 1;
 char rpcUser[20] = "user_1";
 
@@ -173,8 +173,9 @@ void interprete_parameters()
   sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
   modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
 
-  period = config_doc["http"]["query_period"].as<unsigned long>();
- 
+ // period = config_doc["http"]["query_period"].as<unsigned long>();
+  offsetPerPhase = power_offset / 3.0; // distribute offset equally across phases
+
 }
 
 void erase_prefrences()
@@ -375,8 +376,7 @@ void WifiManagerSetup(bool stationmode)
   
   DEBUG_SERIAL.println(F("connected"));
 
-  offsetPerPhase = power_offset_double / 3.0; // distribute offset equally across phases
-
+  
   
   interprete_parameters();
 
