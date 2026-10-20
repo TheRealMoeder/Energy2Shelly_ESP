@@ -176,7 +176,7 @@ void interprete_parameters()
 
 }
 
-void erase_prefrences()
+void erase_preferences()
 {
   preferences.begin("e2s_config", false);
   preferences.clear();
