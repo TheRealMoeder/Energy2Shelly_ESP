@@ -511,7 +511,6 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 </html>
 )rawliteral";
 
-  
 const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
 <!DOCTYPE html><html><head><title>Rebooting...</title>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
@@ -545,7 +544,14 @@ const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
 </body></html>
 )rawhtml";
 
-const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(  
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+  
+#define X(name) "\"" #name "\": " TOSTRING((int)input_type_enum::name) ",\n"
+
+
+
+const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(  
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -590,7 +596,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
                 input_type: {
                     label: "Input Type",
                     description: "Defines the type of input for the device.",
-                    options: ["MQTT", "HTTP", "SMA", "SUNSPEC", "RCT", "SHRDZM", "TIBBERPULSE", "NONE"] 
+                    options: ["NONE", "MQTT", "HTTP", "SMA", "SUNSPEC", "RCT", "SHRDZM", "TIBBERPULSE" ] 
                 },
                 ntp_server: {
                     label: "NTP Server",
@@ -647,10 +653,6 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
             shelly: {
                 _label: "Shelly Settings",
                 _description: "Settings related to Shelly communication.",
-                //shelly_mac: {
-                //    label: "Shelly MAC Address",
-                //    description: "The MAC address of the Shelly device."
-                //},
                 shelly_name: {
                     label: "Shelly Device Name",
                     description: "The name of the Shelly device. e.g. shellypro3em-"
@@ -816,14 +818,8 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
     }
 }
     const INPUT_TYPE_ENUM = {
-    "MQTT": 7,
-    "HTTP": 1,
-    "SMA": 2,
-    "SUNSPEC": 3,
-    "RCT": 4,
-    "SHRDZM": 5,
-    "TIBBERPULSE": 6,
-    "NONE": 0
+)=====" INPUT_TYPE_LIST  R"=====(
+   
 };
 function generateFormFromDictionary(dictionary, currentConfig, container, currentConfigNode = currentConfig, prefix = '') {
     Object.keys(dictionary).forEach(key => {
@@ -1006,6 +1002,6 @@ async function saveConfig() {
     </script>
 </body>
 </html>
-)rawhtml";
+)=====";
 
 #endif // HTML_HOME_H

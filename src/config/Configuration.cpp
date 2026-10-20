@@ -39,8 +39,7 @@ const uint8_t defaultFrequency = 50;
 const uint8_t defaultPowerFactor = 1;
 double offsetPerPhase = 0;
 
-// RPC and query settings
-//unsigned long period = 1000;
+// RPC settings
 int rpcId = 1;
 char rpcUser[20] = "user_1";
 
@@ -123,36 +122,38 @@ void handleblinkled()
 void interprete_parameters()
 {
   // Interpret the loaded parameters and set flags accordingly
-  switch (config_doc["basic"]["input_type"].as<uint32_t>()) {
-    case SMA:
+  input_type_enum current_input_type = static_cast<input_type_enum>(config_doc["basic"]["input_type"].as<uint32_t>());
+
+  switch (current_input_type) {
+    case input_type_enum::SMA:
         dataSMA = true;
         DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
         break;
-    case SHRDZM:
+    case input_type_enum::SHRDZM:
         dataSHRDZM = true;
         DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
         break;
-    case HTTP:
+    case input_type_enum::HTTP:
         dataHTTP = true;
         DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
         break;
-    case SUNSPEC:
+    case input_type_enum::SUNSPEC:
         dataSUNSPEC = true;
         DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
         break;
-   case TIBBERPULSE:
+   case input_type_enum::TIBBERPULSE:
         dataTIBBERPULSE = true;
         DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
         break;
-   case RCT:
+   case input_type_enum::RCT:
         dataRCT = true;
         DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
         break;
-   case MQTT:
+   case input_type_enum::MQTT:
         dataMQTT = true;
         DEBUG_SERIAL.println(F("Enabling MQTT data input"));
         break;
-   case NONE:
+   case input_type_enum::NONE:
    default:
         DEBUG_SERIAL.println(F("None"));
   }
@@ -171,7 +172,6 @@ void interprete_parameters()
   sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
   modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
 
- // period = config_doc["http"]["query_period"].as<unsigned long>();
   offsetPerPhase = power_offset / 3.0; // distribute offset equally across phases
 
 }
@@ -282,7 +282,7 @@ void load_parameters() {
    config_doc["basic"]["phase_number"] = config_doc["basic"]["phase_number"].as<int>() ? config_doc["basic"]["phase_number"].as<int>(): 3;
    config_doc["basic"]["ntp_server"] = config_doc["basic"]["ntp_server"]| "de.pool.ntp.org";
    config_doc["basic"]["timezone"] = config_doc["basic"]["timezone"] | "CET-1CEST,M3.5.0/2,M10.5.0/3";
-   config_doc["basic"]["input_type"] = config_doc["basic"]["input_type"].as<int>() ? config_doc["basic"]["phase_number"].as<int>() : NONE;
+   config_doc["basic"]["input_type"] = config_doc["basic"]["input_type"].as<int>() ? config_doc["basic"]["input_type"].as<int>() : static_cast<int>(input_type_enum::NONE);
    if (config_doc["basic"]["ntp_server"] == "") config_doc["basic"]["ntp_server"] = "de.pool.ntp.org";
    if (config_doc["basic"]["timezone"] == "") config_doc["basic"]["timezone"] = "CET-1CEST,M3.5.0/2,M10.5.0/3";
    
