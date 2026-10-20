@@ -197,6 +197,8 @@ extern unsigned long currentMillis;
 extern time_t now;
 extern tm timeinfo;
 extern  JsonDocument config_doc;
+extern String json_prefs_string;
+extern JsonDocument update_config_doc;
 
 // ============================================================================
 // CONFIGURATION VARIABLES (stored in Preferences)
@@ -342,6 +344,8 @@ extern void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
   extern MDNSResponder::hMDNSService hMDNSService2; // handle of the shelly service in the MDNS responder
 #endif
 
+
+
 // ============================================================================
 // FUNCTION DECLARATIONS
 // ============================================================================
@@ -352,5 +356,8 @@ void saveConfigCallback();
 void WifiManagerSetup(bool stationmode);
 void setupMdns();
 void interprete_parameters();
+void save_parameters();
+void load_parameters();
+void mergeJson(JsonObject target, JsonObjectConst source);
 
 #endif // CONFIGURATION_H

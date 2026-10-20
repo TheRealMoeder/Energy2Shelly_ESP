@@ -6,7 +6,6 @@
 
 // Configuration & setup
 #include "config/Configuration.h"
-#include "config/load_save_parameters.h"
 // Data structures & processing
 #include "data/DataStructures.h"
 #include "data/DataProcessing.h"
@@ -446,10 +445,6 @@ void worker_loop(int currentMillis)
     // actually erases the SDK-saved credentials in flash.
     WiFi.persistent(true);
     WiFi.disconnect(true);
-    preferences.begin("e2s_config", false);
-    preferences.clear();
-    preferences.end();
-
     ESP.eraseConfig();
 #endif
     delay(1000);
