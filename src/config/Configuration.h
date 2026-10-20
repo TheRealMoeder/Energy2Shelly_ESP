@@ -204,7 +204,7 @@ extern  JsonDocument config_doc;
 
 // Data source and server settings
 #define reset_password (config_doc["basic"]["reset_password"]| "")
-#define input_type config_doc["basic"]["input_type"]
+#define input_type (config_doc["basic"]["input_type"] | "")
 #define ntp_server (config_doc["basic"]["ntp_server"]| "")
 #define timezone (config_doc["basic"]["timezone"] | "")
 #define phase_number (config_doc["basic"]["phase_number"] | "")

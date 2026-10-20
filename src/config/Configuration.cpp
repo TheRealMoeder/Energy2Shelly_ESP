@@ -191,7 +191,7 @@ void interprete_parameters()
     dataRCT = true;
     DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
   }
-  else
+  else if (strcmp(input_type, "MQTT") == 0)
   {
     dataMQTT = true;
     DEBUG_SERIAL.println(F("Enabling MQTT data input"));
@@ -205,7 +205,7 @@ void interprete_parameters()
   {
     led_i = false;
   }
-
+ 
   // Convert string parameters to integers where necessary
   modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
   sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
@@ -215,13 +215,6 @@ void interprete_parameters()
  
 }
 
-
-// callback notifying us of the need to save WifiManager config
-void saveConfigCallback()
-{
-  DEBUG_SERIAL.println(F("Should save config"));
-  shouldSaveConfig = true;
-}
 
 #if DEBUG
 WebDebugLogger DebugConsole;
@@ -245,8 +238,10 @@ void WifiManagerSetup(bool stationmode)
   // Set Shelly ID to ESP's MAC address by default
   uint8_t mac[6];
   WiFi.macAddress(mac);
-   
+
   load_parameters(); // Load parameters from Preferences
+
+ 
   config_doc["shelly"]["shelly_mac"] = String(mac[0], HEX) + String(mac[1], HEX) + String(mac[2], HEX) + String(mac[3], HEX) + String(mac[4], HEX) + String(mac[5], HEX);
  
   static WiFiManager wifiManager;
@@ -254,7 +249,6 @@ void WifiManagerSetup(bool stationmode)
   wifiManager.setShowStaticFields(true);
 
   wifiManager.setTitle(String("Energy2Shelly for ESP ") + VERSION_BUILD);
-  wifiManager.setSaveConfigCallback(saveConfigCallback);
 
   wifiManager.setConfigPortalTimeout(180);
   std::vector<const char *> usermenu = {"wifi","info","exit","sep","update"};
@@ -288,18 +282,20 @@ void WifiManagerSetup(bool stationmode)
     if (!wifiManager.autoConnect("Energy2Shelly"))
     {
       DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
+     
       delay(3000);
       ESP.restart();
       delay(5000);
     }
   }
+  
   DEBUG_SERIAL.println(F("connected"));
 
   offsetPerPhase = power_offset_double / 3.0; // distribute offset equally across phases
 
- 
+  
   interprete_parameters();
- 
+
   if (shouldSaveConfig)
   {
     DEBUG_SERIAL.println(F("saving config"));
