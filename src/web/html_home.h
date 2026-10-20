@@ -548,8 +548,8 @@ const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
 #define TOSTRING(x) STRINGIFY(x)
   
 
-#define X(name, val, next) "\"" #name "\": " TOSTRING(val) ",\n"
-#define X_LAST(name, val)  "\"" #name "\": " TOSTRING(val) "\n"
+#define X(name, val)      "\"" #name "\": " TOSTRING(val) ",\n"
+#define X_LAST(name, val) "\"" #name "\": " TOSTRING(val) "\n"
 
 
 

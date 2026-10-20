@@ -204,20 +204,20 @@ extern JsonDocument update_config_doc;
 // CONFIGURATION VARIABLES (stored in Preferences)
 // ============================================================================
  #define INPUT_TYPE_LIST \
-    X(NONE, 0, MQTT) \
-    X(MQTT, 1, HTTP) \
-    X(HTTP, 2, SMA) \
-    X(SMA, 3, SUNSPEC) \
-    X(SUNSPEC, 4, RCT) \
-    X(RCT, 5, SHRDZM) \
-    X(SHRDZM, 6, TIBBERPULSE) \
+    X(NONE, 0) \
+    X(MQTT, 1) \
+    X(HTTP, 2) \
+    X(SMA, 3) \
+    X(SUNSPEC, 4) \
+    X(RCT, 5) \
+    X(SHRDZM, 6) \
     X_LAST(TIBBERPULSE, 7)
 
 
 enum class input_type_enum : uint32_t 
 {
-#define X(name, val, next) name,
-#define X_LAST(name, val) name
+#define X(name, val)      name = val,
+#define X_LAST(name, val) name = val
     INPUT_TYPE_LIST
 #undef X
 #undef X_LAST
