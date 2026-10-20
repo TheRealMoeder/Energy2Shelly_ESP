@@ -370,7 +370,7 @@ server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST,
   server.begin();
 
   // Set up RPC over UDP for Marstek users
-  UdpRPC.begin(String(shelly_port).toInt());
+  UdpRPC.begin(shelly_port);
 
   // Set up MQTT
   if (dataMQTT)

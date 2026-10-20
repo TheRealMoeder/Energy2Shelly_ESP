@@ -256,11 +256,8 @@ enum class input_type_enum : uint32_t
 #define shelly_fw_id config_doc["shelly"]["shelly_fw_id"]
 #define shelly_mac config_doc["shelly"]["shelly_mac"]
 #define shelly_name config_doc["shelly"]["shelly_name"]
-#define shelly_port (config_doc["shelly"]["shelly_port"].as<String>())
+#define shelly_port (config_doc["shelly"]["shelly_port"].as<uint16_t>())
 
-#define sunspec_modbus_dev config_doc["sunspec"]["modbus_dev"]
-#define sunspec_modbus_server config_doc["sunspec"]["modbus_ip"]
-#define sunspec_modbus_port config_doc["sunspec"]["modbus_port"]
 #define query_period_modbus_u32 (config_doc["sunspec"]["query_period"].as<uint32_t>())
 
 // Query and protocol settings
@@ -270,7 +267,7 @@ extern uint8_t modbusdev_int;
 
 // RCT Power settings
 #define rct_host config_doc["rct"]["rct_host"].as<const char*>()
-#define rct_port config_doc["rct"]["rct_port"].as<const char*>()
+#define rct_port config_doc["rct"]["rct_port"].as<uint16_t>()
 #define query_period_rct_u32 config_doc["rct"]["query_period"].as<uint32_t>()
 
 
