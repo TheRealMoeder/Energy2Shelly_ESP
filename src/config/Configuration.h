@@ -203,24 +203,25 @@ extern JsonDocument update_config_doc;
 // ============================================================================
 // CONFIGURATION VARIABLES (stored in Preferences)
 // ============================================================================
-  
-#define INPUT_TYPE_LIST \
-    X(NONE)        \
-    X(MQTT)        \
-    X(HTTP)        \
-    X(SUNSPEC)     \
-    X(SMA)         \
-    X(RCT)         \
-    X(SHRDZM)      \
-    X(TIBBERPULSE)
+ #define INPUT_TYPE_LIST \
+    X(NONE, 0, MQTT) \
+    X(MQTT, 1, HTTP) \
+    X(HTTP, 2, SMA) \
+    X(SMA, 3, SUNSPEC) \
+    X(SUNSPEC, 4, RCT) \
+    X(RCT, 5, SHRDZM) \
+    X(SHRDZM, 6, TIBBERPULSE) \
+    X_LAST(TIBBERPULSE, 7)
 
-enum class input_type_enum : uint32_t
+
+enum class input_type_enum : uint32_t 
 {
-  #define X(name) name,
+#define X(name, val, next) name,
+#define X_LAST(name, val) name
     INPUT_TYPE_LIST
-  #undef X
+#undef X
+#undef X_LAST
 };
-
 
 // Data source and server settings
 #define reset_password (config_doc["basic"]["reset_password"]| "")

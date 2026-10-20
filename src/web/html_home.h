@@ -547,7 +547,9 @@ const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
   
-#define X(name) "\"" #name "\": " TOSTRING((int)input_type_enum::name) ",\n"
+
+#define X(name, val, next) "\"" #name "\": " TOSTRING(val) ",\n"
+#define X_LAST(name, val)  "\"" #name "\": " TOSTRING(val) "\n"
 
 
 
@@ -1003,5 +1005,5 @@ async function saveConfig() {
 </body>
 </html>
 )=====";
-
+#undef X
 #endif // HTML_HOME_H
