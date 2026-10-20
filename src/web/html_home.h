@@ -1006,4 +1006,5 @@ async function saveConfig() {
 </html>
 )=====";
 #undef X
+#undef X_LAST
 #endif // HTML_HOME_H
