@@ -410,8 +410,8 @@ void setupMdns()
   MDNS.addService("shelly", "tcp", 80);
   mdns_txt_item_t serviceTxtData[4] = {
       {"arch", "esp8266"},
-      {"gen", shelly_gen},
-      {"fw_id", shelly_fw_id},
+      {"gen", String(config_doc["shelly"]["shelly_gen"].as<int>()).c_str()},
+      {"fw_id", String(config_doc["shelly"]["shelly_fw_id"].as<int>()).c_str()},
       {"id", shelly_name}};
   mdns_service_instance_name_set("_http", "_tcp", cat_name.c_str());
   mdns_service_txt_set("_http", "_tcp", serviceTxtData, 4);
