@@ -41,9 +41,12 @@ To re-enter WiFiManager for updates or parameter changes:
 # Configuration
 #### 1. Power device and wait for a hotspot named "Energy2Shelly"
 #### 2. Connect to that hotspot
-#### 3. Enter wifi and configuration data using the captive portal or by opening http://192.168.4.1/
+#### 3. Enter wifi data using the captive portal or by opening http://192.168.4.1/
+#### 4. Check if your device is visible in the WLAN. <code>http://IP-address</code><br>
+#### 5. go to configuration page and enter the detailed configuration.
+     The device will ask for user and password. Default: empty. In configuration you can set a password. User name is not used; let it empty.
 
-  #### On the captive portal you can currently set a data source for power data. The following options are available:
+  #### The following options are available:
   - <code>MQTT</code>
     - Server IP, port, username, password and topic
     - Power values on the MQTT topic are expected in JSON format. The are multiple fields to define available values using a JSON Path-style syntax.
@@ -111,13 +114,18 @@ To re-enter WiFiManager for updates or parameter changes:
   
   > [!NOTE]
   > This option controls how energy2shelly firmware outputs energy data, it does not change the input data. So if you have a triphase setup but want to assign all data to phase 1, set <code>phase_number</code> to <code>1</code>. The TRIPAHSE option in JSONPATH settings only controls how the firmware reads the input data, not how it outputs this data.
-  
-#### 4. Check if your device is visible in the WLAN. <code>http://IP-address</code><br>
-#### 5. Check the current power data at <code>http://IP-address/status</code><br>
-- [ ] \(Optional) If you want to reset you Wifi-Configuration and/or reconfigure other settings go to <code>http://IP-address/reset</code> and reconnect to the Energy2Shelly hotspot.
 
-#### 6. Check debug output at <code>http://IP-address/console</code><br>
+  #### don't forget to save the new settings. Some of the settings come into effect immediately, some of them need a reboot.
+
+#### 6. reboot / power on/off the device or press the reset button
+#### 7. Check the current power data at <code>http://IP-address</code><br>
+- [ ] \(Optional) <code>http://IP-address/status</code><br>
+- [ ] \(Optional) If you want to reset you Wifi-Configuration  go to <code>http://IP-address/reset</code> and reconnect to the Energy2Shelly hotspot.
+
+#### 8. Check debug output at <code>http://IP-address/console</code><br>
 - you can enable/disable autoscroll, save text data and clear console
+
+#### 9. Or monitor the power consumption over time at <code>http://IP-address/plot</code><br>
 
 # Currently supported microcontrollers
 * ESP32-C3
