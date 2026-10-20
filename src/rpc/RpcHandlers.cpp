@@ -24,7 +24,7 @@ void shellyGetDeviceInfo() {
   jsonResponse["mac"] = shelly_mac;
   jsonResponse["slot"] = 1;
   jsonResponse["model"] = "SPEM-003CEBEU";
-  jsonResponse["gen"] = atoi(shelly_gen);
+  jsonResponse["gen"] = shelly_gen.as<int>();
   jsonResponse["fw_id"] = shelly_fw_id;
   jsonResponse["ver"] = "1.4.4";
   jsonResponse["app"] = "Pro3EM";
