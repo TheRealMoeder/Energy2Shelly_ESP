@@ -204,6 +204,19 @@ extern JsonDocument update_config_doc;
 // CONFIGURATION VARIABLES (stored in Preferences)
 // ============================================================================
 
+enum input_type_enum 
+{
+    MQTT = 7,
+    HTTP= 1,
+    SMA= 2,
+    SUNSPEC= 3,
+    RCT= 4,
+    SHRDZM = 5,
+    TIBBERPULSE= 6,
+    NONE= 0
+};
+
+
 // Data source and server settings
 #define reset_password (config_doc["basic"]["reset_password"]| "")
 #define input_type (config_doc["basic"]["input_type"] | "")

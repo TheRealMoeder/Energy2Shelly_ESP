@@ -123,40 +123,38 @@ void handleblinkled()
 void interprete_parameters()
 {
   // Interpret the loaded parameters and set flags accordingly
-  if (strcmp(input_type, "SMA") == 0)
-  {
-    dataSMA = true;
-    DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
-  }
-  else if (strcmp(input_type, "SHRDZM") == 0)
-  {
-    dataSHRDZM = true;
-    DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
-  }
-  else if (strcmp(input_type, "HTTP") == 0)
-  {
-    dataHTTP = true;
-    DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
-  }
-  else if (strcmp(input_type, "SUNSPEC") == 0)
-  {
-    dataSUNSPEC = true;
-    DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
-  }
-  else if (strcmp(input_type, "TIBBERPULSE") == 0)
-  {
-    dataTIBBERPULSE = true;
-    DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
-  }
-  else if (strcmp(input_type, "RCT") == 0)
-  {
-    dataRCT = true;
-    DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
-  }
-  else if (strcmp(input_type, "MQTT") == 0)
-  {
-    dataMQTT = true;
-    DEBUG_SERIAL.println(F("Enabling MQTT data input"));
+  switch (config_doc["basic"]["input_type"].as<uint32_t>()) {
+    case SMA:
+        dataSMA = true;
+        DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
+        break;
+    case SHRDZM:
+        dataSHRDZM = true;
+        DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
+        break;
+    case HTTP:
+        dataHTTP = true;
+        DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
+        break;
+    case SUNSPEC:
+        dataSUNSPEC = true;
+        DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
+        break;
+   case TIBBERPULSE:
+        dataTIBBERPULSE = true;
+        DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
+        break;
+   case RCT:
+        dataRCT = true;
+        DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
+        break;
+   case MQTT:
+        dataMQTT = true;
+        DEBUG_SERIAL.println(F("Enabling MQTT data input"));
+        break;
+   case NONE:
+   default:
+        DEBUG_SERIAL.println(F("None"));
   }
 
   if (strcmp(led_gpio_i, "true") == 0)
@@ -284,11 +282,10 @@ void load_parameters() {
    config_doc["basic"]["phase_number"] = config_doc["basic"]["phase_number"].as<int>() ? config_doc["basic"]["phase_number"].as<int>(): 3;
    config_doc["basic"]["ntp_server"] = config_doc["basic"]["ntp_server"]| "de.pool.ntp.org";
    config_doc["basic"]["timezone"] = config_doc["basic"]["timezone"] | "CET-1CEST,M3.5.0/2,M10.5.0/3";
-   config_doc["basic"]["input_type"] = config_doc["basic"]["input_type"] | "NONE";
+   config_doc["basic"]["input_type"] = config_doc["basic"]["input_type"].as<int>() ? config_doc["basic"]["phase_number"].as<int>() : NONE;
    if (config_doc["basic"]["ntp_server"] == "") config_doc["basic"]["ntp_server"] = "de.pool.ntp.org";
    if (config_doc["basic"]["timezone"] == "") config_doc["basic"]["timezone"] = "CET-1CEST,M3.5.0/2,M10.5.0/3";
-   if (config_doc["basic"]["input_type"]=="") config_doc["basic"]["input_type"] = "NONE";
-
+   
    config_doc["sunspec"]["query_period"] = config_doc["sunspec"]["query_period"].as<int>() ? config_doc["sunspec"]["query_period"].as<int>() : 5000;
    config_doc["tibber"]["query_period"] = config_doc["tibber"]["query_period"].as<int>() ? config_doc["tibber"]["query_period"].as<int>() : 5000;
    config_doc["rct"]["query_period"]    = config_doc["rct"]["query_period"].as<int>() ? config_doc["rct"]["query_period"].as<int>() : 5000;

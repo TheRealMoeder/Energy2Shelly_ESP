@@ -815,6 +815,16 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"rawhtml(
         statusText.style.color = "red";
     }
 }
+    const INPUT_TYPE_ENUM = {
+    "MQTT": 7,
+    "HTTP": 1,
+    "SMA": 2,
+    "SUNSPEC": 3,
+    "RCT": 4,
+    "SHRDZM": 5,
+    "TIBBERPULSE": 6,
+    "NONE": 0
+};
 function generateFormFromDictionary(dictionary, currentConfig, container, currentConfigNode = currentConfig, prefix = '') {
     Object.keys(dictionary).forEach(key => {
         const entry = dictionary[key];
@@ -891,10 +901,12 @@ function generateFormFromDictionary(dictionary, currentConfig, container, curren
 
             entry.options.forEach(optValue => {
                 const option = document.createElement('option');
-                option.value = optValue;
-                option.text = optValue;
+                option.text = optValue; // Der lesbare Text im Dropdown bleibt z.B. "MQTT"
 
-                if (configValue === optValue) {
+                const mappedValue = INPUT_TYPE_ENUM[optValue] !== undefined ? INPUT_TYPE_ENUM[optValue] : optValue;
+                option.value = mappedValue;
+
+                if (configValue === mappedValue || String(configValue) === String(mappedValue) || configValue === optValue) {
                     option.selected = true;
                 }
                 input.appendChild(option);
@@ -938,7 +950,6 @@ function generateFormFromDictionary(dictionary, currentConfig, container, curren
         container.appendChild(group);
     });
 }
-
 async function saveConfig() {
     const castValue = (val) => isNaN(val) || val.trim() === "" ? val : Number(val);
 
