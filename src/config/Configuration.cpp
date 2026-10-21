@@ -281,7 +281,6 @@ void load_parameters() {
 
    config_doc["basic"]["phase_number"] = config_doc["basic"]["phase_number"].as<int>() ? config_doc["basic"]["phase_number"].as<int>(): 3;
    config_doc["basic"]["ntp_server"] = config_doc["basic"]["ntp_server"]| "de.pool.ntp.org";
-   config_doc["basic"]["timezone"] = config_doc["basic"]["timezone"] | "CET-1CEST,M3.5.0/2,M10.5.0/3";
    config_doc["basic"]["input_type"] = config_doc["basic"]["input_type"].as<int>() ? config_doc["basic"]["input_type"].as<int>() : static_cast<int>(input_type_enum::NONE);
    if (config_doc["basic"]["ntp_server"] == "") config_doc["basic"]["ntp_server"] = "de.pool.ntp.org";
    if (config_doc["basic"]["timezone"] == "") config_doc["basic"]["timezone"] = "CET-1CEST,M3.5.0/2,M10.5.0/3";
