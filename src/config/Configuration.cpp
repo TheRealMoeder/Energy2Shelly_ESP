@@ -325,7 +325,7 @@ void saveConfigCallback() {
 void WifiManagerSetup(bool stationmode)
 {
   WiFi.setAutoReconnect(true);
-  // Set Shelly ID to ESP's MAC address by default
+ 
 
   load_parameters(); // Load parameters from Preferences
  
@@ -376,7 +376,8 @@ void WifiManagerSetup(bool stationmode)
   }
   
   DEBUG_SERIAL.println(F("connected"));
-
+ 
+  // Set Shelly ID to ESP's MAC address by default
   String currentMac = config_doc["shelly"]["shelly_mac"].as<String>();
   if (currentMac == "null" || currentMac.length() == 0) {
     
