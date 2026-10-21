@@ -644,7 +644,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 },
                 modbus_port: {
                     label: "Modbus Port",
-                    description: "The port number for Modbus communication."
+                    description: "The port number for Modbus communication. e.g. 502"
                 },
                 query_period: {
                     label: "Query Period (ms)",
