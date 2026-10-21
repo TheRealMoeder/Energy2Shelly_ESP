@@ -315,6 +315,13 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
   }
 }
 
+void saveConfigCallback() {
+    DEBUG_SERIAL.println(F("New WiFi settings, reboot..."));
+    delay(1000);
+    ESP.restart();
+    delay(5000);
+}
+
 void WifiManagerSetup(bool stationmode)
 {
   WiFi.setAutoReconnect(true);
@@ -328,7 +335,7 @@ void WifiManagerSetup(bool stationmode)
   wifiManager.setShowStaticFields(true);
 
   wifiManager.setTitle(String("Energy2Shelly for ESP ") + VERSION_BUILD);
-
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.setConfigPortalTimeout(180);
   std::vector<const char *> usermenu = {"wifi","info","exit","sep","update"};
   wifiManager.setMenu(usermenu);
