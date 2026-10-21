@@ -29,9 +29,10 @@ unsigned long updateTimestamp = 0;
 bool parametersUpdated = false; 
 
 bool isNotAuthorized(AsyncWebServerRequest *request) {
-    if (reset_password==NULL) return false;
-    if (reset_password=="") return false;
-    if (!request->authenticate("", reset_password)) {
+    String lp=config_doc["basic"]["reset_password"];
+    if (lp==NULL) return false;
+    if (lp.length()==0) return false;
+    if (!request->authenticate("", config_doc["basic"]["reset_password"].as<const char*>())) {
         request->requestAuthentication(); 
         return true;
     }
