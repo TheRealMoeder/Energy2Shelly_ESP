@@ -319,21 +319,9 @@ void WifiManagerSetup(bool stationmode)
 {
   WiFi.setAutoReconnect(true);
   // Set Shelly ID to ESP's MAC address by default
-  uint8_t mac[6];
-  WiFi.macAddress(mac);
 
   load_parameters(); // Load parameters from Preferences
  
-
-  String currentMac = config_doc["shelly"]["shelly_mac"].as<String>();
-  if (currentMac == "null" || currentMac.length() == 0) {
-    char macStr[13];
-    snprintf(macStr, sizeof(macStr), "%02X%02X%02X%02X%02X%02X", 
-             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-             
-    config_doc["shelly"]["shelly_mac"] = String(macStr);
-  }
-
 
   static WiFiManager wifiManager;
   wifiManager.setDebugOutput(false);
@@ -382,8 +370,14 @@ void WifiManagerSetup(bool stationmode)
   
   DEBUG_SERIAL.println(F("connected"));
 
-  
-  
+  String currentMac = config_doc["shelly"]["shelly_mac"].as<String>();
+  if (currentMac == "null" || currentMac.length() == 0) {
+    
+    String macStr = WiFi.macAddress(); 
+    macStr.replace(":", "");        
+    
+    config_doc["shelly"]["shelly_mac"] = macStr;  
+  }
   interprete_parameters();
 
   DEBUG_SERIAL.println(F("local ip"));
