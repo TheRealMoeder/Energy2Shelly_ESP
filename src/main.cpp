@@ -29,6 +29,8 @@ unsigned long updateTimestamp = 0;
 bool parametersUpdated = false; 
 
 bool isNotAuthorized(AsyncWebServerRequest *request) {
+    if (reset_password==NULL) return false;
+    if (reset_password=="") return false;
     if (!request->authenticate("", reset_password)) {
         request->requestAuthentication(); 
         return true;
