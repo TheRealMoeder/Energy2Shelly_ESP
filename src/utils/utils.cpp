@@ -2,8 +2,8 @@
 #include "config/Configuration.h"
 // 1. Variable definitions and platform separation
 #if defined(ESP32)
-RTC_DATA_ATTR Energy2Shelly_ResetReason rtc_reset_reason;
-RTC_DATA_ATTR uint32_t rtcMagicNumber;
+RTC_NOINIT_ATTR Energy2Shelly_ResetReason rtc_reset_reason;
+RTC_NOINIT_ATTR uint32_t rtcMagicNumber;
 #elif defined(ESP8266)
 Energy2Shelly_ResetReason rtc_reset_reason; // Manually synced.
 // first 0..31 slots maybe used by OTA
