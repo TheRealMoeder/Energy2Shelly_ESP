@@ -622,21 +622,8 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                     description: "The power offset value for calibration."
                 }
             },
-            led: {
-                _label: "LED Settings",
-                _description: "LED settings for the device.",
-                led_gpio: {
-                    label: "LED Pin",
-                    max_length : 6,
-                    description: "Please specify the LED pin number"
-                },
-                led_gpio_i: {
-                    label: "Inverse LED",
-                    description: "Invert LED on/off logic",
-                    options: ["false", "true"] 
-                }
-            },
-           sunspec: {
+
+            sunspec: {
                 _label: "SUNSPEC Settings",
                 _description: "Settings related to SUNSPEC Modbus communication.",
                 _show_if: ["SUNSPEC"],
@@ -661,37 +648,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 }
             },
 
-            shelly: {
-                _label: "Shelly Settings",
-                _description: "Settings related to Shelly communication.",
-                shelly_mac: {
-                    label: "Shelly MAC Address",
-                    max_length : 13,
-                    description: "The MAC address of the Shelly device."
-                },
-                shelly_name: {
-                    label: "Shelly Device Name",
-                    max_length : 26,
-                    description: "The name of the Shelly device. e.g. shellypro3em-"
-                },
-                shelly_gen: {
-                    label: "Shelly Generation",
-                    description: "The generation of the Shelly device (e.g., 1, 2, 3).",
-                    options: [1, 2, 3]
-                },
-                shelly_fw_id: {
-                    label: "Shelly Firmware ID",
-                    max_length : 32,
-                    description: "The firmware ID of the Shelly device. e.g. 20241011-114455/1.4.4-g6d2a586"
-                },
-                shelly_port: {
-                    label: "Shelly Port",
-                    max_length : 6,
-                    description: "The port number for communication with the Shelly device. e.g. 2220"
-                }
-            },
-
-           rct: {
+            rct: {
                 _label: "RCT Settings",
                 _description: "Settings related to RCT inverter communication.",
                 _show_if: ["RCT"],
@@ -712,7 +669,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 }
             },
 
-           sma: {
+            sma: {
                 _label: "SMA Settings",
                 _description: "Settings related to SMA Speedwire communication.",
                 _show_if: ["SMA"],
@@ -723,7 +680,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 }
             },
 
-           tibber: {
+            tibber: {
                 _label: "TibberPulse Settings",
                 _description: "Settings related to TibberPulse communication.",
                 _show_if: ["TIBBERPULSE"],
@@ -753,7 +710,6 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                     description: "The period in milliseconds for querying the Tibber device."
                 }
             },
-
 
             mqtt: {
                 _label: "MQTT Settings",
@@ -801,6 +757,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                     description: "The period in milliseconds for querying the HTTP server."
                 }              
             },
+   
             json: {
                 _label: "JSON Settings",
                 _description: "Settings related to JSON communication. (HTTP/MQTT)",
@@ -840,7 +797,53 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                     max_length : 60,
                     description: "The path to retrieve energy output data from the JSON server."
                 }
+            },
+
+            led: {
+                _label: "LED Settings",
+                _description: "LED settings for the device.",
+                led_gpio: {
+                    label: "LED Pin",
+                    max_length : 6,
+                    description: "Please specify the LED pin number"
+                },
+                led_gpio_i: {
+                    label: "Inverse LED",
+                    description: "Invert LED on/off logic",
+                    options: ["false", "true"] 
+                }
+            },
+
+            shelly: {
+                _label: "Shelly Settings",
+                _description: "Settings related to Shelly communication.",
+                shelly_mac: {
+                    label: "Shelly MAC Address",
+                    max_length : 13,
+                    description: "The MAC address of the Shelly device."
+                },
+                shelly_name: {
+                    label: "Shelly Device Name",
+                    max_length : 26,
+                    description: "The name of the Shelly device. e.g. shellypro3em-"
+                },
+                shelly_gen: {
+                    label: "Shelly Generation",
+                    description: "The generation of the Shelly device (e.g., 1, 2, 3).",
+                    options: [1, 2, 3]
+                },
+                shelly_fw_id: {
+                    label: "Shelly Firmware ID",
+                    max_length : 32,
+                    description: "The firmware ID of the Shelly device. e.g. 20241011-114455/1.4.4-g6d2a586"
+                },
+                shelly_port: {
+                    label: "Shelly Port",
+                    max_length : 6,
+                    description: "The port number for communication with the Shelly device. e.g. 2220"
+                }
             }
+
         };
 
    async function loadConfig() {
