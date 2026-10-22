@@ -20,12 +20,12 @@ void rpcWrapper() {
 // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Shelly#shellygetdeviceinfo-example
 void shellyGetDeviceInfo() {
   JsonDocument jsonResponse;
-  jsonResponse["id"] = shelly_name;
-  jsonResponse["mac"] = shelly_mac;
+  jsonResponse["id"] = shelly_name.c_str();
+  jsonResponse["mac"] = shelly_mac.as<const char*>();
   jsonResponse["slot"] = 1;
   jsonResponse["model"] = "SPEM-003CEBEU";
   jsonResponse["gen"] = shelly_gen.as<int>();
-  jsonResponse["fw_id"] = shelly_fw_id;
+  jsonResponse["fw_id"] = shelly_fw_id.as<const char*>();
   jsonResponse["ver"] = "1.4.4";
   jsonResponse["app"] = "Pro3EM";
   jsonResponse["auth_en"] = false;
@@ -41,9 +41,9 @@ void shellyGetDeviceInfo() {
 // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Sys#sysgetconfig-example
 void sysGetConfig() {
   JsonDocument jsonResponse;
-  jsonResponse["device"]["name"] = shelly_name;
-  jsonResponse["device"]["mac"] = shelly_mac;
-  jsonResponse["device"]["fw_id"] = shelly_fw_id;
+  jsonResponse["device"]["name"] = shelly_name.c_str();
+  jsonResponse["device"]["mac"] = shelly_mac.as<const char*>();
+  jsonResponse["device"]["fw_id"] = shelly_fw_id.as<const char*>();
   jsonResponse["device"]["eco_mode"] = false;
   jsonResponse["device"]["profile"] = "triphase";
   jsonResponse["device"]["discoverable"] = false;
@@ -55,7 +55,7 @@ void sysGetConfig() {
   jsonResponse["debug"]["udp"]["addr"] = nullptr;
   jsonResponse["ui_data"].to<JsonObject>();
   jsonResponse["rpc_udp"]["dst_addr"] = WiFi.localIP().toString();
-  jsonResponse["rpc_udp"]["listen_port"] = shelly_port;
+  jsonResponse["rpc_udp"]["listen_port"] = config_doc["shelly"]["shelly_port"].as<const char*>();
   jsonResponse["sntp"]["server"] = nullptr;
   jsonResponse["cfg_rev"] = 10;
   serializeJson(jsonResponse, serJsonResponse);
@@ -82,7 +82,7 @@ void sysGetStatus() {
   ram_total = 0; // what makes sense here?
 #endif
 
-  jsonResponse["mac"] = shelly_mac;
+  jsonResponse["mac"] = shelly_mac.as<const char*>();
   jsonResponse["restart_required"] = false;
   jsonResponse["time"] = time_buffer;
   jsonResponse["unixtime"] = now;
