@@ -192,3 +192,18 @@ void status_print(void)
   DEBUG_SERIAL.print(F(", reconnect attempts: "));
   DEBUG_SERIAL.println(wifi_reconnect_attempts);
 }
+
+
+String getISO8601Time() {
+    time_t now;
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        return "1970-01-01T00:00:00Z"; // Fallback, 
+    }
+    time(&now);
+    gmtime_r(&now, &timeinfo); // In UTC 
+
+    char buf[25];
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+    return String(buf);
+}

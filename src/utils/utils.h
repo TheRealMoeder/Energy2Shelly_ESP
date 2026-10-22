@@ -21,6 +21,9 @@ uint64_t extendedMillis();
 void status_print(void);
 Energy2Shelly_ResetReason clear_rtc_power_on(void);
 
+String getISO8601Time();
+
+
 // to be tuned for ESP32 and ESP8266
 #if defined(ESP32)
 #define MIN_HEAP_SIZE 12000
