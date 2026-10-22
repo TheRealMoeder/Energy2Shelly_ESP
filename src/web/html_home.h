@@ -639,6 +639,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
            sunspec: {
                 _label: "SUNSPEC Settings",
                 _description: "Settings related to SUNSPEC Modbus communication.",
+                _show_if: ["SUNSPEC"],
                 modbus_dev: {
                     label: "Modbus Device",
                     max_length : 6,
@@ -693,7 +694,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
            rct: {
                 _label: "RCT Settings",
                 _description: "Settings related to RCT inverter communication.",
-
+                _show_if: ["RCT"],
                 rct_host: {
                     label: "RCT hostname/IP",
                     max_length : 41,
@@ -714,6 +715,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
            sma: {
                 _label: "SMA Settings",
                 _description: "Settings related to SMA Speedwire communication.",
+                _show_if: ["SMA"],
                 sma_id: {
                     label: "SMA serial number",
                     max_length : 17,
@@ -724,6 +726,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
            tibber: {
                 _label: "TibberPulse Settings",
                 _description: "Settings related to TibberPulse communication.",
+                _show_if: ["TIBBERPULSE"],
                 tibber_host: {
                     label: "Tibber Hostnane/IP[:port]",
                     max_length : 41,
@@ -755,6 +758,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
             mqtt: {
                 _label: "MQTT Settings",
                 _description: "Settings related to MQTT communication.",
+                _show_if: ["MQTT"],
                 mqtt_server: {
                     label: "MQTT Hostname/IP[:port]",
                     max_length : 60,
@@ -785,6 +789,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
             http: {
                 _label: "HTTP Settings",
                 _description: "Settings related to HTTP communication.",
+                _show_if: ["HTTP"],
                 server_ip: {
                     label: "HTTP Hostname/IP[:port]",
                     max_length : 60,
@@ -799,6 +804,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
             json: {
                 _label: "JSON Settings",
                 _description: "Settings related to JSON communication. (HTTP/MQTT)",
+                _show_if: ["HTTP", "MQTT"],
                 power_path: {
                     label: "Power Path",
                     description: "The path to retrieve power data from the JSON server.",
@@ -849,7 +855,15 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
        
         formContainer.innerHTML = ''; 
         generateFormFromDictionary(CONFIG_DICTIONARY, currentConfig, formContainer);
-        
+          const inputTypeField = document.getElementById('input_basic_input_type');
+
+        if (inputTypeField) {
+                inputTypeField.addEventListener('change', (e) => {
+                applyDynamicVisibility(e.target.value);
+            });
+
+            applyDynamicVisibility(inputTypeField.value);
+        } 
         statusText.innerText = "Configuration successfully loaded.";
         statusText.style.color = "green";
     } catch (err) {
@@ -862,19 +876,53 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
 )=====" INPUT_TYPE_LIST  R"=====(
    
 };
+
+function applyDynamicVisibility(currentInputType) {
+    const conditionalSections = document.querySelectorAll('fieldset[data-show-if]'); 
+    let activeTypeName = currentInputType;
+    
+    if (typeof INPUT_TYPE_ENUM !== 'undefined') {
+        const foundKey = Object.keys(INPUT_TYPE_ENUM).find(key => String(INPUT_TYPE_ENUM[key]) === String(currentInputType));
+        if (foundKey) activeTypeName = foundKey;
+    }
+
+    conditionalSections.forEach(fieldset => {
+        let allowedTypes = [];
+        try {
+            allowedTypes = JSON.parse(fieldset.dataset.showIf);
+        } catch (e) {
+            console.error("Fehler beim Parsen von data-show-if:", e);
+            return; 
+        }
+        
+        const isMatch = allowedTypes.some(type => 
+            String(type).toUpperCase() === String(currentInputType).toUpperCase() ||
+            String(type).toUpperCase() === String(activeTypeName).toUpperCase()
+        );
+
+        
+        if (isMatch) {
+            fieldset.style.display = 'block'; 
+        } else {
+            fieldset.style.display = 'none';
+        }
+    });
+}
 function generateFormFromDictionary(dictionary, currentConfig, container, currentConfigNode = currentConfig, prefix = '') {
     Object.keys(dictionary).forEach(key => {
         const entry = dictionary[key];
        
         const currentPath = prefix ? `${prefix}_${key}` : key;
 
-        if (entry && typeof entry === 'object' && !entry.label && !entry.options) {
+        if (entry && typeof entry === 'object' && !entry.label && !entry.options  && !key.startsWith('_')) {
             const fieldset = document.createElement('fieldset');
             fieldset.className = 'form-group-sub';
             fieldset.style.marginBottom = '25px';
             fieldset.style.padding = '15px';
             fieldset.style.border = '1px solid #ccc';
             fieldset.style.borderRadius = '5px';
+            
+           
 
             const legend = document.createElement('legend');
             legend.innerText = entry._label || key;
@@ -889,6 +937,9 @@ function generateFormFromDictionary(dictionary, currentConfig, container, curren
                 desc.style.color = '#666';
                 desc.style.marginBottom = '10px';
                 fieldset.appendChild(desc);
+            }
+            if (entry._show_if) {
+                fieldset.dataset.showIf = JSON.stringify(entry._show_if);
             }
 
             const nextConfigNode = (currentConfigNode && currentConfigNode[key]) ? currentConfigNode[key] : {};
