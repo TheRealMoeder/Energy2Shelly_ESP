@@ -574,7 +574,9 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
 <body>
     <div class="card">
         <h2>Energy2Shelly Config Editor</h2>
-        
+        <button onclick="goBack()" style="margin-bottom: 15px;">
+        ← Back
+        </button>
         <!-- Input fields will be dynamically inserted here by JavaScript -->
         <div id="configForm">Loading configuration...</div>
         
@@ -582,7 +584,17 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         <p id="status"></p>
     </div>
 
+    
+
     <script>
+    function goBack() {
+        if (document.referrer) {
+            window.history.back();
+        } else {
+            window.location.href = 'index.html'; 
+        }
+    }
+    
         const formContainer = document.getElementById('configForm');
         const saveBtn = document.getElementById('saveBtn');
         const statusText = document.getElementById('status');
