@@ -685,6 +685,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 },
                 shelly_port: {
                     label: "Shelly Port",
+                    max_length : 6,
                     description: "The port number for communication with the Shelly device. e.g. 2220"
                 }
             },
@@ -705,6 +706,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 },
                 query_period: {
                     label: "Query Period (ms)",
+                    max_length : 26,
                     description: "The period in milliseconds for querying the RCT inverter."
                 }
             },
@@ -744,6 +746,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 },
                 query_period: {
                     label: "Query Period (ms)",
+                    max_length : 26,
                     description: "The period in milliseconds for querying the Tibber device."
                 }
             },
@@ -789,6 +792,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 },
                 query_period: {
                     label: "Query Period (ms)",
+                    max_length : 26,
                     description: "The period in milliseconds for querying the HTTP server."
                 }              
             },
