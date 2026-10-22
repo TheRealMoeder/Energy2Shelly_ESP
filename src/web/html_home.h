@@ -867,7 +867,6 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         statusText.innerText = "Configuration successfully loaded.";
         statusText.style.color = "green";
     } catch (err) {
-        console.error(err);
         statusText.innerText = "Error loading configuration.";
         statusText.style.color = "red";
     }
@@ -891,7 +890,6 @@ function applyDynamicVisibility(currentInputType) {
         try {
             allowedTypes = JSON.parse(fieldset.dataset.showIf);
         } catch (e) {
-            console.error("Fehler beim Parsen von data-show-if:", e);
             return; 
         }
         
