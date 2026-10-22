@@ -903,8 +903,8 @@ function generateFormFromDictionary(dictionary, currentConfig, container, curren
 
             entry.options.forEach(optValue => {
                 const option = document.createElement('option');
-                option.text = optValue; // Der lesbare Text im Dropdown bleibt z.B. "MQTT"
-
+                option.text = optValue; 
+                
                 const mappedValue = INPUT_TYPE_ENUM[optValue] !== undefined ? INPUT_TYPE_ENUM[optValue] : optValue;
                 option.value = mappedValue;
 
