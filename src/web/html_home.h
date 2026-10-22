@@ -1090,7 +1090,6 @@ async function saveConfig() {
             statusText.style.color = "red";
         }
     } catch (err) {
-        console.error("Netzwerkfehler:", err);
         statusText.innerText = "Network error while saving.";
         statusText.style.color = "red";
     }
