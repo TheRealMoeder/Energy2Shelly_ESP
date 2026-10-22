@@ -408,13 +408,14 @@ void setupMdns()
   {
     DEBUG_SERIAL.println(F("Error setting up MDNS responder!"));
   }
+  String gen_str = shelly_gen.as<String>();
 
 #ifdef ESP32
   MDNS.addService("http", "tcp", 80);
   MDNS.addService("shelly", "tcp", 80);
   mdns_txt_item_t serviceTxtData[4] = {
       {"arch", "esp8266"},
-      {"gen", String(shelly_gen.as<int>()).c_str()},
+      {"gen", gen_str.c_str()},
       {"fw_id", shelly_fw_id.as<const char*>()},
       {"id", shelly_name.c_str()}};
   mdns_service_instance_name_set("_http", "_tcp", shelly_name.c_str());
@@ -428,7 +429,7 @@ void setupMdns()
   {
     MDNS.setServiceName(hMDNSService, shelly_name.c_str());
     MDNS.addServiceTxt(hMDNSService, "arch", "esp8266");
-    MDNS.addServiceTxt(hMDNSService, "gen", String(shelly_gen.as<int>()).c_str());
+    MDNS.addServiceTxt(hMDNSService, "gen", gen_str.c_str());
     MDNS.addServiceTxt(hMDNSService, "fw_id", shelly_fw_id.as<const char*>());
     MDNS.addServiceTxt(hMDNSService, "id", shelly_name.c_str());
   }
@@ -436,7 +437,7 @@ void setupMdns()
   {
     MDNS.setServiceName(hMDNSService2, shelly_name.c_str());
     MDNS.addServiceTxt(hMDNSService2, "arch", "esp8266");
-    MDNS.addServiceTxt(hMDNSService2, "gen", String(shelly_gen.as<int>()).c_str());
+    MDNS.addServiceTxt(hMDNSService2, "gen", gen_str.c_str());
     MDNS.addServiceTxt(hMDNSService2, "fw_id", shelly_fw_id.as<const char*>());
     MDNS.addServiceTxt(hMDNSService2, "id", shelly_name.c_str());
   }
