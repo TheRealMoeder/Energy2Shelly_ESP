@@ -434,7 +434,7 @@ void setupMdns()
   }
   if (hMDNSService2)
   {
-    MDNS.setServiceName(hMDNSService2, cat_name.c_str());
+    MDNS.setServiceName(hMDNSService2, shelly_name.c_str());
     MDNS.addServiceTxt(hMDNSService2, "arch", "esp8266");
     MDNS.addServiceTxt(hMDNSService2, "gen", String(shelly_gen.as<int>()).c_str());
     MDNS.addServiceTxt(hMDNSService2, "fw_id", shelly_fw_id.as<const char*>());
