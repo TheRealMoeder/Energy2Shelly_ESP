@@ -13,6 +13,7 @@ JsonDocument config_doc;
 
 // Data source and server settings
 
+String shelly_name;
 
 uint16_t sunspec_port_int; // default port
 uint8_t modbusdev_int;     // default device id for KSEM
@@ -173,6 +174,15 @@ void interprete_parameters()
   modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
 
   offsetPerPhase = power_offset / 3.0; // distribute offset equally across phases
+
+  String name_str = config_doc["shelly"]["shelly_name"] | "";
+  String mac_str  = config_doc["shelly"]["shelly_mac"] | "";
+  shelly_name = name_str + mac_str;
+
+ if (shelly_name.length() > 128) {
+    shelly_name = shelly_name.substring(0, 128);
+ }
+
 
 }
 
@@ -394,14 +404,7 @@ void WifiManagerSetup(bool stationmode)
 void setupMdns()
 {
   // Set up mDNS responder
-  String name_str = config_doc["shelly"]["shelly_name"] | "";
-  String mac_str  = config_doc["shelly"]["shelly_mac"] | "";
-  String cat_name = name_str + mac_str;
-
- if (cat_name.length() > 128) {
-    cat_name = cat_name.substring(0, 128);
- }
-  if (!MDNS.begin(cat_name.c_str( )))
+  if (!MDNS.begin(shelly_name.c_str()))
   {
     DEBUG_SERIAL.println(F("Error setting up MDNS responder!"));
   }
@@ -413,21 +416,21 @@ void setupMdns()
       {"arch", "esp8266"},
       {"gen", String(shelly_gen.as<int>()).c_str()},
       {"fw_id", shelly_fw_id.as<const char*>()},
-      {"id", shelly_name.as<const char*>()}};
-  mdns_service_instance_name_set("_http", "_tcp", cat_name.c_str());
+      {"id", shelly_name.c_str()}};
+  mdns_service_instance_name_set("_http", "_tcp", shelly_name.c_str());
   mdns_service_txt_set("_http", "_tcp", serviceTxtData, 4);
-  mdns_service_instance_name_set("_shelly", "_tcp", cat_name.c_str());
+  mdns_service_instance_name_set("_shelly", "_tcp", shelly_name.c_str());
   mdns_service_txt_set("_shelly", "_tcp", serviceTxtData, 4);
 #else
   hMDNSService = MDNS.addService(0, "http", "tcp", 80);
   hMDNSService2 = MDNS.addService(0, "shelly", "tcp", 80);
   if (hMDNSService)
   {
-    MDNS.setServiceName(hMDNSService, cat_name.c_str());
+    MDNS.setServiceName(hMDNSService, shelly_name.c_str());
     MDNS.addServiceTxt(hMDNSService, "arch", "esp8266");
     MDNS.addServiceTxt(hMDNSService, "gen", String(shelly_gen.as<int>()).c_str());
     MDNS.addServiceTxt(hMDNSService, "fw_id", shelly_fw_id.as<const char*>());
-    MDNS.addServiceTxt(hMDNSService, "id", shelly_name.as<const char*>());
+    MDNS.addServiceTxt(hMDNSService, "id", shelly_name.c_str());
   }
   if (hMDNSService2)
   {
@@ -435,7 +438,7 @@ void setupMdns()
     MDNS.addServiceTxt(hMDNSService2, "arch", "esp8266");
     MDNS.addServiceTxt(hMDNSService2, "gen", String(shelly_gen.as<int>()).c_str());
     MDNS.addServiceTxt(hMDNSService2, "fw_id", shelly_fw_id.as<const char*>());
-    MDNS.addServiceTxt(hMDNSService2, "id", shelly_name.as<const char*>());
+    MDNS.addServiceTxt(hMDNSService2, "id", shelly_name.c_str());
   }
 #endif
   DEBUG_SERIAL.println(F("mDNS responder started"));

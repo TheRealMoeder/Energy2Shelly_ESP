@@ -27,7 +27,7 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
 
 void mqtt_reconnect() {
   DEBUG_SERIAL.print(F("Attempting MQTT connection..."));
-  if (mqtt_client.connect(shelly_name, String(mqtt_user).c_str(), String(mqtt_passwd).c_str())) {
+  if (mqtt_client.connect(shelly_name.c_str(), String(mqtt_user).c_str(), String(mqtt_passwd).c_str())) {
     DEBUG_SERIAL.println(F("connected"));
     mqtt_client.subscribe(mqtt_topic);
   } else {

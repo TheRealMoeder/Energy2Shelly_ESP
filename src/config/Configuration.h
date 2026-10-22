@@ -255,7 +255,7 @@ enum class input_type_enum : uint32_t
 #define shelly_gen config_doc["shelly"]["shelly_gen"]
 #define shelly_fw_id config_doc["shelly"]["shelly_fw_id"]
 #define shelly_mac config_doc["shelly"]["shelly_mac"]
-#define shelly_name config_doc["shelly"]["shelly_name"]
+extern String shelly_name;
 #define shelly_port (config_doc["shelly"]["shelly_port"].as<uint16_t>())
 
 #define query_period_modbus_u32 (config_doc["sunspec"]["query_period"].as<uint32_t>())
