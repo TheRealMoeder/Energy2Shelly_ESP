@@ -593,6 +593,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 _description: "General settings for the device.",
                 reset_password: {
                     label: "Reset Password",
+                    max_length : 33,
                     description: "For resetting the WiFi configuration and putting the device in AP / config mode"
                 },
                 input_type: {
@@ -602,10 +603,12 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 },
                 ntp_server: {
                     label: "NTP Server",
+                    max_length : 40,
                     description: "The NTP server used for time synchronization. e.g. de.pool.ntp.org"
                 },
                 timezone: {
                     label: "Timezone",
+                    max_length : 64,
                     description: "The timezone setting for the device. e.g. CET-1CEST,M3.5.0/2,M10.5.0/3"
                 },
                 phase_number: {
@@ -615,6 +618,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 },
                 power_offset: {
                     label: "Power Offset (Watt)",
+                    max_length : 10,
                     description: "The power offset value for calibration."
                 }
             },
@@ -623,6 +627,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 _description: "LED settings for the device.",
                 led_gpio: {
                     label: "LED Pin",
+                    max_length : 6,
                     description: "Please specify the LED pin number"
                 },
                 led_gpio_i: {
@@ -636,14 +641,17 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 _description: "Settings related to SUNSPEC Modbus communication.",
                 modbus_dev: {
                     label: "Modbus Device",
+                    max_length : 6,
                     description: "The device number for Modbus communication (e.g., 71)."
                 },
                 modbus_ip: {
                     label: "Modbus Server IP",
+                    max_length : 60,
                     description: "The IP address of the Modbus server."
                 },
                 modbus_port: {
                     label: "Modbus Port",
+                    max_length : 6,
                     description: "The port number for Modbus communication. e.g. 502"
                 },
                 query_period: {
@@ -657,10 +665,12 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 _description: "Settings related to Shelly communication.",
                 shelly_mac: {
                     label: "Shelly MAC Address",
+                    max_length : 13,
                     description: "The MAC address of the Shelly device."
                 },
                 shelly_name: {
                     label: "Shelly Device Name",
+                    max_length : 26,
                     description: "The name of the Shelly device. e.g. shellypro3em-"
                 },
                 shelly_gen: {
@@ -670,6 +680,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 },
                 shelly_fw_id: {
                     label: "Shelly Firmware ID",
+                    max_length : 32,
                     description: "The firmware ID of the Shelly device. e.g. 20241011-114455/1.4.4-g6d2a586"
                 },
                 shelly_port: {
@@ -684,10 +695,12 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
 
                 rct_host: {
                     label: "RCT hostname/IP",
+                    max_length : 41,
                     description: "IP address or hostname of the RCT Power device (with integrated grid sensor)."
                 },
                 rct_port: {
                     label: "RCT port",
+                    max_length : 6,
                     description: "Defaults to 8899."
                 },
                 query_period: {
@@ -701,6 +714,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 _description: "Settings related to SMA Speedwire communication.",
                 sma_id: {
                     label: "SMA serial number",
+                    max_length : 17,
                     description: "Optional serial number if you have more than one SMA EM/HM in your network"
                 }
             },
@@ -710,18 +724,22 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 _description: "Settings related to TibberPulse communication.",
                 tibber_host: {
                     label: "Tibber Hostnane/IP[:port]",
+                    max_length : 41,
                     description: "The address of the  Tibber device (e.g. 192.168.0.1:8080)."
                 },
                 tibber_user: {
                     label: "Tibber User",
+                    max_length : 11,
                     description: "Defaults to admin."
                 },
                 tibber_password: {
                     label: "Tibber Password",
+                    max_length : 10,
                     description: "As Printed on bridge device: xxxx-xxxx."
                 },
                 tibber_nodeid: {
                     label: "Tibber Node ID",
+                    max_length : 2,
                     description: "Defaults to 1, check the bridge web interface for the right nodeID."
                 },
                 query_period: {
@@ -736,22 +754,27 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 _description: "Settings related to MQTT communication.",
                 mqtt_server: {
                     label: "MQTT Hostname/IP[:port]",
+                    max_length : 60,
                     description: "The address of the MQTT broker (e.g. 192.168.0.1:1883)."
                 },
                 mqtt_port: {
                     label: "MQTT Port",
+                    max_length : 6,
                     description: "The port number for MQTT communication."
                 },
                 mqtt_user: {
                     label: "MQTT User",
+                    max_length : 40,
                     description: "Defaults to admin."
                 },
                 mqtt_password: {
                     label: "MQTT Password",
+                    max_length : 40,
                     description: "The password for the MQTT broker."
                 },
                 mqtt_topic: {
                     label: "MQTT Topic",
+                    max_length : 90,
                     description: "The topic to which the device will read published data."
                 }
                 
@@ -761,6 +784,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 _description: "Settings related to HTTP communication.",
                 server_ip: {
                     label: "HTTP Hostname/IP[:port]",
+                    max_length : 60,
                     description: "The address of the HTTP server (e.g. 192.168.0.1:8080)."
                 },
                 query_period: {
@@ -773,30 +797,37 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 _description: "Settings related to JSON communication. (HTTP/MQTT)",
                 power_path: {
                     label: "Power Path",
-                    description: "The path to retrieve power data from the JSON server."
+                    description: "The path to retrieve power data from the JSON server.",
+                    max_length : 60
                 },
                 pwr_export_path: {
                     label: "Power Export Path",
+                    max_length : 60,
                     description: "The path to retrieve power export data from the JSON server."
                 },
                 power_l1_path: {
                     label: "Power L1 Path",
+                    max_length : 60,
                     description: "The path to retrieve power data for phase L1 from the JSON server."
                 },
                 power_l2_path: {
                     label: "Power L2 Path",
+                    max_length : 60,
                     description: "The path to retrieve power data for phase L2 from the JSON server."
                 },
                 power_l3_path: {
                     label: "Power L3 Path",
+                    max_length : 60,
                     description: "The path to retrieve power data for phase L3 from the JSON server."
                 },
                 energy_in_path: {
                     label: "Energy In Path",
+                    max_length : 60,
                     description: "The path to retrieve energy input data from the JSON server."
                 },
                 energy_out_path: {  
                     label: "Energy Out Path",
+                    max_length : 60,
                     description: "The path to retrieve energy output data from the JSON server."
                 }
             }
@@ -896,7 +927,7 @@ function generateFormFromDictionary(dictionary, currentConfig, container, curren
 
         let input;
         const configValue = (currentConfigNode && currentConfigNode[key] !== undefined) ? currentConfigNode[key] : '';
-
+        
         if (entry.options) {
             input = document.createElement('select');
             input.id = 'input_' + currentPath; 
@@ -919,8 +950,15 @@ function generateFormFromDictionary(dictionary, currentConfig, container, curren
         else {
             input = document.createElement('input');
             input.id = 'input_' + currentPath; 
+            if (entry.max_length) {
+                input.maxLength = entry.max_length; 
+            }
+                    
+
             input.value = configValue;
             inputWrapper.appendChild(input);
+
+       
 
             if (key.toLowerCase().includes('password')) {
                 input.type = 'password';
