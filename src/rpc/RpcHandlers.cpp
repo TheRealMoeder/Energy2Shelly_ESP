@@ -55,7 +55,8 @@ void sysGetConfig() {
   jsonResponse["debug"]["udp"]["addr"] = nullptr;
   jsonResponse["ui_data"].to<JsonObject>();
   jsonResponse["rpc_udp"]["dst_addr"] = WiFi.localIP().toString();
-  jsonResponse["rpc_udp"]["listen_port"] = config_doc["shelly"]["shelly_port"].as<const char*>();
+  String portStr = String(config_doc["shelly"]["shelly_port"].as<int>());
+  jsonResponse["rpc_udp"]["listen_port"] = portStr.c_str();
   jsonResponse["sntp"]["server"] = nullptr;
   jsonResponse["cfg_rev"] = 10;
   serializeJson(jsonResponse, serJsonResponse);
