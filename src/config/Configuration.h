@@ -39,7 +39,9 @@
 
 
 
-extern bool enableConsoleOutput; // Global flag to control console output visibility
+extern bool enableConsoleOutputSerial; // Global flag to control console output visibility
+extern bool enableConsoleOutputWeb; // Global flag to control console output visibility
+
 extern AsyncWebSocket wsConsole;
 // Custom Logger class inheriting from Print to natively support all data types
 class WebDebugLogger : public Print {
@@ -76,11 +78,12 @@ public:
 
     // Intercepts character data from print/println calls
     virtual size_t write(uint8_t character) override {
+        
         // Local hardware USB serial transmission remains direct and synchronous
-        Serial.write(character);
+        if (enableConsoleOutputSerial) Serial.write(character);
 
         // Global runtime visibility check
-        if (!enableConsoleOutput) return 1;
+        if (!enableConsoleOutputWeb) return 1;
 
         // If no browser clients are connected, discard data to save CPU cycles
         if (wsConsole.count() == 0) {

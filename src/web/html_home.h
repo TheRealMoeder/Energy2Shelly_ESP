@@ -854,8 +854,22 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                     max_length : 6,
                     description: "The port number for communication with the Shelly device. e.g. 2220"
                 }
-            }
-
+            },
+            console: {
+                _label: "Console Settings",
+                _description: "Manage data output of Serial and Console printing",
+                web_console: {
+                    label: "Enable web console",
+                    max_length : 6,
+                    description: "With set to false, console web view is disabled",
+                    options : ["false", "true"]
+                },
+                serial_console_time: {
+                    label: "Live time for serial console",
+                    max_length : 30,
+                    description: "Live time of the serial output in minutes after reset.",
+                }
+            }     
         };
 
    async function loadConfig() {
@@ -1061,28 +1075,35 @@ function generateFormFromDictionary(dictionary, currentConfig, container, curren
 async function saveConfig() {
     const castValue = (val) => isNaN(val) || val.trim() === "" ? val : Number(val);
 
-    function buildPayload(configObj, dictionaryObj, prefix = '') {
+   function buildPayload(configObj, dictionaryObj, prefix = '') {
         const result = {};
 
-        Object.keys(configObj).forEach(key => {
-            if (key.startsWith('_')) return;
+        Object.keys(dictionaryObj).forEach(key => {
+            if (key.startsWith('_')) return; // Metadaten überspringen
 
             const currentPath = prefix ? `${prefix}_${key}` : key;
-            
             const inputField = document.getElementById('input_' + currentPath);
-          
+
             if (inputField) {
                 result[key] = castValue(inputField.value);
-            } else if (typeof configObj[key] === 'object' && configObj[key] !== null) {
-                result[key] = buildPayload(configObj[key], dictionaryObj[key] || {}, currentPath);
-            } else {
+            } else if (typeof dictionaryObj[key] === 'object' && dictionaryObj[key] !== null && !dictionaryObj[key].hasOwnProperty('label')) {
+                const subConfig = (configObj && configObj[key]) ? configObj[key] : {};
+                result[key] = buildPayload(subConfig, dictionaryObj[key], currentPath);
+            } else if (configObj && configObj.hasOwnProperty(key)) {
                 result[key] = configObj[key];
             }
         });
 
+        if (configObj) {
+            Object.keys(configObj).forEach(key => {
+                if (!result.hasOwnProperty(key)) {
+                    result[key] = configObj[key];
+                }
+            });
+        }
+
         return result;
     }
-
     const payload = buildPayload(currentConfig, CONFIG_DICTIONARY);
 
     try {

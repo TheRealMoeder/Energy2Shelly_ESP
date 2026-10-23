@@ -140,6 +140,9 @@ void interprete_parameters()
         break;
     case input_type_enum::SUNSPEC:
         dataSUNSPEC = true;
+        modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
+        sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
+        modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
         DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
         break;
    case input_type_enum::TIBBERPULSE:
@@ -158,8 +161,8 @@ void interprete_parameters()
    default:
         DEBUG_SERIAL.println(F("None"));
   }
-
-  if (strcmp(led_gpio_i, "true") == 0)
+ 
+  if (led_gpio_i!=NULL && strlen(led_gpio_i)>=4 && strcmp(led_gpio_i, "true") == 0)
   {
     led_i = true;
   }
@@ -167,11 +170,23 @@ void interprete_parameters()
   {
     led_i = false;
   }
+
+  String temp=config_doc["console"]["web_console"]|"";
+  if (strlen(temp.c_str())>=4 && strncmp(temp.c_str(), "true",4) == 0) {
+    enableConsoleOutputWeb=true;
+  }
+  else {
+     enableConsoleOutputWeb=false;
+  }
  
-  // Convert string parameters to integers where necessary
-  modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
-  sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
-  modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
+  config_doc["console"]["serial_console_time"]  =    config_doc["console"]["serial_console_time"].as<int>() ? config_doc["console"]["serial_console_time"].as<int>() : (int)1;
+  if (config_doc["console"]["serial_console_time"].as<int>()>0) {
+     enableConsoleOutputSerial=true;
+  }
+  else {
+    enableConsoleOutputSerial=false;
+  }
+
 
   offsetPerPhase = power_offset / 3.0; // distribute offset equally across phases
 
@@ -182,6 +197,7 @@ void interprete_parameters()
  if (shelly_name.length() > 128) {
     shelly_name = shelly_name.substring(0, 128);
  }
+
 
 
 }
@@ -228,6 +244,7 @@ void load_parameters() {
   config_doc.clear();
   if (preferences.isKey("config_doc")) {
     json_prefs_string = preferences.getString("config_doc", "");
+    DEBUG_SERIAL.println(json_prefs_string);
     deserializeJson(config_doc, json_prefs_string);
   } else {
     // Load individual parameters if the combined config_doc is not present
@@ -284,7 +301,7 @@ void load_parameters() {
 
 
    /* make sure default values are available */
-   config_doc["shelly"]["shelly_port"] = config_doc["shelly"]["shelly_port"].as<int>() ? config_doc["shelly"]["shelly_port"].as<int>() :  2220;
+   config_doc["shelly"]["shelly_port"] = config_doc["shelly"]["shelly_port"].as<int>() ? config_doc["shelly"]["shelly_port"].as<int>() : 2220;
    config_doc["shelly"]["shelly_gen"] = config_doc["shelly"]["shelly_gen"].as<int>() ? config_doc["shelly"]["shelly_gen"].as<int>() : 2;
    config_doc["shelly"]["shelly_fw_id"] = config_doc["shelly"]["shelly_fw_id"] | "20241011-114455/1.4.4-g6d2a586";
    config_doc["shelly"]["shelly_name"] = config_doc["shelly"]["shelly_name"] | "shellypro3em-";
@@ -299,7 +316,13 @@ void load_parameters() {
    config_doc["tibber"]["query_period"] = config_doc["tibber"]["query_period"].as<int>() ? config_doc["tibber"]["query_period"].as<int>() : 5000;
    config_doc["rct"]["query_period"]    = config_doc["rct"]["query_period"].as<int>() ? config_doc["rct"]["query_period"].as<int>() : 5000;
    config_doc["http"]["query_period"]   = config_doc["http"]["query_period"].as<int>() ? config_doc["http"]["query_period"].as<int>() : 5000;
+   
+ 
+   config_doc["console"]["web_console"]  =    config_doc["console"]["web_console"] | "true";
+   config_doc["console"]["serial_console_time"] = config_doc["console"]["serial_console_time"]|"";
+   config_doc["console"]["serial_console_time"]  = config_doc["console"]["serial_console_time"].as<int>() ? config_doc["console"]["serial_console_time"].as<int>() : (int)1;
 
+ 
 
  
 }
@@ -310,10 +333,14 @@ void load_parameters() {
 
 #if DEBUG
 WebDebugLogger DebugConsole;
-bool enableConsoleOutput = true;
+bool enableConsoleOutputSerial = true;
+bool enableConsoleOutputWeb = true;
+
 #else
 NullDebug EmptyConsole;
-bool enableConsoleOutput = false;
+bool enableConsoleOutputSerial = false;
+bool enableConsoleOutputWeb = false;
+
 #endif
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
@@ -335,7 +362,6 @@ void WifiManagerSetup(bool stationmode)
 {
   WiFi.setAutoReconnect(true);
  
-
   load_parameters(); // Load parameters from Preferences
  
 
@@ -395,6 +421,7 @@ void WifiManagerSetup(bool stationmode)
     
     config_doc["shelly"]["shelly_mac"] = macStr;  
   }
+  
   interprete_parameters();
 
   DEBUG_SERIAL.println(F("local ip"));

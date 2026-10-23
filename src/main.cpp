@@ -29,10 +29,10 @@ unsigned long updateTimestamp = 0;
 bool parametersUpdated = false; 
 
 bool isNotAuthorized(AsyncWebServerRequest *request) {
-    String lp=config_doc["basic"]["reset_password"];
+    String lp=(config_doc["basic"]["reset_password"]|"");
     if (lp==NULL) return false;
     if (lp.length()==0) return false;
-    if (!request->authenticate("", config_doc["basic"]["reset_password"].as<const char*>())) {
+    if (!request->authenticate("", lp.c_str())) {
         request->requestAuthentication(); 
         return true;
     }
@@ -535,6 +535,11 @@ void loop()
     stackWD();
     status_print();
     WDTimer = currentMillis;
+  }
+
+  if (enableConsoleOutputSerial && (extendedMillis()>(config_doc["console"]["serial_console_time"].as<int>()*60000ll))) {
+      enableConsoleOutputSerial=false;
+      DEBUG_SERIAL.println(F("Disabled serial plottin"));
   }
 
   // check if WiFi connection has been lost for more than the allowed interval
