@@ -105,6 +105,9 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
 
 
   if (rtc_reset_reason==Energy2Shelly_ResetReason::MANUAL_RESET) {
+       #ifdef ESP8266
+          ESP.rtcUserMemoryRead(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
+       #endif    
        rtc_reset_counter++;
        #ifdef ESP8266
           ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
