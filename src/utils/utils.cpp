@@ -16,6 +16,32 @@ uint32_t rtc_reset_counter;
 #endif
 Energy2Shelly_ResetReason ram_copy_rtc_reset_reason;
 
+void wifi_reset()
+{
+#ifdef ESP32
+    WiFi.disconnect(true, true);
+#else
+    // WiFiManager may leave persistent=false; force it so disconnect(true)
+    // actually erases the SDK-saved credentials in flash.
+    WiFi.persistent(true);
+    WiFi.disconnect(true);
+    ESP.eraseConfig();
+#endif
+    update_reset_reason(Energy2Shelly_ResetReason::WIFI_RECONFIG);
+    delay(1000);
+    ESP.restart();
+    delay(1000);
+ 
+}
+
+void reset_esp_to_default_and_reboot()
+{
+  preferences.begin("e2s_config", false);
+  preferences.clear();
+  preferences.end();
+  wifi_reset();
+}
+
 
 Energy2Shelly_ResetReason clear_rtc_power_on(void)
 {
@@ -83,6 +109,7 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
        #ifdef ESP8266
           ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
        #endif
+       if (rtc_reset_counter>=5) reset_esp_to_default_and_reboot();
   }
  
   ram_copy_rtc_reset_reason=rtc_reset_reason;
@@ -135,6 +162,8 @@ void stackWD(void)
   DEBUG_SERIAL.print(F(" bytes, Max free block: "));
   DEBUG_SERIAL.print(maxBlock);
   DEBUG_SERIAL.println(F(" bytes"));
+  DEBUG_SERIAL.print(F("Reset counts: "));
+  DEBUG_SERIAL.println(rtc_reset_counter);
   
   if (maxBlock < MIN_HEAP_SIZE)
   {
@@ -165,8 +194,8 @@ uint64_t extendedMillis()
 
 void checkreset_counter()
 {
-  if ((extendedMillis()<(60ull*1000ull)) && (rtc_reset_counter>=5)) {
-      set_rtc_reset_counter(rtc_reset_counter);
+  if ((extendedMillis()>(60ull*1000ull)) && (rtc_reset_counter>0)) {
+      set_rtc_reset_counter(0);
   }
 
 }

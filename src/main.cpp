@@ -441,17 +441,7 @@ void worker_loop(int currentMillis)
   }
   if (shouldResetConfig)
   {
-#ifdef ESP32
-    WiFi.disconnect(true, true);
-#else
-    // WiFiManager may leave persistent=false; force it so disconnect(true)
-    // actually erases the SDK-saved credentials in flash.
-    WiFi.persistent(true);
-    WiFi.disconnect(true);
-    ESP.eraseConfig();
-#endif
-    delay(1000);
-    ESP.restart();
+     wifi_reset();
   }
   if (dataMQTT)
   {
@@ -565,6 +555,9 @@ void loop()
     update_config_doc.clear();        
     parametersUpdated = false;
   }
+
+  // set reset counter to 0, after one minute
+  checkreset_counter();
 
   handleblinkled();
   DEBUG_SERIAL.handleQueue();

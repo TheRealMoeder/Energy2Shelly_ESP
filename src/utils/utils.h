@@ -11,7 +11,8 @@ enum class Energy2Shelly_ResetReason
   WIFI_DISCONNECT = 3,
   OTA_UPDATE = 4,
   RECONFIGURE = 5,
-  OTHER = 6
+  OTHER = 6,
+  WIFI_RECONFIG = 7
 };
 
 void all_esp_reset(Energy2Shelly_ResetReason reason);
@@ -20,7 +21,8 @@ void stackWD(void);
 uint64_t extendedMillis();
 void status_print(void);
 Energy2Shelly_ResetReason clear_rtc_power_on(void);
-
+void wifi_reset();
+void checkreset_counter();
 // to be tuned for ESP32 and ESP8266
 #if defined(ESP32)
 #define MIN_HEAP_SIZE 12000
