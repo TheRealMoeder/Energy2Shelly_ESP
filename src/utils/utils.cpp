@@ -4,9 +4,12 @@
 #if defined(ESP32)
 RTC_NOINIT_ATTR Energy2Shelly_ResetReason rtc_reset_reason;
 RTC_NOINIT_ATTR uint32_t rtcMagicNumber;
+RTC_NOINIT_ATTR uint32_t rtc_reset_counter;
 #elif defined(ESP8266)
 Energy2Shelly_ResetReason rtc_reset_reason; // Manually synced.
+uint32_t rtc_reset_counter;
 // first 0..31 slots maybe used by OTA
+#define RTC_reset_counter_slot 125
 #define RTC_magic_key_slot 126
 #define RTC_reset_reason_slot 127
 
@@ -25,6 +28,7 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
     // If the magic number is missing, it was a genuine cold boot (power applied)
     if (rtcMagicNumber != 0xDEADBEEF)
     {
+      rtc_reset_counter = 0;
       rtcMagicNumber = 0xDEADBEEF; // Prepare for the next boot cycle
       rtc_reset_reason = Energy2Shelly_ResetReason::POWER_ON;
     }
@@ -51,8 +55,9 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
     {
       // Magic number missing -> True cold boot (power applied)
       esp8266MagicNumber = 0xDEADBEEF;
+      rtc_reset_counter = 0;
       ESP.rtcUserMemoryWrite(RTC_magic_key_slot, &esp8266MagicNumber, sizeof(esp8266MagicNumber));
-
+      ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
       rtc_reset_reason = Energy2Shelly_ResetReason::POWER_ON;
     }
     else
@@ -70,6 +75,16 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
     ESP.rtcUserMemoryRead(RTC_reset_reason_slot, (uint32_t *)&rtc_reset_reason, sizeof(rtc_reset_reason));
   }
 #endif
+
+
+
+  if (rtc_reset_reason==Energy2Shelly_ResetReason::MANUAL_RESET) {
+       rtc_reset_counter++;
+       #ifdef ESP8266
+          ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
+       #endif
+  }
+ 
   ram_copy_rtc_reset_reason=rtc_reset_reason;
   update_reset_reason(Energy2Shelly_ResetReason::OTHER); // set to unknown;
   return ram_copy_rtc_reset_reason;
@@ -82,6 +97,15 @@ void update_reset_reason(Energy2Shelly_ResetReason reason)
   ESP.rtcUserMemoryWrite(RTC_reset_reason_slot, (uint32_t *)&rtc_reset_reason, sizeof(rtc_reset_reason));
 #endif
 }
+
+void set_rtc_reset_counter(uint32_t value)
+{
+  rtc_reset_counter = value;
+#if defined(ESP8266)
+  ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, (uint32_t *)&rtc_reset_counter, sizeof(rtc_reset_counter));
+#endif
+}
+
 
 void all_esp_reset(Energy2Shelly_ResetReason reason)
 {
@@ -119,6 +143,7 @@ void stackWD(void)
   }
 }
 
+
 uint64_t extendedMillis()
 {
   static unsigned long lastMillis = 0;
@@ -136,6 +161,16 @@ uint64_t extendedMillis()
   // combine overflows and currentMillis to get the extended time in milliseconds
   return (overflows << 32) + currentMillis;
 }
+
+
+void checkreset_counter()
+{
+  if ((extendedMillis()<(60ull*1000ull)) && (rtc_reset_counter>=5)) {
+      set_rtc_reset_counter(rtc_reset_counter);
+  }
+
+}
+
 
 void status_print(void)
 {
