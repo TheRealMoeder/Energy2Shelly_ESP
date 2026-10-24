@@ -1,5 +1,13 @@
 #include "utils.h"
 #include "config/Configuration.h"
+#ifdef ESP8266
+#include <LittleFS.h>
+#else
+extern "C" {
+#include "nvs_flash.h"
+}
+#endif
+
 // 1. Variable definitions and platform separation
 #if defined(ESP32)
 RTC_NOINIT_ATTR Energy2Shelly_ResetReason rtc_reset_reason;
@@ -36,10 +44,26 @@ void wifi_reset()
 
 void reset_esp_to_default_and_reboot()
 {
-  preferences.begin("e2s_config", false);
-  preferences.clear();
-  preferences.end();
-  wifi_reset();
+  #ifdef ESP32
+    nvs_flash_erase(); 
+    nvs_flash_init(); 
+    WiFi.disconnect(true, true);
+#else
+
+   if (LittleFS.begin()) {
+        LittleFS.format();
+  } 
+    // WiFiManager may leave persistent=false; force it so disconnect(true)
+    // actually erases the SDK-saved credentials in flash.
+    WiFi.persistent(true);
+    WiFi.disconnect(true);
+    ESP.eraseConfig();
+#endif
+   update_reset_reason(Energy2Shelly_ResetReason::FACTORY_RESET);
+   delay(1000);
+   ESP.restart();
+   delay(1000);
+   
 }
 
 
