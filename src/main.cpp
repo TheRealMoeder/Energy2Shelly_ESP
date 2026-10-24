@@ -425,7 +425,7 @@ server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST,
     http.useHTTP10(true);
   }
 
-#ifdef ESP32
+#ifdef ONA_ACTIVE
   ona_Setup();
 #endif
 
@@ -511,7 +511,7 @@ void worker_loop(int currentMillis)
       startMillis = currentMillis;
     }
   }
-#ifdef ESP32
+#ifdef ONA_ACTIVE
   if (enableOna) {
     
     if (currentMillis - onamillis >= config_doc["ona"]["publish_period"].as<unsigned long>()*1000ul)

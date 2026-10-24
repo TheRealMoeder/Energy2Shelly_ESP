@@ -49,6 +49,11 @@ jobs:
         run: |
           cd .pio/build/esp32-s3
           python3 -m esptool --chip esp32-s3 merge_bin -o merged-flash.bin --flash_mode dio --flash_freq 80m --flash_size 4MB 0x0000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+
+      - name: Merge ESP32-S3-N8 flash files
+        run: |
+          cd .pio/build/esp32-s3-N8
+          python3 -m esptool --chip esp32-s3 merge_bin -o merged-flash.bin --flash_mode dio --flash_freq 80m --flash_size 8MB 0x0000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
           
       - name: Merge ESP32-C3 flash files
         run: |
@@ -61,8 +66,10 @@ jobs:
           cp .pio/build/esp32/firmware.bin ./.github/pages/esp32-ota.bin
           cp .pio/build/esp8266/firmware.bin ./.github/pages/esp8266.bin
           cp .pio/build/esp32-s3/merged-flash.bin ./.github/pages/esp32-s3.bin
-          cp .pio/build/esp32-c3/merged-flash.bin ./.github/pages/esp32-c3.bin
           cp .pio/build/esp32-s3/firmware.bin ./.github/pages/esp32-s3-ota.bin
+          cp .pio/build/esp32-s3-N8/merged-flash.bin ./.github/pages/esp32-s3-N8.bin
+          cp .pio/build/esp32-s3-N8/firmware.bin ./.github/pages/esp32-s3-N8-ota.bin
+          cp .pio/build/esp32-c3/merged-flash.bin ./.github/pages/esp32-c3.bin
           cp .pio/build/esp32-c3/firmware.bin ./.github/pages/esp32-c3-ota.bin
           
       - name: Upload firmware artifacts
@@ -75,6 +82,8 @@ jobs:
             ./.github/pages/esp8266.bin
             ./.github/pages/esp32-s3.bin
             ./.github/pages/esp32-s3-ota.bin
+            ./.github/pages/esp32-s3-N8.bin
+            ./.github/pages/esp32-s3-N8-ota.bin
             ./.github/pages/esp32-c3.bin
             ./.github/pages/esp32-c3-ota.bin
             
@@ -112,6 +121,8 @@ jobs:
             ./esp32-ota.bin
             ./esp32-s3.bin
             ./esp32-s3-ota.bin
+            ./esp32-s3-N8.bin
+            ./esp32-s3-N8-ota.bin
             ./esp32-c3.bin
             ./esp32-c3-ota.bin
       - name: Deploy to GitHub Pages

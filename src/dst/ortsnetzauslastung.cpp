@@ -2,7 +2,8 @@
 #include "../data/DataProcessing.h"
 #include "../data/DataStructures.h"
 #include "../utils/utils.h"
-#ifdef ESP32
+#ifdef ONA_ACTIVE
+
 #include <WiFiClientSecure.h>
 static WiFiClientSecure ona_client;
 
