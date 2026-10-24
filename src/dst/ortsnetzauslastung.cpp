@@ -48,14 +48,14 @@ volatile bool ona_responseReady = false;
 volatile TaskHandle_t onaTaskHandle = NULL;
 void ona_sendMeasurementTask(void * pvParameters) {
     HTTPClient http; 
-    MeasurementData data; // Lokaler Speicher für die empfangenen Daten
-
-    while (true) {
-        // Wartet blockierungsfrei, bis eine neue Struktur reinkommt
+    MeasurementData data; 
+    JsonDocument doc;
+    String requestBody;
+    requestBody.reserve(512);
+    while (true) {       
         if (xQueueReceive(onaQueue, &data, portMAX_DELAY) == pdPASS) {
-            
-            // Erst hier im Hintergrund-Task bauen wir das JSON
-            JsonDocument doc;
+            doc.clear();
+          
             doc["observed_at"] = data.timeStr;
             doc["latitude"] = data.latitude;
             doc["longitude"] = data.longitude;
@@ -66,10 +66,9 @@ void ona_sendMeasurementTask(void * pvParameters) {
             doc["integration_version"] = VERSION_BUILD;
             doc["grid_frequency_hz"] = data.frequency;
 
-            String requestBody;
+            
             serializeJson(doc, requestBody);
 
-            // HTTP POST absenden
             http.begin(ona_client, api_url); 
             http.addHeader("Content-Type", "application/json");
 
