@@ -869,7 +869,28 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                     max_length : 30,
                     description: "Live time of the serial output in minutes after reset.",
                 }
-            }     
+            },
+            ona: {
+                _label: "Ortsnetzauslastung",
+                _description: "For publishing data to community. Only active for ESP32. Not for ESP8266",
+                publish_period: {
+                    label: "Publish period",
+                    max_length : 6,
+                    description: "Publish time in seconds. e.g. 60s, 0 => turned off",
+                },
+                latitude: {
+                    label: "Latitude ",
+                    max_length : 30,
+                    description: "Latitude coordinate of the device e.g. 52.520008"
+                },
+                longitude: {
+                    label: "Longitude",
+                    max_length : 30,
+                    description: "Longitude coordinate of the device e.g. 13.404954"
+                }
+
+            }
+
         };
 
    async function loadConfig() {

@@ -2,7 +2,7 @@
 #include "../data/DataProcessing.h"
 #include "../data/DataStructures.h"
 #include "../utils/utils.h"
-
+#ifdef ESP32
 #include <WiFiClientSecure.h>
 static WiFiClientSecure ona_client;
 
@@ -31,46 +31,75 @@ void ona_Setup()
      ona_client.setCACert(ona_root_ca);
 }
 
+String ona_lastResponse = "";
+int ona_lastResponseCode = 0;
+volatile bool ona_responseReady = false; 
 
-void ona_sendMeasurement() {
-
-
-    if  (phase_number!=3) {
-        DEBUG_SERIAL.println(F("Ortsnetzauslastung: Phase number must be 3"));
-    }
+volatile TaskHandle_t onaTaskHandle = NULL;
+void ona_sendMeasurementTask(void * pvParameters) {
+    String *requestBodyPtr = (String *)pvParameters;
+    String requestBody = *requestBodyPtr;
+    delete requestBodyPtr;
 
     HTTPClient http;
-    http.begin(ona_client,api_url); 
+    http.begin(ona_client, api_url); 
     http.addHeader("Content-Type", "application/json");
+
+    int httpResponseCode = http.POST(requestBody);
+
+    ona_lastResponseCode = httpResponseCode;
+    if (httpResponseCode > 0) {
+        ona_lastResponse = http.getString();
+    } else {
+        ona_lastResponse = http.errorToString(httpResponseCode);
+    }
+    http.end();
+
+    ona_responseReady = true;
+
+    onaTaskHandle = NULL; 
+    vTaskDelete(NULL);
+}
+
+void ona_sendMeasurement() {
+    DEBUG_SERIAL.println("Ona");
+
+    if (onaTaskHandle != NULL) {
+        DEBUG_SERIAL.println("[Ona] Still processing");
+        return; 
+    }
+
+    if (phase_number != 3) {
+        DEBUG_SERIAL.println(F("Ona: Phase number must be 3"));
+    }
+    DEBUG_SERIAL.print("Ona, last answer:");
+    DEBUG_SERIAL.println(ona_lastResponse);
 
     JsonDocument doc;
     doc["observed_at"] = getISO8601Time();
-    doc["latitude"] = LATITUDE;
-    doc["longitude"] = LONGITUDE;
+    doc["latitude"] = config_doc["ona"]["latitude"].as<double>();
+    doc["longitude"] = config_doc["ona"]["longitude"].as<double>();
     doc["l1_v"] = PhasePower[0].voltage;
     doc["l2_v"] = PhasePower[1].voltage;
     doc["l3_v"] = PhasePower[2].voltage;
     doc["smartmeter_model"] = "Energy2Shelly";
     doc["integration_version"] = VERSION_BUILD;
-        
-    //if (frequency_hz > 0) {// check if source delivers frequency, else skip it
-    //      doc["grid_frequency_hz"] = frequency_hz;
-    // }
+    doc["grid_frequency_hz"] = PhasePower[0].frequency;
     
-    String requestBody;
-    serializeJson(doc, requestBody);
+    String *requestBody = new String();
+    serializeJson(doc, *requestBody);
+    DEBUG_SERIAL.println(*requestBody);
 
-    int httpResponseCode = http.POST(requestBody);
+    xTaskCreatePinnedToCore(
+        ona_sendMeasurementTask,   
+        "OnaSendTask",             
+        16384,                      
+        (void *)requestBody,       
+        1,                         
+        NULL,                      
+        0                          
+    );
 
-    if (httpResponseCode > 0) {
-        String response = http.getString();
-        DEBUG_SERIAL.printf("[HTTP] Code: %d\n", httpResponseCode);
-        DEBUG_SERIAL.println("[HTTP] Answer:");
-        DEBUG_SERIAL.println(response);
-    } else {
-        DEBUG_SERIAL.printf("[HTTP] POST, Error: %s\n", http.errorToString(httpResponseCode).c_str());
-    }
-    http.end();
-    
-   
 }
+
+#endif

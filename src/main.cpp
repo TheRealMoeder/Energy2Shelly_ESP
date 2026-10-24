@@ -23,6 +23,10 @@
 // Utils function for monitoring and reset
 #include "utils/utils.h"
 
+#ifdef ESP32
+#include "dst/ortsnetzauslastung.h"
+#endif
+
 #define WiFicheckInterval 60000 // Check every 60 seconds
 
 unsigned long updateTimestamp = 0; 
@@ -421,10 +425,15 @@ server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST,
     http.useHTTP10(true);
   }
 
+#ifdef ESP32
+  ona_Setup();
+#endif
+
   // Set up mDNS responder
   setupMdns();
 
   startMillis = millis();
+  onamillis=startMillis;  
 }
 
 /* main worker loop, in case of WiFi connection*/
@@ -502,6 +511,16 @@ void worker_loop(int currentMillis)
       startMillis = currentMillis;
     }
   }
+#ifdef ESP32
+  if (enableOna) {
+    
+    if (currentMillis - onamillis >= config_doc["ona"]["publish_period"].as<unsigned long>()*1000ul)
+    {
+      ona_sendMeasurement();
+      onamillis = currentMillis;
+    }
+  }
+#endif
   DEBUG_SERIAL.handleQueue();
 }
 
@@ -537,7 +556,7 @@ void loop()
     WDTimer = currentMillis;
   }
 
-  if (enableConsoleOutputSerial && (extendedMillis()>(config_doc["console"]["serial_console_time"].as<int>()*60000ll))) {
+  if (enableConsoleOutputSerial && (extendedMillis()>(config_doc["console"]["serial_console_time"].as<uint64_t>()*60000ull))) {
       enableConsoleOutputSerial=false;
       DEBUG_SERIAL.println(F("Disabled serial plottin"));
   }

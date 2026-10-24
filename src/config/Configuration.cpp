@@ -1,6 +1,7 @@
 #include "Configuration.h"
 #include "../utils/utils.h"
 unsigned long startMillis = 0;
+unsigned long onamillis=0;
 unsigned long currentMillis;
 // for time synchronization
 time_t now;
@@ -57,6 +58,7 @@ bool dataHTTP = false;
 bool dataSUNSPEC = false;
 bool dataTIBBERPULSE = false;
 bool dataRCT = false;
+bool enableOna=false;
 
 Preferences preferences;
 
@@ -199,6 +201,11 @@ void interprete_parameters()
  }
 
 
+  if (config_doc["ona"]["publish_period"].isNull())  config_doc["ona"]["publish_period"]=0;
+  enableOna=config_doc["ona"]["publish_period"].as<int>()>0;
+
+  if (config_doc["ona"]["latitude"].isNull())  config_doc["ona"]["latitude"]=0.0;
+  if (config_doc["ona"]["longitude"].isNull()) config_doc["ona"]["longitude"]=0.0;
 
 }
 
