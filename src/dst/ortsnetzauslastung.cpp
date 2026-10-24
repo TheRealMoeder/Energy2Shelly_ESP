@@ -6,6 +6,19 @@
 #include <WiFiClientSecure.h>
 static WiFiClientSecure ona_client;
 
+struct MeasurementData {
+    char timeStr[25]; // Platz für ISO8601 String, z.B. "2026-10-24T16:00:00Z"
+    double latitude;
+    double longitude;
+    float l1_v;
+    float l2_v;
+    float l3_v;
+    float frequency;
+};
+
+QueueHandle_t onaQueue = NULL;
+const int ONA_QUEUE_SIZE = 1;
+
 const char* api_url = "https://www.ortsnetz-auslastung.de/v1/measurements";
 const double LATITUDE = 52.520008;
 const double LONGITUDE = 13.404954;
@@ -26,10 +39,6 @@ const char* ona_root_ca =
 "/q4AaOeMSQ+2b1tbFfLn\n"
 "-----END CERTIFICATE-----\n";
 
-void ona_Setup()
-{
-     ona_client.setCACert(ona_root_ca);
-}
 
 String ona_lastResponse = "";
 int ona_lastResponseCode = 0;
@@ -37,73 +46,84 @@ volatile bool ona_responseReady = false;
 
 volatile TaskHandle_t onaTaskHandle = NULL;
 void ona_sendMeasurementTask(void * pvParameters) {
-    String *requestBodyPtr = (String *)pvParameters;
-    String requestBody = *requestBodyPtr;
-    delete requestBodyPtr;
+    HTTPClient http; 
+    MeasurementData data; // Lokaler Speicher für die empfangenen Daten
 
-    HTTPClient http;
-    http.begin(ona_client, api_url); 
-    http.addHeader("Content-Type", "application/json");
+    while (true) {
+        // Wartet blockierungsfrei, bis eine neue Struktur reinkommt
+        if (xQueueReceive(onaQueue, &data, portMAX_DELAY) == pdPASS) {
+            
+            // Erst hier im Hintergrund-Task bauen wir das JSON
+            JsonDocument doc;
+            doc["observed_at"] = data.timeStr;
+            doc["latitude"] = data.latitude;
+            doc["longitude"] = data.longitude;
+            doc["l1_v"] = data.l1_v;
+            doc["l2_v"] = data.l2_v;
+            doc["l3_v"] = data.l3_v;
+            doc["smartmeter_model"] = "Energy2Shelly";
+            doc["integration_version"] = VERSION_BUILD;
+            doc["grid_frequency_hz"] = data.frequency;
 
-    int httpResponseCode = http.POST(requestBody);
+            String requestBody;
+            serializeJson(doc, requestBody);
 
-    ona_lastResponseCode = httpResponseCode;
-    if (httpResponseCode > 0) {
-        ona_lastResponse = http.getString();
-    } else {
-        ona_lastResponse = http.errorToString(httpResponseCode);
+            // HTTP POST absenden
+            http.begin(ona_client, api_url); 
+            http.addHeader("Content-Type", "application/json");
+
+            int httpResponseCode = http.POST(requestBody);
+            ona_lastResponseCode = httpResponseCode;
+            
+            if (httpResponseCode > 0) {
+                ona_lastResponse = http.getString();
+            } else {
+                ona_lastResponse = http.errorToString(httpResponseCode);
+            }
+            http.end();
+
+            ona_responseReady = true;
+        }
     }
-    http.end();
-
-    ona_responseReady = true;
-
-
-    vTaskDelete(NULL);
 }
+
+void ona_Setup()
+{
+    ona_client.setCACert(ona_root_ca);
+    onaQueue = xQueueCreate(ONA_QUEUE_SIZE, sizeof(MeasurementData));
+  
+    xTaskCreate(ona_sendMeasurementTask, "OnaHTTPTask", 8192, NULL, 1, NULL);
+}
+
 
 void ona_sendMeasurement() {
     DEBUG_SERIAL.println("Ona");
 
-    if (onaTaskHandle != NULL) {
-        if (ona_responseReady) {
-            onaTaskHandle = NULL; 
-        } else {
-            DEBUG_SERIAL.println("[Ona] Still processing");
-            return; 
-        }
-    }
-
     if (phase_number != 3) {
         DEBUG_SERIAL.println(F("Ona: Phase number must be 3"));
+        return; 
     }
-    DEBUG_SERIAL.print("Ona, last answer:");
-    DEBUG_SERIAL.println(ona_lastResponse);
-
-    JsonDocument doc;
-    doc["observed_at"] = getISO8601Time();
-    doc["latitude"] = config_doc["ona"]["latitude"].as<double>();
-    doc["longitude"] = config_doc["ona"]["longitude"].as<double>();
-    doc["l1_v"] = PhasePower[0].voltage;
-    doc["l2_v"] = PhasePower[1].voltage;
-    doc["l3_v"] = PhasePower[2].voltage;
-    doc["smartmeter_model"] = "Energy2Shelly";
-    doc["integration_version"] = VERSION_BUILD;
-    doc["grid_frequency_hz"] = PhasePower[0].frequency;
+    if (ona_responseReady) {
+        ona_responseReady=false;
+        DEBUG_SERIAL.println(ona_lastResponse);
+    }
+   
+    MeasurementData data;
     
-    String *requestBody = new String();
-    serializeJson(doc, *requestBody);
-    DEBUG_SERIAL.println(*requestBody);
+    
+    strncpy(data.timeStr, getISO8601Time().c_str(), sizeof(data.timeStr) - 1);
+    data.timeStr[sizeof(data.timeStr) - 1] = '\0'; 
 
-    xTaskCreatePinnedToCore(
-        ona_sendMeasurementTask,   
-        "OnaSendTask",             
-        16384,                      
-        (void *)requestBody,       
-        1,                         
-         (TaskHandle_t *)&onaTaskHandle,                      
-        0                          
-    );
+    data.latitude = config_doc["ona"]["latitude"].as<double>();
+    data.longitude = config_doc["ona"]["longitude"].as<double>();
+    data.l1_v = PhasePower[0].voltage;
+    data.l2_v = PhasePower[1].voltage;
+    data.l3_v = PhasePower[2].voltage;
+    data.frequency = PhasePower[0].frequency;
 
+    
+    if (xQueueSend(onaQueue, &data, 0) != pdPASS) {
+        DEBUG_SERIAL.println("[Ona] Queue full");
+    } 
 }
-
 #endif
