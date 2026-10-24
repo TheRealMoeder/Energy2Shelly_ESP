@@ -57,7 +57,7 @@ void ona_sendMeasurementTask(void * pvParameters) {
 
     ona_responseReady = true;
 
-    onaTaskHandle = NULL; 
+
     vTaskDelete(NULL);
 }
 
@@ -65,8 +65,12 @@ void ona_sendMeasurement() {
     DEBUG_SERIAL.println("Ona");
 
     if (onaTaskHandle != NULL) {
-        DEBUG_SERIAL.println("[Ona] Still processing");
-        return; 
+        if (ona_responseReady) {
+            onaTaskHandle = NULL; 
+        } else {
+            DEBUG_SERIAL.println("[Ona] Still processing");
+            return; 
+        }
     }
 
     if (phase_number != 3) {
@@ -96,7 +100,7 @@ void ona_sendMeasurement() {
         16384,                      
         (void *)requestBody,       
         1,                         
-        NULL,                      
+         (TaskHandle_t *)&onaTaskHandle,                      
         0                          
     );
 
