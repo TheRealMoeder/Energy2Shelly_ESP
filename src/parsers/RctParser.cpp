@@ -343,7 +343,7 @@ static void rctApplyValues()
   // emulator's web UI also work in Wh, so no scaling is applied - only the
   // feed-in direction is negated. setPowerData handles phase_number and
   // power_offset internally.
-  setPowerData(powers[0], powers[1], powers[2]);
+  setPowerData(powers[0], powers[1], powers[2],powers[0], powers[1], powers[2]);
   double feedInWh = -(double)energies[0];
   double loadWh = (double)energies[1];
   setEnergyData(loadWh, feedInWh);

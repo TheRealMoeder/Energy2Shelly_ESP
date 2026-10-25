@@ -11,7 +11,8 @@ JsonVariant resolveJsonPath(JsonVariant variant, const char *path);
 
 // Power setters - distribute to all three phases
 void setPowerData(double totalPower);
-void setPowerData(double phase1Power, double phase2Power, double phase3Power);
+void setPowerData(double phase1Power, double phase2Power, double phase3Power,
+                  double phase1APower, double phase2APower, double phase3APower);
 
 void setVoltageData(double phase1Voltage, double phase2Voltage, double phase3Voltage);
 void setFrequencyData(double frequency);
