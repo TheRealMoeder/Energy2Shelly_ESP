@@ -89,6 +89,26 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
   DEBUG_SERIAL.println(phase3Power + offsetPerPhase);
 }
 
+
+void setVoltageData(double phase1Voltage, double phase2Voltage, double phase3Voltage) {
+  PhasePower[0].power = round2(phase1Voltage); 
+  PhasePower[1].power = round2(phase2Voltage); 
+  PhasePower[2].power = round2(phase3Voltage); 
+ 
+  for (int i = 0; i <= 2; i++) {
+    if ((PhasePower[i].power>0) && (PhasePower[i].voltage>0)) PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
+  }
+
+}
+void setFrequencyData(double frequency)
+{
+  for (int i = 0; i <= 2; i++) {
+    PhasePower[i].frequency = frequency;
+  }
+
+}
+
+
 void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
   switch (phase_number[0]) {
   case '1': // monophase
