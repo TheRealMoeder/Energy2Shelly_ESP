@@ -876,7 +876,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 publish_period: {
                     label: "Publish period",
                     max_length : 6,
-                    description: "Publish time in seconds. e.g. 60s, 0 => turned off",
+                    description: "Publish time in seconds. e.g. 300s, 0 => turned off",
                 },
                 latitude: {
                     label: "Latitude ",
