@@ -124,7 +124,11 @@ bool parseTibberPulse()
           tibber_frequency=0;
           tibber_voltage_l1=0;
           tibber_voltage_l2=0;
-          tibber_voltage_l3=0;          
+          tibber_voltage_l3=0;  
+          tibber_apparent_power = 0;
+          tibber_apparent_power_l1 = 0;
+          tibber_apparent_power_l2 = 0;
+          tibber_apparent_power_l3 = 0;                  
           break;
         case SML_LISTEND:
           for (
