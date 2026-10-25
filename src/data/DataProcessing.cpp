@@ -60,25 +60,37 @@ void setPowerData(double totalPower) {
   DEBUG_SERIAL.println(adjustedPower);
 }
 
-void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
+void setPowerData(double phase1Power, double phase2Power, double phase3Power,
+                  double phase1APower, double phase2APower, double phase3APower) {
+  
+  
+  
+  
   switch(phase_number[0]) {
     case '1': // monophase
       PhasePower[0].power = round2(phase1Power) + round2(phase2Power) + round2(phase3Power) + offsetPerPhase * 3;
       PhasePower[1].power = 0.0;
       PhasePower[2].power = 0.0;
+      PhasePower[0].apparentPower =round2(phase1APower) + round2(phase2APower) + round2(phase3APower) + offsetPerPhase * 3;
       break;
     case '3': // triphase
     default:
       PhasePower[0].power = round2(phase1Power + offsetPerPhase);
       PhasePower[1].power = round2(phase2Power + offsetPerPhase);
       PhasePower[2].power = round2(phase3Power + offsetPerPhase);
+
+      PhasePower[0].apparentPower = round2(phase1APower + offsetPerPhase);
+      PhasePower[1].apparentPower = round2(phase2APower + offsetPerPhase);
+      PhasePower[2].apparentPower = round2(phase3APower + offsetPerPhase);
+
       break;
   }
+  
+
   for (int i = 0; i <= 2; i++) {
     PhasePower[i].voltage = round2(defaultVoltage);
     PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
-    PhasePower[i].apparentPower = round2(PhasePower[i].power);
-    PhasePower[i].powerFactor = round2(defaultPowerFactor);
+    PhasePower[i].powerFactor = (PhasePower[i].apparentPower >0) ? round2(PhasePower[i].power / PhasePower[i].apparentPower) :  round2(defaultPowerFactor);
     PhasePower[i].frequency = defaultFrequency;
   }
   DEBUG_SERIAL.print(F("Current power (with offset) L1: "));
@@ -88,6 +100,26 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
   DEBUG_SERIAL.print(F(" - L3: "));
   DEBUG_SERIAL.println(phase3Power + offsetPerPhase);
 }
+
+
+void setVoltageData(double phase1Voltage, double phase2Voltage, double phase3Voltage) {
+  PhasePower[0].power = round2(phase1Voltage); 
+  PhasePower[1].power = round2(phase2Voltage); 
+  PhasePower[2].power = round2(phase3Voltage); 
+ 
+  for (int i = 0; i <= 2; i++) {
+    if ((PhasePower[i].power>0) && (PhasePower[i].voltage>0)) PhasePower[i].current = round2(PhasePower[i].power / PhasePower[i].voltage);
+  }
+
+}
+void setFrequencyData(double frequency)
+{
+  for (int i = 0; i <= 2; i++) {
+    PhasePower[i].frequency = frequency;
+  }
+
+}
+
 
 void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
   switch (phase_number[0]) {
@@ -158,7 +190,7 @@ void setJsonPathPower(JsonDocument json) {
     double power2 = resolveJsonPath(json, power_l2_path);
     double power3 = resolveJsonPath(json, power_l3_path);
     DEBUG_SERIAL.println(power1);
-    setPowerData(power1, power2, power3);
+    setPowerData(power1, power2, power3,power1, power2, power3);
   } else {
     // Check if BOTH paths (Import = power_path, Export = pwr_export_path) are defined
     if ((strcmp(power_path, "") != 0) && (strcmp(pwr_export_path, "") != 0)) {

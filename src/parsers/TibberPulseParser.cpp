@@ -5,26 +5,47 @@
 // functions for TibberPulse
 double tibber_consumption = 0, tibber_production = 0, tibber_power = 0;
 double tibber_power_l1 = 0, tibber_power_l2 = 0, tibber_power_l3 = 0;
-
+double tibber_frequency=0;
+double tibber_voltage_l1=0,tibber_voltage_l2=0,tibber_voltage_l3=0;
+double tibber_apparent_power=0;
+double tibber_apparent_power_l1=0,tibber_apparent_power_l2=0,tibber_apparent_power_l3=0;
 typedef struct
 {
   const unsigned char OBIS[6];
   void (*Handler)();
 } OBISHandler;
 
-// supports currently only:
 // - consumption (OBIS 1-0:1.8.0)
 // - production  (OBIS 1-0:2.8.0)
 // - power       (OBIS 1-0:16.7.0)
 // - power L1    (OBIS 1-0:36.7.0)
 // - power L2    (OBIS 1-0:56.7.0)
 // - power L3    (OBIS 1-0:76.7.0)
+// - frequency   (OBIS 1-0:14.7.0)
+// - voltage L1  (OBIS 1-0:32.7.0)
+// - voltage L2  (OBIS 1-0:52.7.0)
+// - voltage L3  (OBIS 1-0:72.7.0)
+// - apparent power    (OBIS 1-0:15.7.0)
+// - apparent power L1 (OBIS 1-0:35.7.0)
+// - apparent power L2 (OBIS 1-0:55.7.0)
+// - apparent power L3 (OBIS 1-0:75.7.0)
+
 void Consumption() { smlOBISWh(tibber_consumption); }
 void Production() { smlOBISWh(tibber_production); }
 void Power() { smlOBISW(tibber_power); }
 void PowerL1() { smlOBISW(tibber_power_l1); }
 void PowerL2() { smlOBISW(tibber_power_l2); }
 void PowerL3() { smlOBISW(tibber_power_l3); }
+void Frequency() { smlOBISHertz(tibber_frequency); } 
+void VoltageL1() { smlOBISVolt(tibber_voltage_l1); }
+void VoltageL2() { smlOBISVolt(tibber_voltage_l2); }
+void VoltageL3() { smlOBISVolt(tibber_voltage_l3); }
+
+void ApparentPower()   { smlOBISW(tibber_apparent_power); } 
+void ApparentPowerL1() { smlOBISW(tibber_apparent_power_l1); }
+void ApparentPowerL2() { smlOBISW(tibber_apparent_power_l2); }
+void ApparentPowerL3() { smlOBISW(tibber_apparent_power_l3); }
+
 
 OBISHandler OBISHandlers[] = {
     {{0x01, 0x00, 0x01, 0x08, 0x00, 0xff}, &Consumption}, /* 1-0: 1. 8.0*255 (Consumption Total) */
@@ -33,7 +54,16 @@ OBISHandler OBISHandlers[] = {
     {{0x01, 0x00, 0x24, 0x07, 0x00, 0xff}, &PowerL1},     /* 1-0:36. 7.0*255 (power L1) */
     {{0x01, 0x00, 0x38, 0x07, 0x00, 0xff}, &PowerL2},     /* 1-0:56. 7.0*255 (power L2) */
     {{0x01, 0x00, 0x4c, 0x07, 0x00, 0xff}, &PowerL3},     /* 1-0:76. 7.0*255 (power L3) */
+    {{0x01, 0x00, 0x0e, 0x07, 0x00, 0xff}, &Frequency},   /* 1-0:14. 7.0*255 (frequency) */
+    {{0x01, 0x00, 0x20, 0x07, 0x00, 0xff}, &VoltageL1},   /* 1-0:32. 7.0*255 (voltage L1) */
+    {{0x01, 0x00, 0x34, 0x07, 0x00, 0xff}, &VoltageL2},   /* 1-0:52. 7.0*255 (voltage L2) */
+    {{0x01, 0x00, 0x48, 0x07, 0x00, 0xff}, &VoltageL3},   /* 1-0:72. 7.0*255 (voltage L3) */
+    {{0x01, 0x00, 0x0f, 0x07, 0x00, 0xff}, &ApparentPower},   /* 1-0:15. 7.0*255 (apparent power total) */
+    {{0x01, 0x00, 0x23, 0x07, 0x00, 0xff}, &ApparentPowerL1}, /* 1-0:35. 7.0*255 (apparent power L1) */
+    {{0x01, 0x00, 0x37, 0x07, 0x00, 0xff}, &ApparentPowerL2}, /* 1-0:55. 7.0*255 (apparent power L2) */
+    {{0x01, 0x00, 0x4b, 0x07, 0x00, 0xff}, &ApparentPowerL3}, /* 1-0:75. 7.0*255 (apparent power L3) */    
     {{0, 0}}};
+
 
 static uint8_t guess = 0;
 static uint8_t success_counter = 0;
@@ -91,6 +121,14 @@ bool parseTibberPulse()
           tibber_power_l1 = 0;
           tibber_power_l2 = 0;
           tibber_power_l3 = 0;
+          tibber_frequency=0;
+          tibber_voltage_l1=0;
+          tibber_voltage_l2=0;
+          tibber_voltage_l3=0;  
+          tibber_apparent_power = 0;
+          tibber_apparent_power_l1 = 0;
+          tibber_apparent_power_l2 = 0;
+          tibber_apparent_power_l3 = 0;                  
           break;
         case SML_LISTEND:
           for (
@@ -110,12 +148,21 @@ bool parseTibberPulse()
           setEnergyData(tibber_consumption, tibber_production);
           if (tibber_power_l1 != 0 || tibber_power_l2 != 0 || tibber_power_l3 != 0)
           {
-            setPowerData(tibber_power_l1, tibber_power_l2, tibber_power_l3);
+            setPowerData(tibber_power_l1, tibber_power_l2, tibber_power_l3, 
+                         tibber_apparent_power_l1, tibber_apparent_power_l2, tibber_apparent_power_l3);
           }
           else
           {
             setPowerData(tibber_power);
           }
+          if (tibber_voltage_l1 != 0 || tibber_voltage_l2 != 0 || tibber_voltage_l3 != 0) {
+            setVoltageData(tibber_voltage_l1, tibber_voltage_l2, tibber_voltage_l3);
+          }
+          if (tibber_frequency!=0) {
+            setFrequencyData(tibber_frequency);
+          } 
+
+
           success_counter = 10;
           ret = true;
           break;
