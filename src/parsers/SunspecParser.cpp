@@ -157,9 +157,9 @@ void parseSUNSPEC()
 
   if (!modbus1.isConnected(modbus_ip))
   {
-    modbus_ip.fromString(mqtt_server);
-    sunspec_port_int = atol(mqtt_port);
-    modbusdev_int = atol(modbus_dev);
+    modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
+    sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
+    modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
     modbus1.connect(modbus_ip, sunspec_port_int);
   }
   else

@@ -46,6 +46,7 @@ const char HTML_HOME[] PROGMEM = R"=====(
     <a href="/console">Console</a>
     <a href="/plot">Plot Data</a>
     <a href="/update" class="reset">Update SW</a>
+    <a href="/config" class="reset">Configure Parameters</a>
   </div>
 
   <div class="data-container">
@@ -510,7 +511,6 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 </html>
 )rawliteral";
 
-  
 const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
 <!DOCTYPE html><html><head><title>Rebooting...</title>
 <meta name='viewport' content='width=device-width, initial-scale=1'>
@@ -544,7 +544,597 @@ const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
 </body></html>
 )rawhtml";
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
   
 
+#define X(name, val)      "\"" #name "\": " TOSTRING(val) ",\n"
+#define X_LAST(name, val) "\"" #name "\": " TOSTRING(val) "\n"
 
+
+
+const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy2Shelly Config Editor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #333; }
+        input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        #status { margin-top: 15px; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Energy2Shelly Config Editor</h2>
+        <button onclick="goBack()" style="margin-bottom: 15px;">
+        ← Back
+        </button>
+        <!-- Input fields will be dynamically inserted here by JavaScript -->
+        <div id="configForm">Loading configuration...</div>
+        
+        <button id="saveBtn" style="margin-top: 15px;">Save Changes</button>
+        <p id="status"></p>
+    </div>
+
+    
+
+    <script>
+    function goBack() {
+        if (document.referrer) {
+            window.history.back();
+        } else {
+            window.location.href = 'index.html'; 
+        }
+    }
+    
+        const formContainer = document.getElementById('configForm');
+        const saveBtn = document.getElementById('saveBtn');
+        const statusText = document.getElementById('status');
+        let currentConfig = {};
+        const CONFIG_DICTIONARY = {
+            basic: {
+                _label: "Basic Settings",
+                _description: "General settings for the device.",
+                reset_password: {
+                    label: "Reset Password",
+                    max_length : 33,
+                    description: "For resetting the WiFi configuration and putting the device in AP / config mode"
+                },
+                input_type: {
+                    label: "Input Type",
+                    description: "Defines the type of input for the device.",
+                    options: ["NONE", "MQTT", "HTTP", "SMA", "SUNSPEC", "RCT", "SHRDZM", "TIBBERPULSE" ] 
+                },
+                ntp_server: {
+                    label: "NTP Server",
+                    max_length : 40,
+                    description: "The NTP server used for time synchronization. e.g. de.pool.ntp.org"
+                },
+                timezone: {
+                    label: "Timezone",
+                    max_length : 64,
+                    description: "The timezone setting for the device. e.g. CET-1CEST,M3.5.0/2,M10.5.0/3"
+                },
+                phase_number: {
+                    label: "Phase Number",
+                    description: "The number of phases for the device (e.g., 1 or 3).",
+                    options: [1, 3]
+                },
+                power_offset: {
+                    label: "Power Offset (Watt)",
+                    max_length : 10,
+                    description: "The power offset value for calibration."
+                }
+            },
+
+            sunspec: {
+                _label: "SUNSPEC Settings",
+                _description: "Settings related to SUNSPEC Modbus communication.",
+                _show_if: ["SUNSPEC"],
+                modbus_dev: {
+                    label: "Modbus Device",
+                    max_length : 6,
+                    description: "The device number for Modbus communication (e.g., 71)."
+                },
+                modbus_ip: {
+                    label: "Modbus Server IP",
+                    max_length : 60,
+                    description: "The IP address of the Modbus server."
+                },
+                modbus_port: {
+                    label: "Modbus Port",
+                    max_length : 6,
+                    description: "The port number for Modbus communication. e.g. 502"
+                },
+                query_period: {
+                    label: "Query Period (ms)",
+                    description: "The period in milliseconds for querying the Modbus server."
+                }
+            },
+
+            rct: {
+                _label: "RCT Settings",
+                _description: "Settings related to RCT inverter communication.",
+                _show_if: ["RCT"],
+                rct_host: {
+                    label: "RCT hostname/IP",
+                    max_length : 41,
+                    description: "IP address or hostname of the RCT Power device (with integrated grid sensor)."
+                },
+                rct_port: {
+                    label: "RCT port",
+                    max_length : 6,
+                    description: "Defaults to 8899."
+                },
+                query_period: {
+                    label: "Query Period (ms)",
+                    max_length : 26,
+                    description: "The period in milliseconds for querying the RCT inverter."
+                }
+            },
+
+            sma: {
+                _label: "SMA Settings",
+                _description: "Settings related to SMA Speedwire communication.",
+                _show_if: ["SMA"],
+                sma_id: {
+                    label: "SMA serial number",
+                    max_length : 17,
+                    description: "Optional serial number if you have more than one SMA EM/HM in your network"
+                }
+            },
+
+            tibber: {
+                _label: "TibberPulse Settings",
+                _description: "Settings related to TibberPulse communication.",
+                _show_if: ["TIBBERPULSE"],
+                tibber_host: {
+                    label: "Tibber Hostnane/IP[:port]",
+                    max_length : 41,
+                    description: "The address of the  Tibber device (e.g. 192.168.0.1:8080)."
+                },
+                tibber_user: {
+                    label: "Tibber User",
+                    max_length : 11,
+                    description: "Defaults to admin."
+                },
+                tibber_password: {
+                    label: "Tibber Password",
+                    max_length : 10,
+                    description: "As Printed on bridge device: xxxx-xxxx."
+                },
+                tibber_nodeid: {
+                    label: "Tibber Node ID",
+                    max_length : 2,
+                    description: "Defaults to 1, check the bridge web interface for the right nodeID."
+                },
+                query_period: {
+                    label: "Query Period (ms)",
+                    max_length : 26,
+                    description: "The period in milliseconds for querying the Tibber device."
+                }
+            },
+
+            mqtt: {
+                _label: "MQTT Settings",
+                _description: "Settings related to MQTT communication.",
+                _show_if: ["MQTT"],
+                mqtt_server: {
+                    label: "MQTT Hostname/IP[:port]",
+                    max_length : 60,
+                    description: "The address of the MQTT broker (e.g. 192.168.0.1:1883)."
+                },
+                mqtt_port: {
+                    label: "MQTT Port",
+                    max_length : 6,
+                    description: "The port number for MQTT communication."
+                },
+                mqtt_user: {
+                    label: "MQTT User",
+                    max_length : 40,
+                    description: "Defaults to admin."
+                },
+                mqtt_password: {
+                    label: "MQTT Password",
+                    max_length : 40,
+                    description: "The password for the MQTT broker."
+                },
+                mqtt_topic: {
+                    label: "MQTT Topic",
+                    max_length : 90,
+                    description: "The topic to which the device will read published data."
+                }
+                
+            },   
+            http: {
+                _label: "HTTP Settings",
+                _description: "Settings related to HTTP communication.",
+                _show_if: ["HTTP"],
+                server_ip: {
+                    label: "HTTP Hostname/IP[:port]",
+                    max_length : 60,
+                    description: "The address of the HTTP server (e.g. 192.168.0.1:8080)."
+                },
+                query_period: {
+                    label: "Query Period (ms)",
+                    max_length : 26,
+                    description: "The period in milliseconds for querying the HTTP server."
+                }              
+            },
+   
+            json: {
+                _label: "JSON Settings",
+                _description: "Settings related to JSON communication. (HTTP/MQTT)",
+                _show_if: ["HTTP", "MQTT"],
+                power_path: {
+                    label: "Power Path",
+                    description: "The path to retrieve power data from the JSON server.",
+                    max_length : 60
+                },
+                pwr_export_path: {
+                    label: "Power Export Path",
+                    max_length : 60,
+                    description: "The path to retrieve power export data from the JSON server."
+                },
+                power_l1_path: {
+                    label: "Power L1 Path",
+                    max_length : 60,
+                    description: "The path to retrieve power data for phase L1 from the JSON server."
+                },
+                power_l2_path: {
+                    label: "Power L2 Path",
+                    max_length : 60,
+                    description: "The path to retrieve power data for phase L2 from the JSON server."
+                },
+                power_l3_path: {
+                    label: "Power L3 Path",
+                    max_length : 60,
+                    description: "The path to retrieve power data for phase L3 from the JSON server."
+                },
+                energy_in_path: {
+                    label: "Energy In Path",
+                    max_length : 60,
+                    description: "The path to retrieve energy input data from the JSON server."
+                },
+                energy_out_path: {  
+                    label: "Energy Out Path",
+                    max_length : 60,
+                    description: "The path to retrieve energy output data from the JSON server."
+                }
+            },
+
+            led: {
+                _label: "LED Settings",
+                _description: "LED settings for the device.",
+                led_gpio: {
+                    label: "LED Pin",
+                    max_length : 6,
+                    description: "Please specify the LED pin number"
+                },
+                led_gpio_i: {
+                    label: "Inverse LED",
+                    description: "Invert LED on/off logic",
+                    options: ["false", "true"] 
+                }
+            },
+
+            shelly: {
+                _label: "Shelly Settings",
+                _description: "Settings related to Shelly communication.",
+                shelly_mac: {
+                    label: "Shelly MAC Address",
+                    max_length : 13,
+                    description: "The MAC address of the Shelly device."
+                },
+                shelly_name: {
+                    label: "Shelly Device Name",
+                    max_length : 26,
+                    description: "The name of the Shelly device. e.g. shellypro3em-"
+                },
+                shelly_gen: {
+                    label: "Shelly Generation",
+                    description: "The generation of the Shelly device (e.g., 1, 2, 3).",
+                    options: [1, 2, 3]
+                },
+                shelly_fw_id: {
+                    label: "Shelly Firmware ID",
+                    max_length : 32,
+                    description: "The firmware ID of the Shelly device. e.g. 20241011-114455/1.4.4-g6d2a586"
+                },
+                shelly_port: {
+                    label: "Shelly Port",
+                    max_length : 6,
+                    description: "The port number for communication with the Shelly device. e.g. 2220"
+                }
+            },
+            console: {
+                _label: "Console Settings",
+                _description: "Manage data output of Serial and Console printing",
+                web_console: {
+                    label: "Enable web console",
+                    max_length : 6,
+                    description: "With set to false, console web view is disabled",
+                    options : ["false", "true"]
+                },
+                serial_console_time: {
+                    label: "Live time for serial console",
+                    max_length : 30,
+                    description: "Live time of the serial output in minutes after reset.",
+                }
+            }     
+        };
+
+   async function loadConfig() {
+    try {
+        const res = await fetch('/json_preferences');
+        if (res.status === 401) {
+            setTimeout(loadConfig, 500); 
+            return; 
+        }
+        
+        currentConfig = await res.json();
+       
+        formContainer.innerHTML = ''; 
+        generateFormFromDictionary(CONFIG_DICTIONARY, currentConfig, formContainer);
+          const inputTypeField = document.getElementById('input_basic_input_type');
+
+        if (inputTypeField) {
+                inputTypeField.addEventListener('change', (e) => {
+                applyDynamicVisibility(e.target.value);
+            });
+
+            applyDynamicVisibility(inputTypeField.value);
+        } 
+        statusText.innerText = "Configuration successfully loaded.";
+        statusText.style.color = "green";
+    } catch (err) {
+        statusText.innerText = "Error loading configuration.";
+        statusText.style.color = "red";
+    }
+}
+    const INPUT_TYPE_ENUM = {
+)=====" INPUT_TYPE_LIST  R"=====(
+   
+};
+
+function applyDynamicVisibility(currentInputType) {
+    const conditionalSections = document.querySelectorAll('fieldset[data-show-if]'); 
+    let activeTypeName = currentInputType;
+    
+    if (typeof INPUT_TYPE_ENUM !== 'undefined') {
+        const foundKey = Object.keys(INPUT_TYPE_ENUM).find(key => String(INPUT_TYPE_ENUM[key]) === String(currentInputType));
+        if (foundKey) activeTypeName = foundKey;
+    }
+
+    conditionalSections.forEach(fieldset => {
+        let allowedTypes = [];
+        try {
+            allowedTypes = JSON.parse(fieldset.dataset.showIf);
+        } catch (e) {
+            return; 
+        }
+        
+        const isMatch = allowedTypes.some(type => 
+            String(type).toUpperCase() === String(currentInputType).toUpperCase() ||
+            String(type).toUpperCase() === String(activeTypeName).toUpperCase()
+        );
+
+        
+        if (isMatch) {
+            fieldset.style.display = 'block'; 
+        } else {
+            fieldset.style.display = 'none';
+        }
+    });
+}
+function generateFormFromDictionary(dictionary, currentConfig, container, currentConfigNode = currentConfig, prefix = '') {
+    Object.keys(dictionary).forEach(key => {
+        const entry = dictionary[key];
+       
+        const currentPath = prefix ? `${prefix}_${key}` : key;
+
+        if (entry && typeof entry === 'object' && !entry.label && !entry.options  && !key.startsWith('_')) {
+            const fieldset = document.createElement('fieldset');
+            fieldset.className = 'form-group-sub';
+            fieldset.style.marginBottom = '25px';
+            fieldset.style.padding = '15px';
+            fieldset.style.border = '1px solid #ccc';
+            fieldset.style.borderRadius = '5px';
+            
+           
+
+            const legend = document.createElement('legend');
+            legend.innerText = entry._label || key;
+            legend.style.fontWeight = 'bold';
+            legend.style.padding = '0 10px';
+            fieldset.appendChild(legend);
+
+            if (entry._description) {
+                const desc = document.createElement('small');
+                desc.innerText = entry._description;
+                desc.style.display = 'block';
+                desc.style.color = '#666';
+                desc.style.marginBottom = '10px';
+                fieldset.appendChild(desc);
+            }
+            if (entry._show_if) {
+                fieldset.dataset.showIf = JSON.stringify(entry._show_if);
+            }
+
+            const nextConfigNode = (currentConfigNode && currentConfigNode[key]) ? currentConfigNode[key] : {};
+
+            generateFormFromDictionary(entry, currentConfig, fieldset, nextConfigNode, currentPath);
+            container.appendChild(fieldset);
+            return;
+        }
+
+        if (key.startsWith('_')) return;
+
+        const group = document.createElement('div');
+        group.className = 'form-group';
+        group.style.marginBottom = '20px';
+
+        const inputWrapper = document.createElement('div');
+        inputWrapper.style.display = 'flex';
+        inputWrapper.style.alignItems = 'center';
+
+        const displayLabel = entry.label || key;
+        const displayDesc = entry.description || '';
+
+        const label = document.createElement('label');
+        label.innerText = displayLabel;
+        label.style.fontWeight = 'bold';
+        label.style.display = 'block';
+
+        let descElement = null;
+        if (displayDesc) {
+            descElement = document.createElement('small');
+            descElement.innerText = displayDesc;
+            descElement.style.display = 'block';
+            descElement.style.color = '#666';
+            descElement.style.marginBottom = '4px';
+        }
+
+        group.appendChild(label);
+        if (descElement) group.appendChild(descElement);
+        group.appendChild(inputWrapper);
+
+        let input;
+        const configValue = (currentConfigNode && currentConfigNode[key] !== undefined) ? currentConfigNode[key] : '';
+        
+        if (entry.options) {
+            input = document.createElement('select');
+            input.id = 'input_' + currentPath; 
+
+            entry.options.forEach(optValue => {
+                const option = document.createElement('option');
+                option.text = optValue; 
+                
+                const mappedValue = INPUT_TYPE_ENUM[optValue] !== undefined ? INPUT_TYPE_ENUM[optValue] : optValue;
+                option.value = mappedValue;
+
+                if (configValue === mappedValue || String(configValue) === String(mappedValue) || configValue === optValue) {
+                    option.selected = true;
+                }
+                input.appendChild(option);
+            });
+
+            inputWrapper.appendChild(input);
+        } 
+        else {
+            input = document.createElement('input');
+            input.id = 'input_' + currentPath; 
+            if (entry.max_length) {
+                input.maxLength = entry.max_length; 
+            }
+                    
+
+            input.value = configValue;
+            inputWrapper.appendChild(input);
+
+       
+
+            if (key.toLowerCase().includes('password')) {
+                input.type = 'password';
+
+                const toggleBtn = document.createElement('button');
+                toggleBtn.type = 'button';
+                toggleBtn.innerText = '👁️';
+                toggleBtn.style.marginLeft = '8px';
+                toggleBtn.style.cursor = 'pointer';
+                toggleBtn.style.background = 'none';
+                toggleBtn.style.border = 'none';
+
+                toggleBtn.addEventListener('click', () => {
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        toggleBtn.innerText = '🔒';
+                    } else {
+                        input.type = 'password';
+                        toggleBtn.innerText = '👁️';
+                    }
+                });
+
+                inputWrapper.appendChild(toggleBtn);
+            } else {
+                input.type = 'text';
+            }
+        }
+
+        container.appendChild(group);
+    });
+}
+async function saveConfig() {
+    const castValue = (val) => isNaN(val) || val.trim() === "" ? val : Number(val);
+
+   function buildPayload(configObj, dictionaryObj, prefix = '') {
+        const result = {};
+
+        Object.keys(dictionaryObj).forEach(key => {
+            if (key.startsWith('_')) return; // Metadaten überspringen
+
+            const currentPath = prefix ? `${prefix}_${key}` : key;
+            const inputField = document.getElementById('input_' + currentPath);
+
+            if (inputField) {
+                result[key] = castValue(inputField.value);
+            } else if (typeof dictionaryObj[key] === 'object' && dictionaryObj[key] !== null && !dictionaryObj[key].hasOwnProperty('label')) {
+                const subConfig = (configObj && configObj[key]) ? configObj[key] : {};
+                result[key] = buildPayload(subConfig, dictionaryObj[key], currentPath);
+            } else if (configObj && configObj.hasOwnProperty(key)) {
+                result[key] = configObj[key];
+            }
+        });
+
+        if (configObj) {
+            Object.keys(configObj).forEach(key => {
+                if (!result.hasOwnProperty(key)) {
+                    result[key] = configObj[key];
+                }
+            });
+        }
+
+        return result;
+    }
+    const payload = buildPayload(currentConfig, CONFIG_DICTIONARY);
+
+    try {
+        statusText.innerText = "Saving to device...";
+        statusText.style.color = "orange";
+
+        const res = await fetch('/json_preferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload) 
+        });
+
+        if (res.ok) {
+            statusText.innerText = "Successfully saved to flash storage!";
+            statusText.style.color = "green";
+        } else {
+            statusText.innerText = "Device rejected the save request.";
+            statusText.style.color = "red";
+        }
+    } catch (err) {
+        statusText.innerText = "Network error while saving.";
+        statusText.style.color = "red";
+    }
+}
+            saveBtn.addEventListener('click', saveConfig);
+        window.addEventListener('DOMContentLoaded', loadConfig);
+        loadConfig(); // Initial load
+    </script>
+</body>
+</html>
+)=====";
+#undef X
+#undef X_LAST
 #endif // HTML_HOME_H
