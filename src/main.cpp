@@ -1,6 +1,8 @@
 #include <Arduino.h>
 
 #ifdef ESP32
+#include "esp_pm.h"        
+#include "esp_private/esp_clk.h" 
 #include "esp_task_wdt.h"
 #endif
 
@@ -31,6 +33,40 @@ unsigned long updateTimestamp = 0;
 void setup(void)
 {
   DEBUG_SERIAL.begin(115200);
+ 
+#ifdef ESP32
+ esp_err_t err;
+ #if CONFIG_IDF_TARGET_ESP32C3
+    esp_pm_config_esp32c3_t pm_config = {
+      .max_freq_mhz = 160,
+      .min_freq_mhz = 80,
+      .light_sleep_enable = false
+    };
+    err = esp_pm_configure(&pm_config);
+
+  #elif CONFIG_IDF_TARGET_ESP32S3
+    esp_pm_config_esp32s3_t pm_config = {
+      .max_freq_mhz = 240,
+      .min_freq_mhz = 80,
+      .light_sleep_enable = false
+    };
+    err = esp_pm_configure(&pm_config);
+
+  #elif CONFIG_IDF_TARGET_ESP32
+    esp_pm_config_esp32_t pm_config = {
+      .max_freq_mhz = 240,
+      .min_freq_mhz = 80,
+      .light_sleep_enable = false
+    };
+    err = esp_pm_configure(&pm_config);
+   
+
+  #else
+    #error "Board not known"
+  #endif
+  
+#endif
+ 
   WifiManagerSetup(clear_rtc_power_on() == Energy2Shelly_ResetReason::RECONFIGURE);
 
   // Initialize watchdog timer (30s timeout)
