@@ -147,6 +147,8 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
           rtc_reset_counter=0;
           #ifdef ESP8266
           ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
+          #else
+          // no need to set rtc_reset_counter in preferences, the next function will erase everything
           #endif
           reset_esp_to_default_and_reboot();
        } 
