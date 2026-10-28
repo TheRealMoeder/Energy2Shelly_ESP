@@ -86,12 +86,6 @@ void update_reset_reason(Energy2Shelly_ResetReason reason)
 void all_esp_reset(Energy2Shelly_ResetReason reason)
 {
   update_reset_reason(reason);
-#if defined(ESP32)
-  WiFi.disconnect(false, false);
-#elif defined(ESP8266)
-  WiFi.disconnect(false);
-#endif
-
 
   delay(1000);
   ESP.restart();
