@@ -97,6 +97,15 @@ To re-enter WiFiManager for updates or parameter changes:
       - **EMH EHZ**
       - **EasyMeter ESY11**
     - Most power meters with SML output should work out of the box. If you encounter an error, please open an issue with your meter's model and a sample data log.
+  - <code>SMLSERIAL</code>
+    - Reads SML data directly from an IR reading head (e.g. Hichi IR TTL, bitShake SmartMeterReader-UART) wired to a UART pin of the ESP, no WiFi bridge needed.
+    - Wiring: reading head `VCC` -> `3V3`, `GND` -> `GND`, reading head `TX` -> configured `RX GPIO` of the ESP. The TX line of the ESP is not used.
+    - Configuration: `RX GPIO` (default 20 on ESP32-C3, 16 on ESP32, 18 on ESP32-S3, 13/D7 on ESP8266), `Baud rate` (usually 9600) and `Invert RX signal` (usually false).
+    - GPIO20 on the ESP32-C3 is only free on boards with native USB and no USB-UART chip (e.g. ESP32-C3 SuperMini). On boards like the ESP32-C3-DevKitM-1 GPIO20 is driven by the USB-UART chip, use another pin such as 4 or 10 there. Flash and USB pins are rejected.
+    - Values are only published if the meter sends them. Telegrams without a power value are counted and reported in the console (enter the meter PIN / enable extended data).
+    - Same OBIS values as <code>TIBBERPULSE</code>: `1.8.0`, `2.8.0`, `16.7.0` and, if available, `36.7.0`/`56.7.0`/`76.7.0` for the phases. Many meters only send the current power after the PIN has been entered at the meter.
+    - The console shows a hex dump of the first received bytes and statistics every 30s, which helps to find wrong baud rate or invert settings.
+    - On ESP32 a hardware UART (`Serial1`) is used, on ESP8266 SoftwareSerial. A reboot is required after changing the settings.
 
   #### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>

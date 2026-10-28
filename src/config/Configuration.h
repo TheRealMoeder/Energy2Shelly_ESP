@@ -214,7 +214,8 @@ extern JsonDocument update_config_doc;
     X(SUNSPEC, 4) \
     X(RCT, 5) \
     X(SHRDZM, 6) \
-    X_LAST(TIBBERPULSE, 7)
+    X(TIBBERPULSE, 7) \
+    X_LAST(SMLSERIAL, 8)
 
 
 enum class input_type_enum : uint32_t 
@@ -281,6 +282,24 @@ extern uint8_t modbusdev_int;
 #define query_period_tibber_u32 config_doc["tibber"]["query_period"].as<uint32_t>()
 
 extern char tibber_rpc[2][26];
+
+// SML via UART (IR reading head connected directly to the ESP)
+#define sml_rx_pin config_doc["smlserial"]["rx_pin"].as<int>()
+#define sml_baud config_doc["smlserial"]["baud"].as<uint32_t>()
+#define sml_invert config_doc["smlserial"]["invert"].as<const char*>()
+
+// default RX pin for the SML reading head, depending on the chip
+#ifndef SML_DEFAULT_RX_PIN
+  #if defined(CONFIG_IDF_TARGET_ESP32C3)
+    #define SML_DEFAULT_RX_PIN 20 // labeled RX on native-USB boards (e.g. SuperMini); boards with a USB-UART chip need another pin (e.g. 4 or 10)
+  #elif defined(CONFIG_IDF_TARGET_ESP32S3)
+    #define SML_DEFAULT_RX_PIN 18
+  #elif defined(ESP32)
+    #define SML_DEFAULT_RX_PIN 16
+  #else
+    #define SML_DEFAULT_RX_PIN 13 // D7 on NodeMCU
+  #endif
+#endif
 // LED settings
 #define led_gpio config_doc["led"]["led_gpio"].as<const char*>()
 #define led_gpio_i config_doc["led"]["led_gpio_i"].as<const char*>()
@@ -323,6 +342,7 @@ extern bool dataHTTP;
 extern bool dataSUNSPEC;
 extern bool dataTIBBERPULSE;
 extern bool dataRCT;
+extern bool dataSMLSERIAL;
 
 extern Preferences preferences;
 

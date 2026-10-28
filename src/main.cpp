@@ -415,6 +415,12 @@ server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST,
     modbus1.connect(modbus_ip, sunspec_port_int);
   }
 
+  // Set up UART for SML reading head
+  if (dataSMLSERIAL)
+  {
+    setupSMLSerial();
+  }
+
   // Set Up HTTP query
   if (dataHTTP)
   {
@@ -493,6 +499,10 @@ void worker_loop(int currentMillis)
       parseTibberPulse();
       startMillis = currentMillis;
     }
+  }
+  if (dataSMLSERIAL)
+  {
+    parseSMLSerial(); // non-blocking, consumes the bytes received since the last call
   }
   if (dataRCT)
   {
