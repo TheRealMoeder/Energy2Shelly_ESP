@@ -434,6 +434,7 @@ void worker_loop(int currentMillis)
   MDNS.update();
 #endif
   parseUdpRPC();
+  notifyStatusWebSocket();
   if (shouldupdate && (currentMillis - updateTimestamp >= 2000))
   {
     all_esp_reset(Energy2Shelly_ResetReason::RECONFIGURE);

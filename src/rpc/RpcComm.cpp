@@ -101,6 +101,29 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
   }
 }
 
+// Push status notifications to connected websocket clients like a real Shelly Pro 3EM.
+// Home Assistant only polls once on connect and relies on these notifications afterwards.
+#define NOTIFY_STATUS_INTERVAL 2000
+void notifyStatusWebSocket() {
+  static unsigned long lastNotify = 0;
+  if (webSocket.count() == 0 || millis() - lastNotify < NOTIFY_STATUS_INTERVAL) {
+    return;
+  }
+  lastNotify = millis();
+  if (!webSocket.availableForWriteAll()) {
+    return; // a client is not consuming its queue, skip this cycle
+  }
+  JsonDocument notify;
+  notify["src"] = shelly_name;
+  notify["method"] = "NotifyStatus";
+  notify["params"]["ts"] = (double)time(nullptr);
+  fillEMStatus(notify["params"]["em:0"].to<JsonObject>());
+  fillEMDataStatus(notify["params"]["emdata:0"].to<JsonObject>());
+  String message;
+  serializeJson(notify, message);
+  webSocket.textAll(message);
+}
+
 void parseUdpRPC() {
   uint8_t buffer[1024];
   int packetSize = UdpRPC.parsePacket();
