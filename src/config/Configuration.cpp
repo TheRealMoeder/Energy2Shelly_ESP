@@ -62,6 +62,8 @@ bool dataTIBBERPULSE = false;
 bool dataRCT = false;
 #ifdef ONA_ACTIVE
 bool enableONA = false;
+bool ONA_validfrequency = false;
+bool ONA_validVoltage = false;
 #endif
 
 Preferences preferences;

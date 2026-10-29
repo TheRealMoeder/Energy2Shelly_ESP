@@ -101,6 +101,11 @@ void ONA_sendMeasurement() {
         DEBUG_SERIAL.println(F("Ona: Phase number must be 3"));
         return; 
     }
+    if (!ONA_validVoltage) {
+        DEBUG_SERIAL.println(F("Ona: No valid voltages values"));
+        return; 
+    }
+
     if (ona_responseReady) {
         ona_responseReady=false;
         DEBUG_SERIAL.println(ona_lastResponse);
@@ -114,10 +119,17 @@ void ONA_sendMeasurement() {
 
     data.latitude = config_doc["ona"]["latitude"].as<double>();
     data.longitude = config_doc["ona"]["longitude"].as<double>();
-    data.l1_v = PhasePower[0].voltage;
-    data.l2_v = PhasePower[1].voltage;
-    data.l3_v = PhasePower[2].voltage;
-    data.frequency = PhasePower[0].frequency;
+    
+    //maybe some sources are indicating with the sign, if we have import or export. Force positiv
+    data.l1_v = fabs(PhasePower[0].voltage); 
+    data.l2_v = fabs(PhasePower[1].voltage);
+    data.l3_v = fabs(PhasePower[2].voltage);
+    if (ONA_validfrequency) {
+        data.frequency = PhasePower[0].frequency;
+    }
+    else {
+        data.frequency = 0; // ONA server rejects frequencies = 0
+    }
 
     
     if (xQueueSend(onaQueue, &data, 0) != pdPASS) {

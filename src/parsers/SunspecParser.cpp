@@ -137,7 +137,10 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
       p |= ((uint32_t)p_u8[1]) << 24;
       PhaseEnergy[2].gridfeedin = p / 1000.0 * scale_real_energy;
     }
-
+    #ifdef ONA_ACTIVE
+    ONA_validVoltage = true;
+    ONA_validfrequency = true;
+    #endif
     DEBUG_SERIAL.print(F("SUNSPEC power: "));
     DEBUG_SERIAL.println(power);
   }

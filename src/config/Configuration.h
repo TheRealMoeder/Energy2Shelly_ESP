@@ -328,6 +328,8 @@ extern bool dataTIBBERPULSE;
 extern bool dataRCT;
 #ifdef ONA_ACTIVE
 extern bool enableONA;
+extern bool ONA_validfrequency;
+extern bool ONA_validVoltage;
 #endif
 
 extern Preferences preferences;
