@@ -426,14 +426,14 @@ server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST,
   }
 
 #ifdef ONA_ACTIVE
-  ona_Setup();
+  ONA_Setup();
 #endif
 
   // Set up mDNS responder
   setupMdns();
 
   startMillis = millis();
-  onamillis=startMillis;  
+  ONA_Millis=startMillis;  
 }
 
 /* main worker loop, in case of WiFi connection*/
@@ -512,12 +512,12 @@ void worker_loop(int currentMillis)
     }
   }
 #ifdef ONA_ACTIVE
-  if (enableOna) {
+  if (enableONA) {
     
-    if (currentMillis - onamillis >= config_doc["ona"]["publish_period"].as<unsigned long>()*1000ul)
+    if (currentMillis - ONA_Millis >= config_doc["ona"]["publish_period"].as<unsigned long>()*1000ul)
     {
-      ona_sendMeasurement();
-      onamillis = currentMillis;
+      ONA_sendMeasurement();
+      ONA_Millis = currentMillis;
     }
   }
 #endif

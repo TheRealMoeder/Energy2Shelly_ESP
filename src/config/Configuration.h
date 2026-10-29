@@ -195,7 +195,9 @@ public:
 //#define DEBUG_SERIAL if(DEBUG)Serial
 
 extern unsigned long startMillis;
-extern unsigned long onamillis;
+#ifdef ONA_ACTIVE
+extern unsigned long ONA_Millis;
+#endif
 extern unsigned long currentMillis;
 // for time synchronization
 extern time_t now;
@@ -324,7 +326,9 @@ extern bool dataHTTP;
 extern bool dataSUNSPEC;
 extern bool dataTIBBERPULSE;
 extern bool dataRCT;
-extern bool enableOna;
+#ifdef ONA_ACTIVE
+extern bool enableONA;
+#endif
 
 extern Preferences preferences;
 
