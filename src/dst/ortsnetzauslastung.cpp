@@ -75,8 +75,8 @@ void ona_sendMeasurementTask(void * pvParameters) {
             if (WiFi.status() == WL_CONNECTED) {
                 doc.clear();
                 doc["time"] = data.timeStr;
-                doc["lat"] = LATITUDE;
-                doc["lon"] = LONGITUDE;
+                doc["lat"] = config_doc["ona"]["latitude"].as<double>();
+                doc["lon"] = config_doc["ona"]["longitude"].as<double>();
                 doc["l1_v"] = data.l1_v;
                 doc["l2_v"] = data.l2_v;
                 doc["l3_v"] = data.l3_v;
@@ -132,8 +132,9 @@ void ona_loop_state_machine() {
             if (ona_esp8266_has_data) {
                 doc.clear();
                 doc["time"] = ona_esp8266_buffer.timeStr;
-                doc["lat"] = LATITUDE;
-                doc["lon"] = LONGITUDE;
+               
+                doc["lat"] = config_doc["ona"]["latitude"].as<double>();
+                doc["lon"] = config_doc["ona"]["longitude"].as<double>();
                 doc["l1_v"] = ona_esp8266_buffer.l1_v;
                 doc["l2_v"] = ona_esp8266_buffer.l2_v;
                 doc["l3_v"] = ona_esp8266_buffer.l3_v;
