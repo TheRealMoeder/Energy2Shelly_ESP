@@ -17,7 +17,7 @@
 #include <ArduinoJson.h>
 
 struct MeasurementData {
-    char timeStr[25]; // Korrigiert: Zurück auf char-Array für ISO8601 Strings
+    char timeStr[25]; 
     double latitude;
     double longitude;
     float l1_v;
@@ -26,10 +26,9 @@ struct MeasurementData {
     float frequency;
 };
 
-// --- API Konfiguration ---
+
 const char* api_url = "https://ortsnetz-auslastung.de";
-const double LATITUDE = 52.520008;
-const double LONGITUDE = 13.404954;
+
 
 const char* ona_root_ca = 
 "-----BEGIN CERTIFICATE-----\n"
@@ -47,14 +46,12 @@ const char* ona_root_ca =
 "/q4AaOeMSQ+2b1tbFfLn\n"
 "-----END CERTIFICATE-----\n";
 
-// --- Gemeinsame Statusvariablen ---
+
 String ona_lastResponse = "";
 int ona_lastResponseCode = 0;
 volatile bool ona_responseReady = false; 
 
-// ==========================================
-// ========== ESP32 IMPLEMENTIERUNG =========
-// ==========================================
+
 #ifdef ESP32
 QueueHandle_t onaQueue = NULL;
 const int ONA_QUEUE_SIZE = 1;
@@ -73,7 +70,7 @@ void ona_sendMeasurementTask(void * pvParameters) {
     requestBody.reserve(512);
 
     for (;;) {
-        // Blockiert ohne CPU-Last, bis Daten in die Queue geschoben werden
+        
         if (xQueueReceive(onaQueue, &data, portMAX_DELAY) == pdPASS) {
             if (WiFi.status() == WL_CONNECTED) {
                 doc.clear();
@@ -108,18 +105,16 @@ void ona_sendMeasurementTask(void * pvParameters) {
 }
 #endif
 
-// ==========================================
-// ========= ESP8266 IMPLEMENTIERUNG ========
-// ==========================================
+
 #ifdef ESP8266
 static MeasurementData ona_esp8266_buffer;
 static volatile bool ona_esp8266_has_data = false;
 static BearSSL::WiFiClientSecure ona_client;
 static HTTPClient http_client;
 
-// Timeout-Variablen für den ESP8266
+
 static unsigned long ona_timeoutStart = 0;
-const unsigned long ONA_TIMEOUT_MS = 5000; // 5 Sekunden Timeout
+const unsigned long ONA_TIMEOUT_MS = 5000;
 
 enum ONA_State { 
     ONA_IDLE, 
@@ -153,16 +148,16 @@ void ona_loop_state_machine() {
 
         case ONA_START_CONNECTION:
             if (WiFi.status() == WL_CONNECTED) {
-                // Setze HTTP-Timeout für den Verbindungsaufbau (z.B. 4 Sekunden)
+              
                 http_client.setTimeout(4000); 
                 
                 if (http_client.begin(ona_client, api_url)) {
                     http_client.addHeader("Content-Type", "application/json");
                     
-                    // Zeitstempel für den Gesamt-Timeout im nächsten Schritt setzen
+                   
                     ona_timeoutStart = millis();
                     
-                    // POST startet den Sendevorgang
+                 
                     ona_lastResponseCode = http_client.POST(requestBody);
                     ona_currentState = ONA_WAITING_FOR_RESPONSE;
                 } else {
@@ -173,7 +168,6 @@ void ona_loop_state_machine() {
             break;
 
         case ONA_WAITING_FOR_RESPONSE:
-            // 1. SCHUTZ: Prüfen, ob der integrierte Timeout gegriffen hat oder der Server fertig ist
             if (ona_lastResponseCode != HTTPC_ERROR_CONNECTION_REFUSED) {
                 if (ona_lastResponseCode > 0) {
                     ona_lastResponse = http_client.getString();
@@ -182,17 +176,17 @@ void ona_loop_state_machine() {
                 }
                 
                 ona_responseReady = true;
-                ona_esp8266_has_data = false; // BUFFER WIRD FREIGEGEBEN -> Neue Anfrage möglich!
+                ona_esp8266_has_data = false; 
                 http_client.end();
                 ona_currentState = ONA_IDLE;
             }
-            // 2. SCHUTZ: Manueller Software-Timeout, falls die Netzwerkkarte hängt
+           
             else if (millis() - ona_timeoutStart > ONA_TIMEOUT_MS) {
-                ona_lastResponseCode = -11; // Eigener Fehlercode für Timeout
+                ona_lastResponseCode = -11;
                 ona_lastResponse = "Software Timeout - No Server Response";
                 ona_responseReady = true;
                 
-                ona_esp8266_has_data = false; // BUFFER WIRD FREIGEGEBEN -> Neue Anfrage möglich!
+                ona_esp8266_has_data = false; 
                 http_client.end();
                 ona_currentState = ONA_IDLE;
             }
@@ -201,11 +195,6 @@ void ona_loop_state_machine() {
 }
 #endif
 
-// ==========================================
-// ====== UNIVERSELLE SCHNITTSTELLE =========
-// ==========================================
-// Diese Funktion behebt den "undefined reference" Fehler.
-// Ersetze darin ggf. die Dummy-Werte durch deine echten globalen Messdatenvariablen.
 bool ona_sendMeasurement() {
     MeasurementData data;
     
@@ -221,10 +210,10 @@ bool ona_sendMeasurement() {
 
 #ifdef ESP32
     if (onaQueue == NULL) return false;
-    // Schiebt die Daten nicht-blockierend in die Queue (gibt false zurück, wenn voll)
+    
     return (xQueueSend(onaQueue, &data, 0) == pdPASS);
 #elif defined(ESP8266)
-    if (ona_esp8266_has_data) return false; // Letzter Request läuft noch
+    if (ona_esp8266_has_data) return false; 
     ona_esp8266_buffer = data;
     ona_esp8266_has_data = true;
     return true;
@@ -233,9 +222,7 @@ bool ona_sendMeasurement() {
 #endif
 }
 
-// ==========================================
-// =========== INITIALISIERUNG ==============
-// ==========================================
+
 void ona_Setup() {
 #ifdef ESP32
     ona_client.setCACert(ona_root_ca);
