@@ -433,7 +433,9 @@ server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST,
   setupMdns();
 
   startMillis = millis();
+#ifdef ONA_ACTIVE
   ONA_Millis=startMillis;  
+#endif
 }
 
 /* main worker loop, in case of WiFi connection*/
