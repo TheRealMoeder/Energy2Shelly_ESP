@@ -41,9 +41,12 @@ To re-enter WiFiManager for updates or parameter changes:
 # Configuration
 #### 1. Power device and wait for a hotspot named "Energy2Shelly"
 #### 2. Connect to that hotspot
-#### 3. Enter wifi and configuration data using the captive portal or by opening http://192.168.4.1/
+#### 3. Enter wifi data using the captive portal or by opening http://192.168.4.1/
+#### 4. Check if your device is visible in the WLAN. <code>http://IP-address</code><br>
+#### 5. go to configuration page and enter the detailed configuration.
+     The device will ask for user and password. Default: empty. In configuration you can set a password. User name is not used; let it empty.
 
-  #### On the captive portal you can currently set a data source for power data. The following options are available:
+  #### The following options are available:
   - <code>MQTT</code>
     - Server IP, port, username, password and topic
     - Power values on the MQTT topic are expected in JSON format. The are multiple fields to define available values using a JSON Path-style syntax.
@@ -94,6 +97,15 @@ To re-enter WiFiManager for updates or parameter changes:
       - **EMH EHZ**
       - **EasyMeter ESY11**
     - Most power meters with SML output should work out of the box. If you encounter an error, please open an issue with your meter's model and a sample data log.
+  - <code>SMLSERIAL</code>
+    - Reads SML data directly from an IR reading head (e.g. Hichi IR TTL, bitShake SmartMeterReader-UART) wired to a UART pin of the ESP, no WiFi bridge needed.
+    - Wiring: reading head `VCC` -> `3V3`, `GND` -> `GND`, reading head `TX` -> configured `RX GPIO` of the ESP. The TX line of the ESP is not used.
+    - Configuration: `RX GPIO` (default 20 on ESP32-C3, 16 on ESP32, 18 on ESP32-S3, 13/D7 on ESP8266), `Baud rate` (usually 9600) and `Invert RX signal` (usually false).
+    - GPIO20 on the ESP32-C3 is only free on boards with native USB and no USB-UART chip (e.g. ESP32-C3 SuperMini). On boards like the ESP32-C3-DevKitM-1 GPIO20 is driven by the USB-UART chip, use another pin such as 4 or 10 there. Flash and USB pins are rejected.
+    - Energy counters are only published if the meter sends them. Telegrams without a power value publish 0 W and are reported in the console (enter the meter PIN / enable extended data).
+    - Same OBIS values as <code>TIBBERPULSE</code>: `1.8.0`, `2.8.0`, `16.7.0` and, if available, `36.7.0`/`56.7.0`/`76.7.0` for the phases. Many meters only send the current power after the PIN has been entered at the meter.
+    - The console shows a hex dump of the first received bytes and statistics every 30s, which helps to find wrong baud rate or invert settings.
+    - On ESP32 a hardware UART (`Serial1`) is used, on ESP8266 SoftwareSerial. A reboot is required after changing the settings.
 
   #### Here are some sample generic HTTP query paths for common devices:
   - Fronius: <code>http://IP-address/solar_api/v1/GetMeterRealtimeData.cgi?Scope=System</code>
@@ -111,13 +123,18 @@ To re-enter WiFiManager for updates or parameter changes:
   
   > [!NOTE]
   > This option controls how energy2shelly firmware outputs energy data, it does not change the input data. So if you have a triphase setup but want to assign all data to phase 1, set <code>phase_number</code> to <code>1</code>. The TRIPAHSE option in JSONPATH settings only controls how the firmware reads the input data, not how it outputs this data.
-  
-#### 4. Check if your device is visible in the WLAN. <code>http://IP-address</code><br>
-#### 5. Check the current power data at <code>http://IP-address/status</code><br>
-- [ ] \(Optional) If you want to reset you Wifi-Configuration and/or reconfigure other settings go to <code>http://IP-address/reset</code> and reconnect to the Energy2Shelly hotspot.
 
-#### 6. Check debug output at <code>http://IP-address/console</code><br>
+  #### don't forget to save the new settings. Some of the settings come into effect immediately, some of them need a reboot.
+
+#### 6. reboot / power on/off the device or press the reset button
+#### 7. Check the current power data at <code>http://IP-address</code><br>
+- [ ] \(Optional) <code>http://IP-address/status</code><br>
+- [ ] \(Optional) If you want to reset you Wifi-Configuration  go to <code>http://IP-address/reset</code> and reconnect to the Energy2Shelly hotspot.
+
+#### 8. Check debug output at <code>http://IP-address/console</code><br>
 - you can enable/disable autoscroll, save text data and clear console
+
+#### 9. Or monitor the power consumption over time at <code>http://IP-address/plot</code><br>
 
 # Currently supported microcontrollers
 * ESP32-C3

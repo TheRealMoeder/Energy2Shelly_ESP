@@ -39,7 +39,9 @@
 
 
 
-extern bool enableConsoleOutput; // Global flag to control console output visibility
+extern bool enableConsoleOutputSerial; // Global flag to control console output visibility
+extern bool enableConsoleOutputWeb; // Global flag to control console output visibility
+
 extern AsyncWebSocket wsConsole;
 // Custom Logger class inheriting from Print to natively support all data types
 class WebDebugLogger : public Print {
@@ -76,11 +78,12 @@ public:
 
     // Intercepts character data from print/println calls
     virtual size_t write(uint8_t character) override {
+        
         // Local hardware USB serial transmission remains direct and synchronous
-        Serial.write(character);
+        if (enableConsoleOutputSerial) Serial.write(character);
 
         // Global runtime visibility check
-        if (!enableConsoleOutput) return 1;
+        if (!enableConsoleOutputWeb) return 1;
 
         // If no browser clients are connected, discard data to save CPU cycles
         if (wsConsole.count() == 0) {
@@ -196,61 +199,111 @@ extern unsigned long currentMillis;
 // for time synchronization
 extern time_t now;
 extern tm timeinfo;
+extern  JsonDocument config_doc;
+extern String json_prefs_string;
+extern JsonDocument update_config_doc;
 
 // ============================================================================
 // CONFIGURATION VARIABLES (stored in Preferences)
 // ============================================================================
+ #define INPUT_TYPE_LIST \
+    X(NONE, 0) \
+    X(MQTT, 1) \
+    X(HTTP, 2) \
+    X(SMA, 3) \
+    X(SUNSPEC, 4) \
+    X(RCT, 5) \
+    X(SHRDZM, 6) \
+    X(TIBBERPULSE, 7) \
+    X_LAST(SMLSERIAL, 8)
+
+
+enum class input_type_enum : uint32_t 
+{
+#define X(name, val)      name = val,
+#define X_LAST(name, val) name = val
+    INPUT_TYPE_LIST
+#undef X
+#undef X_LAST
+};
 
 // Data source and server settings
-extern char reset_password[33];
-extern char input_type[40];
-extern char ntp_server[40];
-extern char timezone[64];
-extern char phase_number[2];
-extern char power_offset[10];
-extern char mqtt_server[160];
-extern char mqtt_port[6];
-extern char mqtt_topic[90];
-extern char mqtt_user[40];
-extern char mqtt_passwd[40];
+#define reset_password (config_doc["basic"]["reset_password"]| "")
+#define input_type (config_doc["basic"]["input_type"] | "")
+#define ntp_server (config_doc["basic"]["ntp_server"]| "")
+#define timezone (config_doc["basic"]["timezone"] | "")
+#define phase_number (config_doc["basic"]["phase_number"].as<uint8_t>())
+#define power_offset (config_doc["basic"]["power_offset"].as<double_t>())
+
+#define mqtt_server (config_doc["mqtt"]["mqtt_server"]|"")
+#define mqtt_port (config_doc["mqtt"]["mqtt_port"]|"")
+#define mqtt_topic (config_doc["mqtt"]["mqtt_topic"]|"")
+#define mqtt_user (config_doc["mqtt"]["mqtt_user"]|"")
+#define mqtt_passwd (config_doc["mqtt"]["mqtt_password"]|"")
+
+
 
 // JSON path settings
-extern char power_path[60];
-extern char pwr_export_path[60];
-extern char power_l1_path[60];
-extern char power_l2_path[60];
-extern char power_l3_path[60];
-extern char energy_in_path[60];
-extern char energy_out_path[60];
+#define power_path  (config_doc["json"]["power_path"]|"")
+#define pwr_export_path (config_doc["json"]["pwr_export_path"]|"")
+#define power_l1_path (config_doc["json"]["power_l1_path"]|"")
+#define power_l2_path (config_doc["json"]["power_l2_path"]|"")
+#define power_l3_path (config_doc["json"]["power_l3_path"]|"")
+#define energy_in_path (config_doc["json"]["energy_in_path"]|"")
+#define energy_out_path (config_doc["json"]["energy_out_path"]|"")
+
+#define http_server (config_doc["http"]["server_ip"]|"")
+#define query_period_http_u32 (config_doc["http"]["query_period"].as<uint32_t>())
 
 // Shelly device settings
-extern char shelly_gen[2];
-extern char shelly_fw_id[32];
-extern char shelly_mac[13];
-extern char shelly_name[26];
-extern char shelly_port[6];
+#define shelly_gen config_doc["shelly"]["shelly_gen"]
+#define shelly_fw_id config_doc["shelly"]["shelly_fw_id"]
+#define shelly_mac config_doc["shelly"]["shelly_mac"]
+extern String shelly_name;
+#define shelly_port (config_doc["shelly"]["shelly_port"].as<uint16_t>())
+
+#define query_period_modbus_u32 (config_doc["sunspec"]["query_period"].as<uint32_t>())
 
 // Query and protocol settings
-extern char query_period[10];
-extern char modbus_dev[10];
-extern char sma_id[17];
+#define sma_id config_doc["sma"]["sma_id"].as<const char*>()
 extern uint16_t sunspec_port_int; // default port
-extern uint8_t modbusdev_int; // default device id for KSEM
-
+extern uint8_t modbusdev_int; 
 
 // RCT Power settings
-extern char rct_host[41];
-extern char rct_port[6];
+#define rct_host config_doc["rct"]["rct_host"].as<const char*>()
+#define rct_port config_doc["rct"]["rct_port"].as<uint16_t>()
+#define query_period_rct_u32 config_doc["rct"]["query_period"].as<uint32_t>()
 
-extern char tibber_host[41];
-extern char tibber_user[11];
-extern char tibber_password[10];
+
+#define tibber_host config_doc["tibber"]["tibber_host"].as<const char*>()
+#define tibber_user config_doc["tibber"]["tibber_user"].as<const char*>()
+#define tibber_password config_doc["tibber"]["tibber_password"].as<const char*>()
+#define tibber_nodeid config_doc["tibber"]["tibber_nodeid"].as<const char*>()
+#define query_period_tibber_u32 config_doc["tibber"]["query_period"].as<uint32_t>()
+
 extern char tibber_rpc[2][26];
-extern char tibber_nodeid[2];
 
+// SML via UART (IR reading head connected directly to the ESP)
+#define sml_rx_pin config_doc["smlserial"]["rx_pin"].as<int>()
+#define sml_baud config_doc["smlserial"]["baud"].as<uint32_t>()
+#define sml_invert config_doc["smlserial"]["invert"].as<const char*>()
+
+// default RX pin for the SML reading head, depending on the chip
+#ifndef SML_DEFAULT_RX_PIN
+  #if defined(CONFIG_IDF_TARGET_ESP32C3)
+    #define SML_DEFAULT_RX_PIN 20 // labeled RX on native-USB boards (e.g. SuperMini); boards with a USB-UART chip need another pin (e.g. 4 or 10)
+  #elif defined(CONFIG_IDF_TARGET_ESP32S3)
+    #define SML_DEFAULT_RX_PIN 18
+  #elif defined(ESP32)
+    #define SML_DEFAULT_RX_PIN 16
+  #else
+    #define SML_DEFAULT_RX_PIN 13 // D7 on NodeMCU
+  #endif
+#endif
 // LED settings
-extern char led_gpio[3];
-extern char led_gpio_i[6];
+#define led_gpio config_doc["led"]["led_gpio"].as<const char*>()
+#define led_gpio_i config_doc["led"]["led_gpio_i"].as<const char*>()
+
 extern unsigned long ledOffTime;
 extern uint8_t led;
 extern bool led_i;
@@ -289,6 +342,7 @@ extern bool dataHTTP;
 extern bool dataSUNSPEC;
 extern bool dataTIBBERPULSE;
 extern bool dataRCT;
+extern bool dataSMLSERIAL;
 
 extern Preferences preferences;
 
@@ -324,6 +378,8 @@ extern void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
   extern MDNSResponder::hMDNSService hMDNSService2; // handle of the shelly service in the MDNS responder
 #endif
 
+
+
 // ============================================================================
 // FUNCTION DECLARATIONS
 // ============================================================================
@@ -333,5 +389,9 @@ void handleblinkled();
 void saveConfigCallback();
 void WifiManagerSetup(bool stationmode);
 void setupMdns();
+void interprete_parameters();
+void save_parameters();
+void load_parameters();
+void mergeJson(JsonObject target, JsonObjectConst source);
 
 #endif // CONFIGURATION_H

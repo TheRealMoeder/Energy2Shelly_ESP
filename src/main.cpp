@@ -8,7 +8,6 @@
 
 // Configuration & setup
 #include "config/Configuration.h"
-
 // Data structures & processing
 #include "data/DataStructures.h"
 #include "data/DataProcessing.h"
@@ -29,6 +28,19 @@
 #define WiFicheckInterval 60000 // Check every 60 seconds
 
 unsigned long updateTimestamp = 0; 
+bool parametersUpdated = false; 
+
+bool isNotAuthorized(AsyncWebServerRequest *request) {
+    String lp=(config_doc["basic"]["reset_password"]|"");
+    if (lp==NULL) return false;
+    if (lp.length()==0) return false;
+    if (!request->authenticate("", lp.c_str())) {
+        request->requestAuthentication(); 
+        return true;
+    }
+    return false;
+}
+
 
 void setup(void)
 {
@@ -68,7 +80,7 @@ void setup(void)
 #endif
  
   WifiManagerSetup(clear_rtc_power_on() == Energy2Shelly_ResetReason::RECONFIGURE);
-
+ 
   // Initialize watchdog timer (30s timeout)
 #ifdef ESP32
   // check SDK version.
@@ -192,6 +204,15 @@ void setup(void)
     });
     request->send(response); });
 
+  server.on("/config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(CONFIG_PAGE_HTML), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+        // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
+        memcpy_P(buffer, CONFIG_PAGE_HTML + index, maxLen); return maxLen;
+    });
+    request->send(response); });
+
+    
   server.on("/shelly", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
     shellyGetDeviceInfo();
@@ -285,7 +306,42 @@ void setup(void)
         request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
     } });
 
-  // Shelly RPC endpoints called via HTTP GET method
+  server.on("/json_preferences", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+   
+    if (isNotAuthorized(request)) {
+            return request->requestAuthentication(); 
+        }
+    serializeJson(config_doc, json_prefs_string);   
+    request->send(200, "application/json", json_prefs_string); 
+  });
+
+server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST, 
+    [](AsyncWebServerRequest *request) {
+        if (isNotAuthorized(request)) {
+            request->send(401, "text/plain", "Unauthorized");
+            json_prefs_string = "";
+            return;
+        }
+        AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\":\"OK\"}");
+        response->addHeader("Connection", "close");
+        request->send(response);
+        parametersUpdated = true;
+    },
+    NULL, 
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        if (index == 0) {
+            json_prefs_string = "";
+            json_prefs_string.reserve(total); 
+        }
+        
+        
+        json_prefs_string += String((const char*)data).substring(0, len);
+    }
+);
+
+
+
+// Shelly RPC endpoints called via HTTP GET method
   server.on("/rpc/EM.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
     EMGetConfig();
@@ -353,7 +409,7 @@ void setup(void)
   server.begin();
 
   // Set up RPC over UDP for Marstek users
-  UdpRPC.begin(String(shelly_port).toInt());
+  UdpRPC.begin(shelly_port);
 
   // Set up MQTT
   if (dataMQTT)
@@ -390,19 +446,20 @@ void setup(void)
   // Set Up Modbus TCP for SUNSPEC register query
   if (dataSUNSPEC)
   {
-    period = atol(query_period);
     modbus1.client();
-    modbus_ip.fromString(mqtt_server); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
-    sunspec_port_int = atol(mqtt_port);
-    modbusdev_int = atol(modbus_dev);
     DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
     modbus1.connect(modbus_ip, sunspec_port_int);
+  }
+
+  // Set up UART for SML reading head
+  if (dataSMLSERIAL)
+  {
+    setupSMLSerial();
   }
 
   // Set Up HTTP query
   if (dataHTTP)
   {
-    period = atol(query_period);
     http.useHTTP10(true);
   }
 
@@ -457,7 +514,7 @@ void worker_loop(int currentMillis)
   if (dataSUNSPEC)
   {
     modbus1.task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
-    if (currentMillis - startMillis >= period)
+    if (currentMillis - startMillis >= query_period_modbus_u32)
     {
       parseSUNSPEC();
       startMillis = currentMillis;
@@ -465,7 +522,7 @@ void worker_loop(int currentMillis)
   }
   if (dataHTTP)
   {
-    if (currentMillis - startMillis >= period)
+    if (currentMillis - startMillis >= query_period_http_u32)
     {
       queryHTTP();
       startMillis = currentMillis;
@@ -473,15 +530,19 @@ void worker_loop(int currentMillis)
   }
   if (dataTIBBERPULSE)
   {
-    if (currentMillis - startMillis >= period)
+    if (currentMillis - startMillis >= query_period_tibber_u32)
     {
       parseTibberPulse();
       startMillis = currentMillis;
     }
   }
+  if (dataSMLSERIAL)
+  {
+    parseSMLSerial(); // non-blocking, consumes the bytes received since the last call
+  }
   if (dataRCT)
   {
-    if (currentMillis - startMillis >= period)
+    if (currentMillis - startMillis >= query_period_rct_u32)
     {
       parseRCT();
       startMillis = currentMillis;
@@ -522,12 +583,33 @@ void loop()
     WDTimer = currentMillis;
   }
 
+  if (enableConsoleOutputSerial && (extendedMillis()>(config_doc["console"]["serial_console_time"].as<int>()*60000ll))) {
+      enableConsoleOutputSerial=false;
+      DEBUG_SERIAL.println(F("Disabled serial plottin"));
+  }
+
   // check if WiFi connection has been lost for more than the allowed interval
   // saveguard against nasty router/AP behavior
   if (millis() - WiFilastConnectionCheck > WiFicheckInterval)
   {
     DEBUG_SERIAL.println(F("Lost WiFi connection or SSID changed!"));
     all_esp_reset(Energy2Shelly_ResetReason::WIFI_DISCONNECT);
+  }
+  if (parametersUpdated) {
+    DEBUG_SERIAL.println(F("New keys"));
+    update_config_doc.clear(); 
+    DeserializationError error = deserializeJson(update_config_doc, json_prefs_string);
+    DEBUG_SERIAL.handleQueue();
+    DEBUG_SERIAL.println(json_prefs_string);
+    json_prefs_string = String();
+    DEBUG_SERIAL.handleQueue();
+    if (!error) {
+      mergeJson(config_doc.as<JsonObject>(), update_config_doc.as<JsonObjectConst>());  
+      interprete_parameters();
+      save_parameters();
+    }
+    update_config_doc.clear();        
+    parametersUpdated = false;
   }
 
   handleblinkled();

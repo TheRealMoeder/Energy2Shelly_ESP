@@ -12,37 +12,49 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      
       - uses: actions/cache@v6
         with:
           path: |
             ~/.cache/pip
             ~/.platformio/.cache
           key: ${{ runner.os }}-pio
+          
       - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
+          
+      - name: Install latest esptool
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade esptool
+          
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
+        
       - name: Build firmware
         run: pio run
+        
       - name: Merge ESP32 flash files
         run: |
           cd .pio/build/esp32
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32 merge_bin -o merged-flash.bin --flash_mode dio --flash_size 4MB 0x1000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          python3 -m esptool --chip esp32 merge_bin -o merged-flash.bin --flash_mode dio --flash_size 4MB 0x1000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          
       - name: Merge ESP32-S3 flash files
         run: |
           cd .pio/build/esp32-s3
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32-s3 merge_bin -o merged-flash.bin --flash_mode dio --flash_freq 80m --flash_size 4MB 0x0000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          python3 -m esptool --chip esp32-s3 merge_bin -o merged-flash.bin --flash_mode dio --flash_freq 80m --flash_size 4MB 0x0000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          
       - name: Merge ESP32-C3 flash files
         run: |
           cd .pio/build/esp32-c3
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32-c3 merge_bin -o merged-flash.bin --flash_mode dio --flash_freq 80m --flash_size 4MB 0x0000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          python3 -m esptool --chip esp32-c3 merge_bin -o merged-flash.bin --flash_mode dio --flash_freq 80m --flash_size 4MB 0x0000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          
       - name: Copy firmware
         run: |
           cp .pio/build/esp32/merged-flash.bin ./.github/pages/esp32.bin
@@ -52,6 +64,7 @@ jobs:
           cp .pio/build/esp32-c3/merged-flash.bin ./.github/pages/esp32-c3.bin
           cp .pio/build/esp32-s3/firmware.bin ./.github/pages/esp32-s3-ota.bin
           cp .pio/build/esp32-c3/firmware.bin ./.github/pages/esp32-c3-ota.bin
+          
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -64,8 +77,10 @@ jobs:
             ./.github/pages/esp32-s3-ota.bin
             ./.github/pages/esp32-c3.bin
             ./.github/pages/esp32-c3-ota.bin
+            
       - name: Setup Github Page
         uses: actions/configure-pages@v6
+        
       - name: Upload webflash files
         uses: actions/upload-pages-artifact@v5
         with:

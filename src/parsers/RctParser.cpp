@@ -395,7 +395,7 @@ void parseRCT()
 {
   if (!rctClient.connected())
   {
-    int port = atol(rct_port);
+    int port = rct_port;
     if (port <= 0)
     {
       port = 8899;
