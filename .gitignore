@@ -8,3 +8,7 @@
 .DS_Store
 .vscode/settings.json
 src/web/chart_js.h
+sdkconfig.esp32
+sdkconfig.esp32-c3
+sdkconfig.esp32-s3
+src/CMakeLists.txt
