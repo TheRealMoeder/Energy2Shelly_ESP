@@ -23,6 +23,8 @@
 // Utils function for monitoring and reset
 #include "utils/utils.h"
 
+#include "dst/ortsnetzauslastung.h"
+
 #define WiFicheckInterval 60000 // Check every 60 seconds
 
 unsigned long updateTimestamp = 0; 
@@ -427,10 +429,17 @@ server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST,
     http.useHTTP10(true);
   }
 
+#ifdef ONA_ACTIVE
+  ONA_Setup();
+#endif
+
   // Set up mDNS responder
   setupMdns();
 
   startMillis = millis();
+#ifdef ONA_ACTIVE
+  ONA_Millis=startMillis;  
+#endif
 }
 
 /* main worker loop, in case of WiFi connection*/
@@ -512,6 +521,16 @@ void worker_loop(int currentMillis)
       startMillis = currentMillis;
     }
   }
+#ifdef ONA_ACTIVE
+  if (enableONA) {
+    ONA_loop_state_machine();
+    if (currentMillis - ONA_Millis >= config_doc["ona"]["publish_period"].as<unsigned long>()*1000ul)
+    {
+      ONA_sendMeasurement();
+      ONA_Millis = currentMillis;
+    }
+  }
+#endif
   DEBUG_SERIAL.handleQueue();
 }
 
@@ -547,7 +566,7 @@ void loop()
     WDTimer = currentMillis;
   }
 
-  if (enableConsoleOutputSerial && (extendedMillis()>(config_doc["console"]["serial_console_time"].as<int>()*60000ll))) {
+  if (enableConsoleOutputSerial && (extendedMillis()>(config_doc["console"]["serial_console_time"].as<uint64_t>()*60000ull))) {
       enableConsoleOutputSerial=false;
       DEBUG_SERIAL.println(F("Disabled serial plottin"));
   }

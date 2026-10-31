@@ -195,6 +195,9 @@ public:
 //#define DEBUG_SERIAL if(DEBUG)Serial
 
 extern unsigned long startMillis;
+#ifdef ONA_ACTIVE
+extern unsigned long ONA_Millis;
+#endif
 extern unsigned long currentMillis;
 // for time synchronization
 extern time_t now;
@@ -316,7 +319,7 @@ extern IPAddress multicastIP;
 // MODBUS settings
 extern IPAddress modbus_ip;
 extern ModbusIP modbus1;
-extern int16_t modbus_result[256];
+extern int16_t modbus_result[64];
 
 // Default electrical values and offset
 extern const uint8_t defaultVoltage;
@@ -342,6 +345,11 @@ extern bool dataHTTP;
 extern bool dataSUNSPEC;
 extern bool dataTIBBERPULSE;
 extern bool dataRCT;
+#ifdef ONA_ACTIVE
+extern bool enableONA;
+extern bool ONA_validfrequency;
+extern bool ONA_validVoltage;
+#endif
 extern bool dataSMLSERIAL;
 
 extern Preferences preferences;

@@ -86,12 +86,6 @@ void update_reset_reason(Energy2Shelly_ResetReason reason)
 void all_esp_reset(Energy2Shelly_ResetReason reason)
 {
   update_reset_reason(reason);
-#if defined(ESP32)
-  WiFi.disconnect(false, false);
-#elif defined(ESP8266)
-  WiFi.disconnect(false);
-#endif
-
 
   delay(1000);
   ESP.restart();
@@ -191,4 +185,19 @@ void status_print(void)
   }
   DEBUG_SERIAL.print(F(", reconnect attempts: "));
   DEBUG_SERIAL.println(wifi_reconnect_attempts);
+}
+
+
+String getISO8601Time() {
+    time_t now;
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        return "1970-01-01T00:00:00Z"; // Fallback, 
+    }
+    time(&now);
+    gmtime_r(&now, &timeinfo); // In UTC 
+
+    char buf[25];
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+    return String(buf);
 }

@@ -1,6 +1,9 @@
 #include "Configuration.h"
 #include "../utils/utils.h"
 unsigned long startMillis = 0;
+#ifdef ONA_ACTIVE
+unsigned long ONA_Millis = 0;
+#endif
 unsigned long currentMillis;
 // for time synchronization
 time_t now;
@@ -32,7 +35,7 @@ IPAddress multicastIP(239, 12, 255, 254);
 // MODBUS settings
 IPAddress modbus_ip;
 ModbusIP modbus1;
-int16_t modbus_result[256];
+int16_t modbus_result[64];
 
 // Default electrical values and offset
 const uint8_t defaultVoltage = 230;
@@ -57,6 +60,11 @@ bool dataHTTP = false;
 bool dataSUNSPEC = false;
 bool dataTIBBERPULSE = false;
 bool dataRCT = false;
+#ifdef ONA_ACTIVE
+bool enableONA = false;
+bool ONA_validfrequency = false;
+bool ONA_validVoltage = false;
+#endif
 bool dataSMLSERIAL = false;
 
 Preferences preferences;
@@ -203,7 +211,12 @@ void interprete_parameters()
     shelly_name = shelly_name.substring(0, 128);
  }
 
-
+#ifdef ONA_ACTIVE
+  if (config_doc["ona"]["publish_period"].isNull())  config_doc["ona"]["publish_period"]=0;
+  enableONA=config_doc["ona"]["publish_period"].as<int>()>0;
+#endif
+  if (config_doc["ona"]["latitude"].isNull())  config_doc["ona"]["latitude"]=0.0;
+  if (config_doc["ona"]["longitude"].isNull()) config_doc["ona"]["longitude"]=0.0;
 
 }
 
@@ -374,7 +387,7 @@ void WifiManagerSetup(bool stationmode)
   load_parameters(); // Load parameters from Preferences
  
 
-  static WiFiManager wifiManager;
+  WiFiManager wifiManager;
   wifiManager.setDebugOutput(false);
   wifiManager.setShowStaticFields(true);
 

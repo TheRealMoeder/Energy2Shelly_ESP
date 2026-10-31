@@ -29,6 +29,13 @@
         "parts": [
           { "path": "esp32-s3.bin", "offset": 0 }
         ]
+      },
+      {
+        "name": "ESP32-S3 (8MB Flash)",
+        "chipFamily": "ESP32-S3",
+        "parts": [
+          { "path": "esp32-s3-N8.bin", "offset": 0 }
+        ]
       }
     ]
   }
