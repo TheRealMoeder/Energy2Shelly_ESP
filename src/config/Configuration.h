@@ -390,7 +390,7 @@ void saveConfigCallback();
 void WifiManagerSetup(bool stationmode);
 void setupMdns();
 void interprete_parameters();
-void save_parameters();
+bool save_parameters();
 void load_parameters();
 void mergeJson(JsonObject target, JsonObjectConst source);
 
