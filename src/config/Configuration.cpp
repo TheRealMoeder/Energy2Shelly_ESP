@@ -65,6 +65,7 @@ bool enableONA = false;
 bool ONA_validfrequency = false;
 bool ONA_validVoltage = false;
 #endif
+bool dataSMLSERIAL = false;
 
 Preferences preferences;
 
@@ -156,6 +157,10 @@ void interprete_parameters()
    case input_type_enum::TIBBERPULSE:
         dataTIBBERPULSE = true;
         DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
+        break;
+   case input_type_enum::SMLSERIAL:
+        dataSMLSERIAL = true;
+        DEBUG_SERIAL.println(F("Enabling SML serial (UART) data input"));
         break;
    case input_type_enum::RCT:
         dataRCT = true;
@@ -329,6 +334,10 @@ void load_parameters() {
    config_doc["tibber"]["query_period"] = config_doc["tibber"]["query_period"].as<int>() ? config_doc["tibber"]["query_period"].as<int>() : 5000;
    config_doc["rct"]["query_period"]    = config_doc["rct"]["query_period"].as<int>() ? config_doc["rct"]["query_period"].as<int>() : 5000;
    config_doc["http"]["query_period"]   = config_doc["http"]["query_period"].as<int>() ? config_doc["http"]["query_period"].as<int>() : 5000;
+
+   config_doc["smlserial"]["rx_pin"] = config_doc["smlserial"]["rx_pin"].is<int>() ? config_doc["smlserial"]["rx_pin"].as<int>() : SML_DEFAULT_RX_PIN;
+   config_doc["smlserial"]["baud"]   = config_doc["smlserial"]["baud"].as<uint32_t>() ? config_doc["smlserial"]["baud"].as<uint32_t>() : 9600;
+   config_doc["smlserial"]["invert"] = config_doc["smlserial"]["invert"] | "false";
    
  
    config_doc["console"]["web_console"]  =    config_doc["console"]["web_console"] | "true";

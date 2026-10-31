@@ -611,7 +611,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                 input_type: {
                     label: "Input Type",
                     description: "Defines the type of input for the device.",
-                    options: ["NONE", "MQTT", "HTTP", "SMA", "SUNSPEC", "RCT", "SHRDZM", "TIBBERPULSE" ] 
+                    options: ["NONE", "MQTT", "HTTP", "SMA", "SUNSPEC", "RCT", "SHRDZM", "TIBBERPULSE", "SMLSERIAL" ] 
                 },
                 ntp_server: {
                     label: "NTP Server",
@@ -720,6 +720,27 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
                     label: "Query Period (ms)",
                     max_length : 26,
                     description: "The period in milliseconds for querying the Tibber device."
+                }
+            },
+
+            smlserial: {
+                _label: "SML Serial Settings",
+                _description: "SML data from an IR reading head connected directly to a UART pin of the ESP. Requires a reboot after saving.",
+                _show_if: ["SMLSERIAL"],
+                rx_pin: {
+                    label: "RX GPIO",
+                    max_length : 3,
+                    description: "GPIO connected to the TX line of the reading head (e.g. 20 for ESP32-C3 SuperMini, 16 for ESP32). Boards with a USB-UART chip on GPIO20 need another pin, e.g. 4 or 10. Flash and USB pins are rejected."
+                },
+                baud: {
+                    label: "Baud rate",
+                    description: "Most SML meters send with 9600 baud, 8N1.",
+                    options: [9600, 2400, 4800, 19200, 38400, 57600, 115200]
+                },
+                invert: {
+                    label: "Invert RX signal",
+                    description: "Only needed for reading heads without inverting output stage (e.g. bare phototransistor).",
+                    options: ["false", "true"]
                 }
             },
 
