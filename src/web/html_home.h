@@ -872,7 +872,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
             },
             ona: {
                 _label: "Ortsnetzauslastung",
-                _description: "For publishing data to community. Only active for ESP32. Not for ESP8266",
+                _description: "For publishing data to community.",
                 publish_period: {
                     label: "Publish period",
                     max_length : 6,
