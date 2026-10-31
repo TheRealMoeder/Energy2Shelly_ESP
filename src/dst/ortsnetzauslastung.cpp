@@ -73,12 +73,14 @@ void ONA_sendMeasurementTask(void * pvParameters) {
         if (xQueueReceive(onaQueue, &data, portMAX_DELAY) == pdPASS) {
             if (WiFi.status() == WL_CONNECTED) {
                 doc.clear();
-                doc["time"] = data.timeStr;
-                doc["lat"] = config_doc["ona"]["latitude"].as<double>();
-                doc["lon"] = config_doc["ona"]["longitude"].as<double>();
+                doc["observed_at"] = data.timeStr;
+                doc["latitude"] = config_doc["ona"]["latitude"].as<double>();
+                doc["longitude"] = config_doc["ona"]["longitude"].as<double>();
                 doc["l1_v"] = data.l1_v;
                 doc["l2_v"] = data.l2_v;
                 doc["l3_v"] = data.l3_v;
+                doc["smartmeter_model"] = "Energy2Shelly";
+                doc["integration_version"] = VERSION_BUILD;                
                 doc["freq"] = data.frequency;
 
                 requestBody = "";
@@ -130,17 +132,19 @@ void ONA_loop_state_machine() {
         case ONA_IDLE:
             if (ona_esp8266_has_data) {
                 doc.clear();
-                doc["time"] = ona_esp8266_buffer.timeStr;
+                doc["observed_at"] = ona_esp8266_buffer.timeStr;
                
-                doc["lat"] = config_doc["ona"]["latitude"].as<double>();
-                doc["lon"] = config_doc["ona"]["longitude"].as<double>();
+                doc["latitude"] = config_doc["ona"]["latitude"].as<double>();
+                doc["longitude"] = config_doc["ona"]["longitude"].as<double>();
                 doc["l1_v"] = ona_esp8266_buffer.l1_v;
                 doc["l2_v"] = ona_esp8266_buffer.l2_v;
                 doc["l3_v"] = ona_esp8266_buffer.l3_v;
+                doc["smartmeter_model"] = "Energy2Shelly";
+                doc["integration_version"] = VERSION_BUILD;
                 doc["freq"] = ona_esp8266_buffer.frequency;
 
                 requestBody = "";
-                serializeJson(doc, requestBody);
+                serializeJson(doc, requestBody);                
                 
                 ona_currentState = ONA_START_CONNECTION;
             }
@@ -148,10 +152,9 @@ void ONA_loop_state_machine() {
 
         case ONA_START_CONNECTION:
             if (WiFi.status() == WL_CONNECTED) {
-              
-                http_client.setTimeout(4000); 
-                
                 if (http_client.begin(ona_client, api_url)) {
+                    http_client.setTimeout(8000);
+                    ona_client.setTimeout(8000);
                     http_client.addHeader("Content-Type", "application/json");
                     
                    
@@ -252,17 +255,9 @@ void ONA_Setup() {
     ona_client.setCACert(ona_root_ca);
     onaQueue = xQueueCreate(ONA_QUEUE_SIZE, sizeof(MeasurementData));
     
-    xTaskCreatePinnedToCore(
-        ONA_sendMeasurementTask,
-        "ONA_SendTask",
-        4096,
-        NULL,
-        1,
-        (TaskHandle_t*)&onaTaskHandle,
-        1
-    );
+    xTaskCreate(ONA_sendMeasurementTask, "ONAHTTPTask", 8192, NULL, 1, NULL);
 #elif defined(ESP8266)
-    ona_client.setBufferSizes(512, 512);
+    ona_client.setBufferSizes(1024, 512);
     ona_client.setInsecure();
 #endif
 }
