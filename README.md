@@ -104,6 +104,7 @@ To re-enter WiFiManager for updates or parameter changes:
     - GPIO20 on the ESP32-C3 is only free on boards with native USB and no USB-UART chip (e.g. ESP32-C3 SuperMini). On boards like the ESP32-C3-DevKitM-1 GPIO20 is driven by the USB-UART chip, use another pin such as 4 or 10 there. Flash and USB pins are rejected.
     - Energy counters are only published if the meter sends them. Telegrams without a power value publish 0 W and are reported in the console (enter the meter PIN / enable extended data).
     - Same OBIS values as <code>TIBBERPULSE</code>: `1.8.0`, `2.8.0`, `16.7.0` and, if available, `36.7.0`/`56.7.0`/`76.7.0` for the phases. Many meters only send the current power after the PIN has been entered at the meter.
+    - If the meter sends them, voltage (`32.7.0`/`52.7.0`/`72.7.0`), current (`31.7.0`/`51.7.0`/`71.7.0`), apparent power (`29.7.0`/`49.7.0`/`69.7.0`) and frequency (`14.7.0`) are used as well (also for <code>TIBBERPULSE</code>). Missing values keep the defaults (230 V, 50 Hz, current and apparent power derived from the active power).
     - The console shows a hex dump of the first received bytes and statistics every 30s, which helps to find wrong baud rate or invert settings.
     - On ESP32 a hardware UART (`Serial1`) is used, on ESP8266 SoftwareSerial. A reboot is required after changing the settings.
 
