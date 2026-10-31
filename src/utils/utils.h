@@ -26,9 +26,17 @@ String getISO8601Time();
 
 // to be tuned for ESP32 and ESP8266
 #if defined(ESP32)
+#ifdef ONA_ACTIVE
+#define MIN_HEAP_SIZE 40000
+#else
 #define MIN_HEAP_SIZE 12000
+#endif
 #elif defined(ESP8266)
+#ifdef ONA_ACTIVE
+#define MIN_HEAP_SIZE 2000
+#else
 #define MIN_HEAP_SIZE 5000
+#endif
 #endif
 
 
