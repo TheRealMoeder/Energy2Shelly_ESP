@@ -23,9 +23,7 @@
 // Utils function for monitoring and reset
 #include "utils/utils.h"
 
-#ifdef ESP32
 #include "dst/ortsnetzauslastung.h"
-#endif
 
 #define WiFicheckInterval 60000 // Check every 60 seconds
 
@@ -515,7 +513,7 @@ void worker_loop(int currentMillis)
   }
 #ifdef ONA_ACTIVE
   if (enableONA) {
-    
+    ONA_loop_state_machine();
     if (currentMillis - ONA_Millis >= config_doc["ona"]["publish_period"].as<unsigned long>()*1000ul)
     {
       ONA_sendMeasurement();
