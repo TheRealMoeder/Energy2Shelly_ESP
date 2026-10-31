@@ -107,8 +107,7 @@ void sysGetStatus() {
 
 // aligned with Shelly API docs
 // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EM#emgetstatus-example
-void EMGetStatus() {
-  JsonDocument jsonResponse;
+void fillEMStatus(JsonObject jsonResponse) {
   jsonResponse["id"] = 0;
   jsonResponse["a_current"] = serialized(String(PhasePower[0].current, 2));
   jsonResponse["a_voltage"] = serialized(String(PhasePower[0].voltage, 2));
@@ -133,6 +132,11 @@ void EMGetStatus() {
   jsonResponse["total_act_power"] = serialized(String(PhasePower[0].power + PhasePower[1].power + PhasePower[2].power, 2));
   jsonResponse["total_aprt_power"] = serialized(String(PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower, 2));
   jsonResponse["user_calibrated_phase"] = JsonArray();
+}
+
+void EMGetStatus() {
+  JsonDocument jsonResponse;
+  fillEMStatus(jsonResponse.to<JsonObject>());
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.print(F("EMGetStatus: "));
   DEBUG_SERIAL.println(serJsonResponse);
@@ -141,8 +145,7 @@ void EMGetStatus() {
 
 // aligned with Shelly API docs
 // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EMData#emdatagetstatus-example
-void EMDataGetStatus() {
-  JsonDocument jsonResponse;
+void fillEMDataStatus(JsonObject jsonResponse) {
   jsonResponse["id"] = 0;
   jsonResponse["a_total_act_energy"] = serialized(String(PhaseEnergy[0].consumption, 2));
   jsonResponse["a_total_act_ret_energy"] = serialized(String(PhaseEnergy[0].gridfeedin, 2));
@@ -152,6 +155,11 @@ void EMDataGetStatus() {
   jsonResponse["c_total_act_ret_energy"] = serialized(String(PhaseEnergy[2].gridfeedin, 2));
   jsonResponse["total_act"] = serialized(String(PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption, 2));
   jsonResponse["total_act_ret"] = serialized(String(PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin, 2));
+}
+
+void EMDataGetStatus() {
+  JsonDocument jsonResponse;
+  fillEMDataStatus(jsonResponse.to<JsonObject>());
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.print(F("EMDataGetStatus: "));
   DEBUG_SERIAL.println(serJsonResponse);
