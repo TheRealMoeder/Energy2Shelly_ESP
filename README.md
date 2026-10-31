@@ -35,7 +35,8 @@ To re-enter WiFiManager for updates or parameter changes:
 > 💡 **Tip:** If the page does not appear or shows an error after the reboot, **refresh/reload your browser**  to force a clean reconnect.
 
 
-
+## Option 4: Factory reset, if everything went wrong
+Press 5 times reset button of the device within 60s. This will erase all configs and reboots in a fresh setup
 
 
 # Configuration

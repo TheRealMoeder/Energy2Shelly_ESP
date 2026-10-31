@@ -1,17 +1,70 @@
 #include "utils.h"
 #include "config/Configuration.h"
+#ifdef ESP8266
+#include <LittleFS.h>
+#else
+extern "C" {
+#include "nvs_flash.h"
+}
+#endif
+
 // 1. Variable definitions and platform separation
 #if defined(ESP32)
 RTC_NOINIT_ATTR Energy2Shelly_ResetReason rtc_reset_reason;
 RTC_NOINIT_ATTR uint32_t rtcMagicNumber;
+uint32_t rtc_reset_counter;
 #elif defined(ESP8266)
 Energy2Shelly_ResetReason rtc_reset_reason; // Manually synced.
+uint32_t rtc_reset_counter;
 // first 0..31 slots maybe used by OTA
+#define RTC_reset_counter_slot 125
 #define RTC_magic_key_slot 126
 #define RTC_reset_reason_slot 127
 
 #endif
 Energy2Shelly_ResetReason ram_copy_rtc_reset_reason;
+
+void wifi_reset()
+{
+#ifdef ESP32
+    WiFi.disconnect(true, true);
+#else
+    // WiFiManager may leave persistent=false; force it so disconnect(true)
+    // actually erases the SDK-saved credentials in flash.
+    WiFi.persistent(true);
+    WiFi.disconnect(true);
+    ESP.eraseConfig();
+#endif
+    update_reset_reason(Energy2Shelly_ResetReason::WIFI_RECONFIG);
+    delay(1000);
+    ESP.restart();
+    delay(1000);
+ 
+}
+
+void reset_esp_to_default_and_reboot()
+{
+  #ifdef ESP32
+    nvs_flash_erase(); 
+    nvs_flash_init(); 
+    WiFi.disconnect(true, true);
+#else
+
+   if (LittleFS.begin()) {
+        LittleFS.format();
+  } 
+    // WiFiManager may leave persistent=false; force it so disconnect(true)
+    // actually erases the SDK-saved credentials in flash.
+    WiFi.persistent(true);
+    WiFi.disconnect(true);
+    ESP.eraseConfig();
+#endif
+   update_reset_reason(Energy2Shelly_ResetReason::FACTORY_RESET);
+   delay(1000);
+   ESP.restart();
+   delay(1000);
+   
+}
 
 
 Energy2Shelly_ResetReason clear_rtc_power_on(void)
@@ -51,8 +104,9 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
     {
       // Magic number missing -> True cold boot (power applied)
       esp8266MagicNumber = 0xDEADBEEF;
+      rtc_reset_counter = 0;
       ESP.rtcUserMemoryWrite(RTC_magic_key_slot, &esp8266MagicNumber, sizeof(esp8266MagicNumber));
-
+      ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
       rtc_reset_reason = Energy2Shelly_ResetReason::POWER_ON;
     }
     else
@@ -70,9 +124,52 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
     ESP.rtcUserMemoryRead(RTC_reset_reason_slot, (uint32_t *)&rtc_reset_reason, sizeof(rtc_reset_reason));
   }
 #endif
+
+
+
+
+  if ((rtc_reset_reason==Energy2Shelly_ResetReason::MANUAL_RESET)||(rtc_reset_reason==Energy2Shelly_ResetReason::POWER_ON)) {
+       #ifdef ESP8266
+          ESP.rtcUserMemoryRead(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
+       #else
+          preferences.begin("e2s_config", false);
+          rtc_reset_counter=preferences.getUInt("reset_counter", 0);          
+       #endif    
+       rtc_reset_counter++;
+       #ifdef ESP8266
+          ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
+       #else
+          preferences.putUInt("reset_counter", rtc_reset_counter); 
+          preferences.end();       
+       #endif
+     
+       if (rtc_reset_counter>=5) {
+          rtc_reset_counter=0;
+          #ifdef ESP8266
+          ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
+          #else
+          // no need to set rtc_reset_counter in preferences, the next function will erase everything
+          #endif
+          reset_esp_to_default_and_reboot();
+       } 
+  }
+  else {
+     #ifdef ESP8266
+     ESP.rtcUserMemoryRead(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
+     #else
+     preferences.begin("e2s_config", false);
+     rtc_reset_counter=preferences.getUInt("reset_counter", 0);  
+     preferences.end();    
+    #endif
+  }
+  DEBUG_SERIAL.print(F("Reset counter:"));
+  DEBUG_SERIAL.println(rtc_reset_counter); 
+  
+  
   ram_copy_rtc_reset_reason=rtc_reset_reason;
   update_reset_reason(Energy2Shelly_ResetReason::OTHER); // set to unknown;
   return ram_copy_rtc_reset_reason;
+
 }
 
 void update_reset_reason(Energy2Shelly_ResetReason reason)
@@ -82,6 +179,19 @@ void update_reset_reason(Energy2Shelly_ResetReason reason)
   ESP.rtcUserMemoryWrite(RTC_reset_reason_slot, (uint32_t *)&rtc_reset_reason, sizeof(rtc_reset_reason));
 #endif
 }
+
+void set_rtc_reset_counter(uint32_t value)
+{
+  rtc_reset_counter = value;
+#if defined(ESP8266)
+  ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, (uint32_t *)&rtc_reset_counter, sizeof(rtc_reset_counter));
+#else
+  preferences.begin("e2s_config", false);
+  preferences.putUInt("reset_counter", rtc_reset_counter); 
+  preferences.end();    
+#endif
+}
+
 
 void all_esp_reset(Energy2Shelly_ResetReason reason)
 {
@@ -111,6 +221,8 @@ void stackWD(void)
   DEBUG_SERIAL.print(F(" bytes, Max free block: "));
   DEBUG_SERIAL.print(maxBlock);
   DEBUG_SERIAL.println(F(" bytes"));
+  DEBUG_SERIAL.print(F("Reset counts: "));
+  DEBUG_SERIAL.println(rtc_reset_counter);
   
   if (maxBlock < MIN_HEAP_SIZE)
   {
@@ -118,6 +230,7 @@ void stackWD(void)
     all_esp_reset(Energy2Shelly_ResetReason::LOW_MEMORY);
   }
 }
+
 
 uint64_t extendedMillis()
 {
@@ -136,6 +249,17 @@ uint64_t extendedMillis()
   // combine overflows and currentMillis to get the extended time in milliseconds
   return (overflows << 32) + currentMillis;
 }
+
+
+void checkreset_counter()
+{
+  if ((extendedMillis()>(60ull*1000ull)) && (rtc_reset_counter>0)) {
+      DEBUG_SERIAL.println(F("Set reset counter to 0"));
+      set_rtc_reset_counter(0);
+  }
+
+}
+
 
 void status_print(void)
 {
