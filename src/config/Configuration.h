@@ -300,7 +300,7 @@ extern IPAddress multicastIP;
 // MODBUS settings
 extern IPAddress modbus_ip;
 extern ModbusIP modbus1;
-extern int16_t modbus_result[256];
+extern int16_t modbus_result[64];
 
 // Default electrical values and offset
 extern const uint8_t defaultVoltage;
