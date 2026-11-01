@@ -384,7 +384,7 @@ void saveConfigCallback() {
     delay(5000);
 }
 
-void WifiManagerSetup(bool stationmode)
+void WifiManagerSetup(bool SW_update)
 {
   WiFi.setAutoReconnect(true);
  
@@ -411,15 +411,15 @@ void WifiManagerSetup(bool stationmode)
   wifiManager.setConfigPortalTimeout(180);
   std::vector<const char *> usermenu = {"info","exit","sep","update"};
   wifiManager.setMenu(usermenu);
-  if (stationmode)
+  if (SW_update)
   {
     WiFi.mode(WIFI_STA);
-    WiFi.begin();
+    WiFi.begin(config_doc["wifi"]["ssid"].as<const char*>(), config_doc["wifi"]["password"].as<const char*>());
     unsigned long startAttemptTime = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000)
     {
       delay(500);
-      Serial.print(".");
+      DEBUG_SERIAL.print(".");
     }
     update_reset_reason(Energy2Shelly_ResetReason::OTA_UPDATE);
     if (WiFi.status() == WL_CONNECTED)
@@ -432,27 +432,27 @@ void WifiManagerSetup(bool stationmode)
         wifiManager.process();
         delay(10);
       }
-     
+      all_esp_reset(Energy2Shelly_ResetReason::OTA_UPDATE);
     }
   }
-  else
+  else // No update requested.
   {
-    if (config_doc["wifi"]["ssid"] == "" || config_doc["wifi"]["password"] == "")
+    if (config_doc["wifi"]["ssid"] == "" || config_doc["wifi"]["password"] == "") // check for valid WiFi credentials, if not present, start config portal
     {
       DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
       WiFi.mode(WIFI_AP_STA);
       WiFi.softAP("Energy2Shelly", "");
     }
-    else {
+    else { //try to connect to WiFi with stored credentials
       WiFi.mode(WIFI_STA);
       WiFi.begin(config_doc["wifi"]["ssid"].as<const char*>(), config_doc["wifi"]["password"].as<const char*>());
       unsigned long startAttemptTime = millis();
       while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000)
       {
         delay(500);
-        Serial.print(".");
+        DEBUG_SERIAL.print(".");
       }
-      if (WiFi.status() != WL_CONNECTED)
+      if (WiFi.status() != WL_CONNECTED) // if connection failed, start config portal
       {
         WiFi.mode(WIFI_AP_STA); 
         WiFi.softAP("Energy2Shelly", "");
