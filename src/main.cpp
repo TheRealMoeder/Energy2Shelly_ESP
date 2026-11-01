@@ -127,21 +127,19 @@ void setup(void)
      request->send_P(200, "text/html", HTML_HOME); // Direkt die Seite senden, kein Redirect!
      });
 
-  // Android / Google Hotspot-Erkennung
+  // Android / Google Hotspot
      server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    // Android erwartet hier entweder ein 200 OK mit Inhalt oder einen 302 Redirect.
-    // Wir leiten Android direkt auf die Startseite um.
-    request->redirect("http://192.168.4.1/"); // Ersetze es durch deine exakte AP-IP
+     request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
     });
 
-  // Windows / Microsoft Erkennung
+  // Windows / Microsoft 
     server.on("/connecttest.txt", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->redirect("http://192.168.4.1/");
+    request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
     });
 
     server.onNotFound([](AsyncWebServerRequest *request) {
     DEBUG_SERIAL.printf("Not Found -> Redirect zu IP: %s\n", request->url().c_str());
-    request->redirect("http://192.168.4.1/"); // Zwinge den Browser auf die IP
+    request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
   });
   }
 
