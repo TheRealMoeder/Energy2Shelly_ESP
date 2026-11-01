@@ -20,6 +20,9 @@
 // Web content
 #include "web/html_home.h"
 
+
+
+
 // Utils function for monitoring and reset
 #include "utils/utils.h"
 
@@ -38,6 +41,7 @@ bool isNotAuthorized(AsyncWebServerRequest *request) {
     }
     return false;
 }
+
 
 
 void setup(void)
@@ -115,6 +119,30 @@ void setup(void)
     {
       digitalWrite(led, HIGH);
     }
+  }
+  if (WiFi.getMode() == WIFI_AP_STA) {
+     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+     dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+     server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+     request->send_P(200, "text/html", HTML_HOME); // Direkt die Seite senden, kein Redirect!
+     });
+
+  // Android / Google Hotspot-Erkennung
+     server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    // Android erwartet hier entweder ein 200 OK mit Inhalt oder einen 302 Redirect.
+    // Wir leiten Android direkt auf die Startseite um.
+    request->redirect("http://192.168.4.1/"); // Ersetze es durch deine exakte AP-IP
+    });
+
+  // Windows / Microsoft Erkennung
+    server.on("/connecttest.txt", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->redirect("http://192.168.4.1/");
+    });
+
+    server.onNotFound([](AsyncWebServerRequest *request) {
+    DEBUG_SERIAL.printf("Not Found -> Redirect zu IP: %s\n", request->url().c_str());
+    request->redirect("http://192.168.4.1/"); // Zwinge den Browser auf die IP
+  });
   }
 
   // Set up web server and endpoints
@@ -279,7 +307,7 @@ void setup(void)
     request->send(200, "application/json", json_prefs_string); 
   });
 
-server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST, 
+  server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST, 
     [](AsyncWebServerRequest *request) {
         if (isNotAuthorized(request)) {
             request->send(401, "text/plain", "Unauthorized");
@@ -370,6 +398,7 @@ server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST,
   wsConsole.onEvent(onWsEvent);
   server.addHandler(&webSocket);
   server.addHandler(&wsConsole);
+ 
   server.begin();
 
   // Set up RPC over UDP for Marstek users
@@ -529,7 +558,7 @@ void loop()
   {
     // not connected, attempt to reconnect
     static unsigned long reconnectStart = 0;
-    if (currentMillis - reconnectStart > 10000) // Attempt to reconnect every 10 seconds, to fast reconnection can cause issues with some routers and APs
+    if ((currentMillis - reconnectStart > 10000)&&(WiFi.getMode() == WIFI_STA)) // Attempt to reconnect every 10 seconds, to fast reconnection can cause issues with some routers and APs
     {
       reconnectStart = currentMillis;
       wifi_reconnect_attempts++;
@@ -552,13 +581,18 @@ void loop()
       DEBUG_SERIAL.println(F("Disabled serial plottin"));
   }
 
-  // check if WiFi connection has been lost for more than the allowed interval
-  // saveguard against nasty router/AP behavior
-  if (millis() - WiFilastConnectionCheck > WiFicheckInterval)
-  {
-    DEBUG_SERIAL.println(F("Lost WiFi connection or SSID changed!"));
-    all_esp_reset(Energy2Shelly_ResetReason::WIFI_DISCONNECT);
+  if (WiFi.getMode() == WIFI_AP_STA) {
+     dnsServer.processNextRequest(); 
+  } else {
+    // check if WiFi connection has been lost for more than the allowed interval
+    // saveguard against nasty router/AP behavior
+    if (millis() - WiFilastConnectionCheck > WiFicheckInterval)
+    {
+      DEBUG_SERIAL.println(F("Lost WiFi connection or SSID changed!"));
+      all_esp_reset(Energy2Shelly_ResetReason::WIFI_DISCONNECT);
+    }
   }
+
   if (parametersUpdated) {
     DEBUG_SERIAL.println(F("New keys"));
     update_config_doc.clear(); 

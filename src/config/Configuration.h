@@ -30,6 +30,7 @@
 #include <ESPAsyncWebServer.h>
 #include <WiFiUdp.h>
 #include <ModbusIP_ESP8266.h>
+#include <DNSServer.h>
 
 // ============================================================================
 // DEBUG & TIMING
@@ -361,6 +362,10 @@ extern WiFiUDP Udp;
 extern HTTPClient http;
 extern WiFiUDP UdpRPC;
 extern void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+
+
+extern DNSServer dnsServer;
+extern const byte DNS_PORT;
 
 // Platform-specific UDP print macro
 #ifdef ESP32

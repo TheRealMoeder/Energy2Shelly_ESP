@@ -600,6 +600,20 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         const statusText = document.getElementById('status');
         let currentConfig = {};
         const CONFIG_DICTIONARY = {
+            wifi: {
+                _label: "WiFi Settings",
+                _description: "Settings for connecting to WiFi networks.",
+                ssid: {
+                    label: "SSID",
+                    max_length : 32,
+                    description: "The name of the WiFi network."
+                },
+                password: {
+                    label: "Password",
+                    max_length : 64,
+                    description: "The password for the WiFi network."
+                }
+            },
             basic: {
                 _label: "Basic Settings",
                 _description: "General settings for the device.",
@@ -1106,7 +1120,12 @@ async function saveConfig() {
             const inputField = document.getElementById('input_' + currentPath);
 
             if (inputField) {
-                result[key] = castValue(inputField.value);
+                const lowerKey = key.toLowerCase();
+                if (lowerKey.includes('password') || lowerKey.includes('ssid')) {
+                    result[key] = String(inputField.value); // Niemals in Number konvertieren
+                } else {
+                    result[key] = castValue(inputField.value); // Normale Konvertierung für den Rest
+                }
             } else if (typeof dictionaryObj[key] === 'object' && dictionaryObj[key] !== null && !dictionaryObj[key].hasOwnProperty('label')) {
                 const subConfig = (configObj && configObj[key]) ? configObj[key] : {};
                 result[key] = buildPayload(subConfig, dictionaryObj[key], currentPath);

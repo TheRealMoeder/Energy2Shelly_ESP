@@ -74,7 +74,8 @@ WiFiUDP Udp;
 HTTPClient http;
 WiFiUDP UdpRPC;
 uint16_t wifi_reconnect_attempts = 0;
-
+DNSServer dnsServer;
+const byte DNS_PORT = 53;
 // ============================================================================
 // MDNS RESPONDER HANDLES (ESP8266 only)
 // ============================================================================
@@ -331,6 +332,8 @@ void load_parameters() {
    config_doc["console"]["serial_console_time"] = config_doc["console"]["serial_console_time"]|"";
    config_doc["console"]["serial_console_time"]  = config_doc["console"]["serial_console_time"].as<int>() ? config_doc["console"]["serial_console_time"].as<int>() : (int)1;
 
+   config_doc["wifi"]["ssid"] = config_doc["wifi"]["ssid"] | "";
+   config_doc["wifi"]["password"] = config_doc["wifi"]["password"] | "";
  
 
  
@@ -374,14 +377,14 @@ void WifiManagerSetup(bool stationmode)
   load_parameters(); // Load parameters from Preferences
  
 
-  static WiFiManager wifiManager;
+  WiFiManager wifiManager;
   wifiManager.setDebugOutput(false);
   wifiManager.setShowStaticFields(true);
 
   wifiManager.setTitle(String("Energy2Shelly for ESP ") + VERSION_BUILD);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.setConfigPortalTimeout(180);
-  std::vector<const char *> usermenu = {"wifi","info","exit","sep","update"};
+  std::vector<const char *> usermenu = {"info","exit","sep","update"};
   wifiManager.setMenu(usermenu);
   if (stationmode)
   {
@@ -409,17 +412,31 @@ void WifiManagerSetup(bool stationmode)
   }
   else
   {
-    if (!wifiManager.autoConnect("Energy2Shelly"))
+    if (config_doc["wifi"]["wifi_ssid"] == "" || config_doc["wifi"]["wifi_password"] == "")
     {
-      DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
-     
-      delay(3000);
-      ESP.restart();
-      delay(5000);
+      DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
+      WiFi.mode(WIFI_AP_STA);
+      WiFi.softAP("Energy2Shelly", "");
+    }
+    else {
+      WiFi.mode(WIFI_STA);
+      WiFi.begin(config_doc["wifi"]["wifi_ssid"].as<const char*>(), config_doc["wifi"]["wifi_password"].as<const char*>());
+      unsigned long startAttemptTime = millis();
+      while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000)
+      {
+        delay(500);
+        Serial.print(".");
+      }
+      if (WiFi.status() != WL_CONNECTED)
+      {
+        WiFi.mode(WIFI_AP_STA); WiFi.softAP("Energy2Shelly", "");
+        DEBUG_SERIAL.println(F("Failed to connect to WiFi, starting config portal..."));
+      }
     }
   }
   
-  DEBUG_SERIAL.println(F("connected"));
+  
+  
  
   // Set Shelly ID to ESP's MAC address by default
   String currentMac = config_doc["shelly"]["shelly_mac"].as<String>();
