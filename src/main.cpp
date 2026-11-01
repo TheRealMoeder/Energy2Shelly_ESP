@@ -576,7 +576,7 @@ void loop()
 
   if (enableConsoleOutputSerial && (extendedMillis()>(config_doc["console"]["serial_console_time"].as<int>()*60000ll))) {
       enableConsoleOutputSerial=false;
-      DEBUG_SERIAL.println(F("Disabled serial plottin"));
+      DEBUG_SERIAL.println(F("Disabled serial plotting"));
   }
 
   if (WiFi.getMode() == WIFI_AP_STA) {
