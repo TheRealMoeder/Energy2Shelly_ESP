@@ -288,7 +288,7 @@ const char DEFAULT_CONFIG_JSON[] PROGMEM = R"=====(
 
 void load_parameters() {
   config_doc.clear();
-  DeserializationError defaultError = deserializeJson(config_doc, DEFAULT_CONFIG_JSON);
+  DeserializationError defaultError = deserializeJson(config_doc, (const __FlashStringHelper*)DEFAULT_CONFIG_JSON);
   if (defaultError) {
     DEBUG_SERIAL.println(F("Error during default config initialization!"));
   }
