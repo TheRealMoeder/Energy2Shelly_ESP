@@ -580,7 +580,11 @@ void loop()
   }
 
   if (WiFi.getMode() == WIFI_AP_STA) {
-     dnsServer.processNextRequest(); 
+     dnsServer.processNextRequest();
+     if ((extendedMillis()>15ull*60ull*1000ull) && (WiFi.softAPgetStationNum()==0)) { // Reset device after 15 minutes in AP mode, to avoid being stuck in AP mode forever
+        DEBUG_SERIAL.println(F("AP mode timeout, resetting device"));
+        all_esp_reset(Energy2Shelly_ResetReason::AP_TIMEOUT);
+     }
   } else {
     // check if WiFi connection has been lost for more than the allowed interval
     // saveguard against nasty router/AP behavior

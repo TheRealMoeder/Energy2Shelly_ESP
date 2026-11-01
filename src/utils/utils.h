@@ -11,7 +11,8 @@ enum class Energy2Shelly_ResetReason
   WIFI_DISCONNECT = 3,
   OTA_UPDATE = 4,
   RECONFIGURE = 5,
-  OTHER = 6
+  OTHER = 6,
+  AP_TIMEOUT = 7
 };
 
 void all_esp_reset(Energy2Shelly_ResetReason reason);
