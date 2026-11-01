@@ -224,19 +224,19 @@ String json_prefs_string;
 JsonDocument update_config_doc;
 
 
-void mergeJson(JsonObject target, JsonObjectConst source) {
-    for (JsonPairConst p : source) {
-        JsonVariantConst value = p.value();
-        
-        if (value.is<JsonObjectConst>()) {
-            JsonObject targetChild = target[p.key()].to<JsonObject>();
-            mergeJson(targetChild, value.as<JsonObjectConst>());
-        } else {
-            target[p.key()] = value;
-        }
+void mergeJson(JsonVariant dst, JsonVariantConst src) {
+  if (src.is<JsonObjectConst>()) {
+    for (JsonPairConst kv : src.as<JsonObjectConst>()) {
+      if (dst[kv.key()].is<JsonObject>()) {
+        mergeJson(dst[kv.key()], kv.value());
+      } else {
+        dst[kv.key()] = kv.value();
+      }
     }
+  } else {
+    dst.set(src);
+  }
 }
-
 
 
 bool save_parameters() {
@@ -256,96 +256,56 @@ bool save_parameters() {
   return true;
 }
 
+// 1. Definition im Flash-Speicher mittels PROGMEM
+const char DEFAULT_CONFIG_JSON[] PROGMEM = R"=====(
+{
+  "basic": {
+    "ntp_server": "de.pool.ntp.org",
+    "timezone": "CET-1CEST,M3.5.0/2,M10.5.0/3",
+    "phase_number": 3,
+    "input_type": 0
+  },
+  "shelly": {
+    "shelly_port": 2220,
+    "shelly_gen": 2,
+    "shelly_fw_id": "20241011-114455/1.4.4-g6d2a586",
+    "shelly_name": "shellypro3em-"
+  },
+  "sunspec": { "query_period": 5000 },
+  "tibber": { "query_period": 5000 },
+  "rct": { "query_period": 5000 },
+  "http": { "query_period": 5000 },
+  "smlserial": {
+    "rx_pin": 3,
+    "baud": 9600,
+    "invert": "false"
+  },
+  "console": {
+    "web_console": "true",
+    "serial_console_time": 1
+  }
+}
+)=====";
+
 void load_parameters() {
-  preferences.begin("e2s_config", false);
   config_doc.clear();
-  DeserializationError error=DeserializationError::EmptyInput;
+  DeserializationError defaultError = deserializeJson(config_doc, DEFAULT_CONFIG_JSON);
+  if (defaultError) {
+    DEBUG_SERIAL.println(F("Error during default config initialization!"));
+  }
+
   if (FS_INSTANCE.exists(configPath)) {
     File configFile = FS_INSTANCE.open(configPath, "r");
-    error = deserializeJson(config_doc, configFile);
-    configFile.close();
+    if (configFile) {
+      JsonDocument fs_doc;
+      DeserializationError fsError = deserializeJson(fs_doc, configFile);
+      configFile.close();
+
+      if (fsError == DeserializationError::Ok) {
+        mergeJson(config_doc.to<JsonVariant>(), fs_doc.as<JsonVariantConst>());
+      }
+    }
   } 
-  if (error!=DeserializationError::Ok)  {
-    // Load individual parameters if the combined config_doc is not present
-    config_doc["basic"]["reset_password"] = preferences.getString("reset_password", "");
-    config_doc["basic"]["input_type"] = preferences.getString("input_type", "");
-    config_doc["basic"]["ntp_server"] = preferences.getString("ntp_server", "");
-    config_doc["basic"]["timezone"] = preferences.getString("timezone", "");
-    config_doc["basic"]["phase_number"] = preferences.getString("phase_number", "");
-    config_doc["basic"]["power_offset"] = preferences.getString("power_offset", "");
-
-    config_doc["mqtt"]["mqtt_server"] = preferences.getString("mqtt_server", "");
-    config_doc["mqtt"]["mqtt_port"] = preferences.getString("mqtt_port", "");
-    config_doc["mqtt"]["mqtt_topic"] = preferences.getString("mqtt_topic", "");
-    config_doc["mqtt"]["mqtt_user"] = preferences.getString("mqtt_user", "");
-    config_doc["mqtt"]["mqtt_password"] = preferences.getString("mqtt_passwd", "");
-
-    config_doc["sunspec"]["modbus_dev"] = preferences.getString("modbus_dev", "");
-    config_doc["sunspec"]["modbus_ip"] = preferences.getString("mqtt_server", "");
-    config_doc["sunspec"]["modbus_port"] = preferences.getString("mqtt_port", "");
-    config_doc["sunspec"]["query_period"] = preferences.getString("query_period", "");
-   
-
-    config_doc["led"]["led_gpio"] = preferences.getString("led_gpio", "");
-    config_doc["led"]["led_gpio_i"] = preferences.getString("led_gpio_i", "");
-
-    config_doc["shelly"]["shelly_port"] = preferences.getString("shelly_port", "2220");
-   
-    config_doc["json"]["power_path"] = preferences.getString("power_path", "");
-    config_doc["json"]["pwr_export_path"] = preferences.getString("pwr_export_path", "");
-    config_doc["json"]["power_l1_path"] = preferences.getString("power_l1_path", "");
-    config_doc["json"]["power_l2_path"] = preferences.getString("power_l2_path", "");
-    config_doc["json"]["power_l3_path"] = preferences.getString("power_l3_path", "");
-    config_doc["json"]["energy_in_path"] = preferences.getString("energy_in_path", "");
-    config_doc["json"]["energy_out_path"] = preferences.getString("energy_out_path", "");
-    
-    
-    config_doc["http"]["server_ip"] = preferences.getString("mqtt_server", ""); 
-    config_doc["http"]["query_period"] = preferences.getString("query_period", "");
-
-    config_doc["sma"]["sma_id"] = preferences.getString("sma_id", "");
-    
-    
-    config_doc["tibber"]["tibber_host"] = preferences.getString("tibber_host", "");
-    config_doc["tibber"]["tibber_nodeid"] = preferences.getString("tibber_nodeid", "");
-    config_doc["tibber"]["tibber_user"] = preferences.getString("tibber_user", "");
-    config_doc["tibber"]["tibber_password"] = preferences.getString("tibber_password", "");
-    config_doc["tibber"]["query_period"] = preferences.getString("query_period", "");
-
-    config_doc["rct"]["rct_host"] = preferences.getString("rct_host", "");
-    config_doc["rct"]["rct_port"] = preferences.getString("rct_port", "");
-    config_doc["rct"]["query_period"] = preferences.getString("query_period", "");
-  }
-    preferences.end();
-
-
-   /* make sure default values are available */
-   config_doc["shelly"]["shelly_port"] = config_doc["shelly"]["shelly_port"].as<int>() ? config_doc["shelly"]["shelly_port"].as<int>() : 2220;
-   config_doc["shelly"]["shelly_gen"] = config_doc["shelly"]["shelly_gen"].as<int>() ? config_doc["shelly"]["shelly_gen"].as<int>() : 2;
-   config_doc["shelly"]["shelly_fw_id"] = config_doc["shelly"]["shelly_fw_id"] | "20241011-114455/1.4.4-g6d2a586";
-   config_doc["shelly"]["shelly_name"] = config_doc["shelly"]["shelly_name"] | "shellypro3em-";
-
-   config_doc["basic"]["phase_number"] = config_doc["basic"]["phase_number"].as<int>() ? config_doc["basic"]["phase_number"].as<int>(): 3;
-   config_doc["basic"]["ntp_server"] = config_doc["basic"]["ntp_server"]| "de.pool.ntp.org";
-   config_doc["basic"]["input_type"] = config_doc["basic"]["input_type"].as<int>() ? config_doc["basic"]["input_type"].as<int>() : static_cast<int>(input_type_enum::NONE);
-   if (config_doc["basic"]["ntp_server"] == "") config_doc["basic"]["ntp_server"] = "de.pool.ntp.org";
-   if (config_doc["basic"]["timezone"] == "") config_doc["basic"]["timezone"] = "CET-1CEST,M3.5.0/2,M10.5.0/3";
-   
-   config_doc["sunspec"]["query_period"] = config_doc["sunspec"]["query_period"].as<int>() ? config_doc["sunspec"]["query_period"].as<int>() : 5000;
-   config_doc["tibber"]["query_period"] = config_doc["tibber"]["query_period"].as<int>() ? config_doc["tibber"]["query_period"].as<int>() : 5000;
-   config_doc["rct"]["query_period"]    = config_doc["rct"]["query_period"].as<int>() ? config_doc["rct"]["query_period"].as<int>() : 5000;
-   config_doc["http"]["query_period"]   = config_doc["http"]["query_period"].as<int>() ? config_doc["http"]["query_period"].as<int>() : 5000;
-
-   config_doc["smlserial"]["rx_pin"] = config_doc["smlserial"]["rx_pin"].is<int>() ? config_doc["smlserial"]["rx_pin"].as<int>() : SML_DEFAULT_RX_PIN;
-   config_doc["smlserial"]["baud"]   = config_doc["smlserial"]["baud"].as<uint32_t>() ? config_doc["smlserial"]["baud"].as<uint32_t>() : 9600;
-   config_doc["smlserial"]["invert"] = config_doc["smlserial"]["invert"] | "false";
-   
- 
-   config_doc["console"]["web_console"]  =    config_doc["console"]["web_console"] | "true";
-   config_doc["console"]["serial_console_time"] = config_doc["console"]["serial_console_time"]|"";
-   config_doc["console"]["serial_console_time"]  = config_doc["console"]["serial_console_time"].as<int>() ? config_doc["console"]["serial_console_time"].as<int>() : (int)1;
-
- 
 
  
 }
