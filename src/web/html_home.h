@@ -917,6 +917,14 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         
         currentConfig = await res.json();
        
+         if (currentConfig.wifi && currentConfig.wifi.networks) {
+            const scannedSSIDs = currentConfig.wifi.networks.map(net => net.ssid);
+            const uniqueSSIDs = [...new Set(scannedSSIDs)].filter(ssid => ssid && ssid.trim() !== "");
+            
+            CONFIG_DICTIONARY.wifi.ssid.options = uniqueSSIDs;
+            delete currentConfig.wifi.networks;
+        }
+
         formContainer.innerHTML = ''; 
         generateFormFromDictionary(CONFIG_DICTIONARY, currentConfig, formContainer);
           const inputTypeField = document.getElementById('input_basic_input_type');

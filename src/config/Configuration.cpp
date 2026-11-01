@@ -79,6 +79,8 @@ WiFiUDP UdpRPC;
 uint16_t wifi_reconnect_attempts = 0;
 DNSServer dnsServer;
 const byte DNS_PORT = 53;
+unsigned long WiFi_lastScanTime = 0;
+bool WiFi_scanInProgress = false;
 // ============================================================================
 // MDNS RESPONDER HANDLES (ESP8266 only)
 // ============================================================================
@@ -124,6 +126,50 @@ void handleblinkled()
   }
 }
 
+void WiFi_processScanResult(int n) {
+  if (!config_doc["wifi"]["networks"].isNull()) {
+    config_doc["wifi"].remove("networks"); 
+  }
+  JsonArray networks = config_doc["wifi"].createNestedArray("networks");
+  for (int i = 0; i < n; ++i) {
+    JsonObject net = networks.createNestedObject();
+    net["ssid"] = WiFi.SSID(i);
+    net["rssi"] = WiFi.RSSI(i);
+    net["channel"] = WiFi.channel(i);
+    
+#if defined(ESP32)
+    net["encryption"] = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? "Open" : "Secured";
+#elif defined(ESP8266)
+    net["encryption"] = (WiFi.encryptionType(i) == ENC_TYPE_NONE) ? "Open" : "Secured";
+#endif
+  }
+}
+
+
+void wifi_scan()
+{
+  if (WiFi_scanInProgress) {
+    int16_t scanResult = WiFi.scanComplete();
+
+    if (scanResult >= 0) {
+      WiFi_processScanResult(scanResult);
+      
+      WiFi.scanDelete();
+      WiFi_scanInProgress = false;
+      WiFi_lastScanTime = millis();
+    } 
+    else if (scanResult == WIFI_SCAN_FAILED) {
+      DEBUG_SERIAL.println(F("Background-Scan failed."));
+      WiFi_scanInProgress = false;
+      WiFi_lastScanTime = millis();
+    }
+  }
+  if (!WiFi_scanInProgress && (millis() - WiFi_lastScanTime >= Wifi_scanInterval)) {
+    DEBUG_SERIAL.println(F("\nNew asyncron scan..."));
+    WiFi.scanNetworks(true);
+    WiFi_scanInProgress = true;
+  }
+}
 
 void interprete_parameters()
 {
@@ -241,6 +287,9 @@ void mergeJson(JsonVariant dst, JsonVariantConst src) {
 
 
 bool save_parameters() {
+   if (!config_doc["wifi"]["networks"].isNull()) {
+    config_doc["wifi"].remove("networks"); 
+  }
   File configFile = FS_INSTANCE.open(configPath, "w");
   if (!configFile) {
     DEBUG_SERIAL.println(F("Error: Could not open file"));

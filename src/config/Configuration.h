@@ -367,6 +367,12 @@ extern void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsE
 extern DNSServer dnsServer;
 extern const byte DNS_PORT;
 
+extern unsigned long WiFi_lastScanTime;
+#define Wifi_scanInterval 15000 
+extern bool WiFi_scanInProgress;
+
+
+
 // Platform-specific UDP print macro
 #ifdef ESP32
 #define UDPPRINT print
@@ -398,5 +404,5 @@ void interprete_parameters();
 bool save_parameters();
 void load_parameters();
 void mergeJson(JsonObject target, JsonObjectConst source);
-
+void wifi_scan();
 #endif // CONFIGURATION_H
