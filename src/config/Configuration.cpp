@@ -256,7 +256,6 @@ bool save_parameters() {
   return true;
 }
 
-// 1. Definition im Flash-Speicher mittels PROGMEM
 const char DEFAULT_CONFIG_JSON[] PROGMEM = R"=====(
 {
   "basic": {
