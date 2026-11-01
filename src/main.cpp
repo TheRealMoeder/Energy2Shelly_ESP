@@ -619,7 +619,7 @@ void loop()
     }
   }
 
-  if (shouldupdate && (currentMillis - updateTimestamp >= 2000))
+  if (shouldReboot && (currentMillis - updateTimestamp >= 2000))
   {
     shouldReboot = false;
     all_esp_reset(Energy2Shelly_ResetReason::REBOOT_REQUEST);
