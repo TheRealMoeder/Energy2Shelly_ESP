@@ -347,6 +347,18 @@ void setup(void)
     request->send(200, "application/json", json_prefs_string); 
   });
 
+
+  server.on("/reboot", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {  
+    if (isNotAuthorized(request)) {
+            return request->requestAuthentication(); 
+        }
+    request->send(200, "text/plain", "Rebooting device...");
+    updateTimestamp=millis();
+    shouldReboot=true;
+    
+  });
+
+
   server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST, 
     [](AsyncWebServerRequest *request) {
         if (isNotAuthorized(request)) {
@@ -606,6 +618,13 @@ void loop()
       DEBUG_SERIAL.println(F("WiFi disconnected, attempting to reconnect..."));
     }
   }
+
+  if (shouldupdate && (currentMillis - updateTimestamp >= 2000))
+  {
+    shouldReboot = false;
+    all_esp_reset(Energy2Shelly_ResetReason::REBOOT_REQUEST);
+  }
+
 
   // check Watchdogs and print status info
   static unsigned long WDTimer = 0;

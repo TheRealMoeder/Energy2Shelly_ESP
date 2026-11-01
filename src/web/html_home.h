@@ -581,6 +581,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         <div id="configForm">Loading configuration...</div>
         
         <button id="saveBtn" style="margin-top: 15px;">Save Changes</button>
+        <button id="rebootBtn" style="margin-top: 15px; background-color: #dc3545; color: white;">Restart Device</button>
         <p id="status"></p>
     </div>
 
@@ -595,6 +596,48 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         }
     }
     
+document.getElementById('rebootBtn').addEventListener('click', async () => {
+    if (!confirm("Are you sure you want to restart the device?")) {
+        return;
+    }
+
+    const statusText = document.getElementById('status');
+    statusText.innerText = "Sending reboot command...";
+    statusText.style.color = "orange";
+
+    const redirectToHome = () => {
+        setTimeout(() => {
+            window.location.href = '/'; 
+        }, 20000); 
+    };
+    try {
+        const res = await fetch('/reboot', { method: 'POST' }); 
+        
+        if (res.ok) {
+            statusText.innerText = "Device is restarting... Redirecting to homepage in 20 seconds.";
+            statusText.style.color = "green";
+            
+            document.getElementById('saveBtn').disabled = true;
+            document.getElementById('rebootBtn').disabled = true;
+
+            redirectToHome();
+        } else {
+            statusText.innerText = `Reboot failed (Status: ${res.status}).`;
+            statusText.style.color = "red";
+        }
+    } catch (err) {
+        statusText.innerText = "Device disconnected. Restarting... Redirecting to homepage in 20 seconds.";
+        statusText.style.color = "green";
+        
+        document.getElementById('saveBtn').disabled = true;
+        document.getElementById('rebootBtn').disabled = true;
+        
+        redirectToHome();
+    }
+});
+
+
+
         const formContainer = document.getElementById('configForm');
         const saveBtn = document.getElementById('saveBtn');
         const statusText = document.getElementById('status');
