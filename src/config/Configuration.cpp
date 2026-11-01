@@ -437,7 +437,7 @@ void WifiManagerSetup(bool stationmode)
   }
   else
   {
-    if (config_doc["wifi"]["wifi_ssid"] == "" || config_doc["wifi"]["wifi_password"] == "")
+    if (config_doc["wifi"]["ssid"] == "" || config_doc["wifi"]["password"] == "")
     {
       DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
       WiFi.mode(WIFI_AP_STA);
@@ -445,7 +445,7 @@ void WifiManagerSetup(bool stationmode)
     }
     else {
       WiFi.mode(WIFI_STA);
-      WiFi.begin(config_doc["wifi"]["wifi_ssid"].as<const char*>(), config_doc["wifi"]["wifi_password"].as<const char*>());
+      WiFi.begin(config_doc["wifi"]["ssid"].as<const char*>(), config_doc["wifi"]["password"].as<const char*>());
       unsigned long startAttemptTime = millis();
       while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000)
       {
@@ -454,7 +454,8 @@ void WifiManagerSetup(bool stationmode)
       }
       if (WiFi.status() != WL_CONNECTED)
       {
-        WiFi.mode(WIFI_AP_STA); WiFi.softAP("Energy2Shelly", "");
+        WiFi.mode(WIFI_AP_STA); 
+        WiFi.softAP("Energy2Shelly", "");
         DEBUG_SERIAL.println(F("Failed to connect to WiFi, starting config portal..."));
       }
     }
