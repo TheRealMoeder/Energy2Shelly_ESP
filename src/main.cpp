@@ -123,10 +123,25 @@ void setup(void)
   if (WiFi.getMode() == WIFI_AP_STA) {
      dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
      dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
-     server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-     request->send_P(200, "text/html", HTML_HOME); // Direkt die Seite senden, kein Redirect!
-     });
+     server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {     
+      size_t totalLen = strlen_P(HTML_HOME); 
+      AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+      size_t remaining = totalLen - index;
+      if (remaining == 0) return 0;
 
+      size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+
+      memcpy_P(buffer, HTML_HOME + index, toCopy);
+        
+        return toCopy; 
+    });
+
+    response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    response->addHeader("Pragma", "no-cache");
+    response->addHeader("Expires", "-1");
+
+    request->send(response);
+});
   // Android / Google Hotspot
      server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
      request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
@@ -144,19 +159,31 @@ void setup(void)
   }
 
   // Set up web server and endpoints
-  server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(HTML_HOME), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-        // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
-        memcpy_P(buffer, HTML_HOME + index, maxLen); return maxLen;
-    });
-    request->send(response); });
+  server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    size_t totalLen = strlen_P(HTML_HOME);
 
+    AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+        size_t remaining = totalLen - index;
+        if (remaining == 0) return 0; 
+
+        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+        memcpy_P(buffer, HTML_HOME + index, toCopy); 
+        
+        return toCopy; 
+    });
+
+    request->send(response); 
+});
   server.on("/plot", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(webplotter_html), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-        // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
-        memcpy_P(buffer, webplotter_html + index, maxLen); return maxLen;
+            {  size_t totalLen = strlen_P(webplotter_html); 
+    AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(webplotter_html), [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+      size_t remaining = totalLen - index;
+        if (remaining == 0) return 0; 
+
+        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+        memcpy_P(buffer, webplotter_html + index, toCopy); 
+        
+        return toCopy; 
     });
     request->send(response); });
  server.on("/chart.min.js", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -187,18 +214,30 @@ void setup(void)
    });
 
   server.on("/console", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(htmlPage_console), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+            {  size_t totalLen = strlen_P(htmlPage_console); 
+      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(htmlPage_console), [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
         // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
-        memcpy_P(buffer, htmlPage_console + index, maxLen); return maxLen;
+          size_t remaining = totalLen - index;
+        if (remaining == 0) return 0; 
+
+        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+        memcpy_P(buffer, htmlPage_console + index, toCopy); 
+        
+        return toCopy; 
     });
     request->send(response); });
 
   server.on("/config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(CONFIG_PAGE_HTML), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+            {  size_t totalLen = strlen_P(CONFIG_PAGE_HTML); 
+      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(CONFIG_PAGE_HTML), [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
         // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
-        memcpy_P(buffer, CONFIG_PAGE_HTML + index, maxLen); return maxLen;
+          size_t remaining = totalLen - index;
+        if (remaining == 0) return 0; 
+
+        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+        memcpy_P(buffer, CONFIG_PAGE_HTML + index, toCopy); 
+        
+        return toCopy; 
     });
     request->send(response); });
 
