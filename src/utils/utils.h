@@ -12,7 +12,8 @@ enum class Energy2Shelly_ResetReason
   OTA_UPDATE = 4,
   RECONFIGURE = 5,
   OTHER = 6,
-  AP_TIMEOUT = 7
+  AP_TIMEOUT = 7,
+  REBOOT_REQUEST = 8
 };
 
 void all_esp_reset(Energy2Shelly_ResetReason reason);

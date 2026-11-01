@@ -185,6 +185,15 @@ void status_print(void)
     case Energy2Shelly_ResetReason::OTA_UPDATE:
     DEBUG_SERIAL.print(F("OTA reset"));
     break;
+  case Energy2Shelly_ResetReason::RECONFIGURE:
+    DEBUG_SERIAL.print(F("Reconfigure reset"));
+    break;
+  case Energy2Shelly_ResetReason::AP_TIMEOUT:
+    DEBUG_SERIAL.print(F("AP timeout reset"));
+    break;
+  case Energy2Shelly_ResetReason::REBOOT_REQUEST:
+    DEBUG_SERIAL.print(F("Reboot request reset"));
+    break;
   default:
     DEBUG_SERIAL.print(F("Unknown reset reason"));
     break;
