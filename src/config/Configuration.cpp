@@ -1,5 +1,8 @@
 #include "Configuration.h"
 #include "../utils/utils.h"
+#include <LittleFS.h>
+#define FS_INSTANCE LittleFS
+const char* configPath = "/config.json";
 unsigned long startMillis = 0;
 unsigned long currentMillis;
 // for time synchronization
@@ -237,22 +240,33 @@ void mergeJson(JsonObject target, JsonObjectConst source) {
 
 
 
-void save_parameters() {
-    preferences.begin("e2s_config", false);
-    serializeJson(config_doc, json_prefs_string);
-    preferences.putString("config_doc", json_prefs_string);
-    preferences.end();
+bool save_parameters() {
+  File configFile = FS_INSTANCE.open(configPath, "w");
+  if (!configFile) {
+    DEBUG_SERIAL.println(F("Error: Could not open file"));
+    return false;
+  }
 
+  if (serializeJson(config_doc, configFile) == 0) {
+    DEBUG_SERIAL.println(F("Error: not possible to serialize"));
+    configFile.close();
+    return false;
+  }
+
+  configFile.close();
+  return true;
 }
 
 void load_parameters() {
   preferences.begin("e2s_config", false);
   config_doc.clear();
-  if (preferences.isKey("config_doc")) {
-    json_prefs_string = preferences.getString("config_doc", "");
-    DEBUG_SERIAL.println(json_prefs_string);
-    deserializeJson(config_doc, json_prefs_string);
-  } else {
+  DeserializationError error=DeserializationError::EmptyInput;
+  if (FS_INSTANCE.exists(configPath)) {
+    File configFile = FS_INSTANCE.open(configPath, "r");
+    error = deserializeJson(config_doc, configFile);
+    configFile.close();
+  } 
+  if (error!=DeserializationError::Ok)  {
     // Load individual parameters if the combined config_doc is not present
     config_doc["basic"]["reset_password"] = preferences.getString("reset_password", "");
     config_doc["basic"]["input_type"] = preferences.getString("input_type", "");
@@ -374,6 +388,17 @@ void WifiManagerSetup(bool stationmode)
 {
   WiFi.setAutoReconnect(true);
  
+  #if defined(ESP32)
+    if (!LittleFS.begin(true)) {
+      DEBUG_SERIAL.println(F("LittleFS Mounting Error!"));
+    }
+  #elif defined(ESP8266)
+    if (!LittleFS.begin()) {
+      DEBUG_SERIAL.println(F("LittleFS Mounting Error. Try formating..."));
+      LittleFS.format();
+      LittleFS.begin();
+    }
+  #endif
   load_parameters(); // Load parameters from Preferences
  
 
