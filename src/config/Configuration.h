@@ -334,6 +334,7 @@ extern char rpcUser[20];
 extern bool shouldSaveConfig;
 extern bool shouldResetConfig;
 extern bool shouldupdate;
+extern bool shouldReboot;
 
 // flags for data sources
 extern bool dataMQTT;

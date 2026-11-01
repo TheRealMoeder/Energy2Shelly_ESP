@@ -51,6 +51,7 @@ char rpcUser[20] = "user_1";
 bool shouldSaveConfig = false;
 bool shouldResetConfig = false;
 bool shouldupdate = false;
+bool shouldReboot = false;
 
 // flags for data sources
 bool dataMQTT = false;
