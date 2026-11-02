@@ -134,15 +134,11 @@ jobs:
 
       - name: Post Comment to PR
         if: github.event_name == 'pull_request'
-        uses: marooned/comment-on-pr@v1.3.0
+        uses: marocchino/sticky-pull-request-comment@v2
         with:
-          file: ../pr_comment.md
-          check_for_duplicate: true
-          comment_tag: esp_size_report
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      # --- Unchanged original workflow steps from here on ---
+          header: esp_size_report   # Unique identifier to find and update the same comment
+          path: ../pr_comment.md    # Path to the generated markdown file
+
       - name: Merge ESP32 flash files
         run: |
           cd .pio/build/esp32
