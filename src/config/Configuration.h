@@ -2,7 +2,6 @@
 #define CONFIGURATION_H
 
 #include <Arduino.h>
-#include <Preferences.h>
 
 // Fix WifiManager/WebServer conflicts
 #ifndef ESP32
@@ -343,9 +342,6 @@ extern bool dataSUNSPEC;
 extern bool dataTIBBERPULSE;
 extern bool dataRCT;
 extern bool dataSMLSERIAL;
-
-extern Preferences preferences;
-
 
 // ============================================================================
 // NETWORK OBJECTS
