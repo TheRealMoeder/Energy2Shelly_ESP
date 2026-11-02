@@ -270,7 +270,7 @@ void setup(void)
         request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
     } });
 
-  server.on("/json_preferences", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/json_config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
    
     if (isNotAuthorized(request)) {
             return request->requestAuthentication(); 
@@ -279,7 +279,7 @@ void setup(void)
     request->send(200, "application/json", json_prefs_string); 
   });
 
-server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST, 
+server.on("/json_config", AsyncWebRequestMethod::HTTP_POST, 
     [](AsyncWebServerRequest *request) {
         if (isNotAuthorized(request)) {
             request->send(401, "text/plain", "Unauthorized");
@@ -561,17 +561,18 @@ void loop()
   }
   if (parametersUpdated) {
     DEBUG_SERIAL.println(F("New keys"));
-    update_config_doc.clear(); 
-    DeserializationError error = deserializeJson(update_config_doc, json_prefs_string);
-    DEBUG_SERIAL.handleQueue();
-    DEBUG_SERIAL.println(json_prefs_string);
-    json_prefs_string = String();
-    DEBUG_SERIAL.handleQueue();
-    if (!error) {
-      mergeJson(config_doc.as<JsonObject>(), update_config_doc.as<JsonObjectConst>());  
-      interprete_parameters();
-      save_parameters();
+    DeserializationError error = deserializeJson(config_doc, json_prefs_string);
+    save_parameters();
+    size_t chunkSize=40; // ESP8266 low memory has some troubles to cope with larger strings in webconsole
+    for (size_t i = 0; i < json_prefs_string.length(); i += chunkSize) {
+         DEBUG_SERIAL.println(json_prefs_string.substring(i, i + chunkSize));
+         DEBUG_SERIAL.handleQueue();
     }
+    DEBUG_SERIAL.println();
+    
+    if (error!=DeserializationError::Ok) DEBUG_SERIAL.println("Config Error");
+    DEBUG_SERIAL.handleQueue();
+    interprete_parameters();
     update_config_doc.clear();        
     parametersUpdated = false;
   }
