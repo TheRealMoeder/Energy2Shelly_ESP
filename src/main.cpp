@@ -20,8 +20,11 @@
 // Web content
 #include "web/html_home.h"
 
-
-
+#if defined(ESP32)
+#include <Update.h>
+#else
+#include <Updater.h>
+#endif
 
 // Utils function for monitoring and reset
 #include "utils/utils.h"
@@ -41,7 +44,6 @@ bool isNotAuthorized(AsyncWebServerRequest *request) {
     }
     return false;
 }
-
 
 
 void setup(void)
@@ -295,6 +297,76 @@ void setup(void)
         request->send(200, "text/plain", PSTR("Resetting WiFi configuration...\r\n"));
     } });
   
+
+
+  #if 1
+
+    server.on("/update", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request){
+       if (isNotAuthorized(request)) {
+            return request->requestAuthentication(); 
+        }
+        request->send(200, "text/html", FPSTR(UPDATE_INDEX_HTML));
+    });
+
+  server.on("/update", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request){
+  // Prüft die Autorisierung am Ende des Uploads
+    if (isNotAuthorized(request)) {
+            return request->requestAuthentication(); 
+  }
+  
+  bool success = !Update.hasError();
+  
+   if(success) {
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
+    response->addHeader("Connection", "close");
+    request->send(response);
+    
+    updateTimestamp=millis();
+    shouldReboot=true;
+  } else {
+    AsyncWebServerResponse *response = request->beginResponse(500, "text/html", FPSTR(UPDATE_ERROR_HTML));
+    response->addHeader("Connection", "close");
+    request->send(response);
+  }
+
+
+}, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
+  if (isNotAuthorized(request)) {
+            return request->requestAuthentication(); 
+  }
+
+  if(!index){
+    DEBUG_SERIAL.printf("Update Started: %s\n", filename.c_str());
+    
+    #ifdef ESP32
+      size_t updateSize = UPDATE_SIZE_UNKNOWN;
+    #elif defined(ESP8266)
+      size_t updateSize = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+       Update.runAsync(true); 
+    #endif
+
+    if(!Update.begin(updateSize, U_FLASH)) { 
+      DEBUG_SERIAL.println(F("Error flash"));
+    }
+  }
+  #ifdef ESP8266
+    ESP.wdtFeed(); 
+  #endif
+  if(Update.write(data, len) != len){
+    DEBUG_SERIAL.println(F("Error flash"));
+  }
+  
+  if(final){
+    if(Update.end(true)){
+      DEBUG_SERIAL.printf("Update done: %u Bytes\n", index + len);
+    } 
+  }
+});
+  #else
+
+
+
+
     server.on("/update", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
     bool hasPassword = (reset_password != nullptr && strlen(reset_password) > 0);
@@ -337,7 +409,7 @@ void setup(void)
         updateTimestamp=millis();
         request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
     } });
-
+  #endif
   server.on("/json_preferences", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
    
     if (isNotAuthorized(request)) {
@@ -352,7 +424,7 @@ void setup(void)
     if (isNotAuthorized(request)) {
             return request->requestAuthentication(); 
         }
-    request->send(200, "text/plain", "Rebooting device...");
+    request->send(200, "text/plain", FPSTR(UPDATE_SUCCESS_HTML));
     updateTimestamp=millis();
     shouldReboot=true;
     

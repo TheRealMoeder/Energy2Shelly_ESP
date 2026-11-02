@@ -413,48 +413,13 @@ void WifiManagerSetup(bool SW_update)
   load_parameters(); // Load parameters from Preferences
  
 
-  WiFiManager wifiManager;
-  wifiManager.setDebugOutput(false);
-  wifiManager.setShowStaticFields(true);
-
-  wifiManager.setTitle(String("Energy2Shelly for ESP ") + VERSION_BUILD);
-  wifiManager.setSaveConfigCallback(saveConfigCallback);
-  wifiManager.setConfigPortalTimeout(180);
-  std::vector<const char *> usermenu = {"info","exit","sep","update"};
-  wifiManager.setMenu(usermenu);
-  if (SW_update)
+  if (config_doc["wifi"]["ssid"] == "" || config_doc["wifi"]["password"] == "") // check for valid WiFi credentials, if not present, start config portal
   {
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(config_doc["wifi"]["ssid"].as<const char*>(), config_doc["wifi"]["password"].as<const char*>());
-    unsigned long startAttemptTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000)
-    {
-      delay(500);
-      DEBUG_SERIAL.print(".");
-    }
-    update_reset_reason(Energy2Shelly_ResetReason::OTA_UPDATE);
-    if (WiFi.status() == WL_CONNECTED)
-    {
-      shouldSaveConfig=true;      
-      wifiManager.startWebPortal();
-      startAttemptTime = millis();
-      while (wifiManager.getWebPortalActive())
-      {
-        wifiManager.process();
-        delay(10);
-      }
-      all_esp_reset(Energy2Shelly_ResetReason::OTA_UPDATE);
-    }
-  }
-  else // No update requested.
-  {
-    if (config_doc["wifi"]["ssid"] == "" || config_doc["wifi"]["password"] == "") // check for valid WiFi credentials, if not present, start config portal
-    {
       DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
       WiFi.mode(WIFI_AP_STA);
       WiFi.softAP("Energy2Shelly", "");
-    }
-    else { //try to connect to WiFi with stored credentials
+  }
+  else { //try to connect to WiFi with stored credentials
       WiFi.mode(WIFI_STA);
       WiFi.begin(config_doc["wifi"]["ssid"].as<const char*>(), config_doc["wifi"]["password"].as<const char*>());
       unsigned long startAttemptTime = millis();
@@ -469,7 +434,6 @@ void WifiManagerSetup(bool SW_update)
         WiFi.softAP("Energy2Shelly", "");
         DEBUG_SERIAL.println(F("Failed to connect to WiFi, starting config portal..."));
       }
-    }
   }
   
   

@@ -24,7 +24,6 @@
 // Web & JSON libraries
 #include <ArduinoJson.h>
 #define WM_MDNS  
-#include <WiFiManager.h>
 #include <PubSubClient.h>
 #include <WiFiClient.h>
 #include <ESPAsyncWebServer.h>
