@@ -309,7 +309,6 @@ void setup(void)
     });
 
   server.on("/update", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request){
-  // Prüft die Autorisierung am Ende des Uploads
     if (isNotAuthorized(request)) {
             return request->requestAuthentication(); 
   }
