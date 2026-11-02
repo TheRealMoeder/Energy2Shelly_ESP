@@ -35,7 +35,7 @@
 // DEBUG & TIMING
 // ============================================================================
 
-#define DEBUG true // set to false for no DEBUG output
+#define DEBUG false // set to false for no DEBUG output
 
 
 
