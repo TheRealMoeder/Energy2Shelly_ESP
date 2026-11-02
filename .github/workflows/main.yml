@@ -60,15 +60,22 @@ jobs:
         if: github.event_name == 'pull_request'
         run: echo "${{ github.event.pull_request.number }}" > ../pr_number.txt
 
+      - name: Prepare Logs for Upload
+        if: github.event_name == 'pull_request'
+        run: |
+          cp ../base_sizes.txt ./base_sizes.txt
+          cp ../head_sizes.txt ./head_sizes.txt
+          cp ../pr_number.txt ./pr_number.txt
+
       - name: Upload Size Artifacts (PR only)
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: size-logs
           path: |
-            ../base_sizes.txt
-            ../head_sizes.txt
-            ../pr_number.txt
+            base_sizes.txt
+            head_sizes.txt
+            pr_number.txt
           retention-days: 1
 
       - name: Merge ESP32 flash files
