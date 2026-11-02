@@ -43,7 +43,7 @@ jobs:
       - name: Build Base Branch Sizes (PR only)
         if: github.event_name == 'pull_request'
         run: |
-          mkdir ../pr-branch && cp -r . ../pr-branch
+          mkdir ../pr-branch && rsync -a --exclude='.git' . ../pr-branch/
           git fetch origin ${{ github.base_ref }}
           git checkout FETCH_HEAD
           pio run > ../base_sizes.txt || true
