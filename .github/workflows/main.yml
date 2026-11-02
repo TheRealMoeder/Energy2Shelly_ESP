@@ -1,16 +1,19 @@
 name: CI
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     paths-ignore:
       - '**.md'
       - '/doc/**'
       - '/screenshots/**'
   pull_request:
-    
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  pull-requests: write
 
 jobs:
   build:
@@ -37,9 +40,109 @@ jobs:
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
         
+      - name: Build Base Branch Sizes (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          # Temporarily stash the current PR code to check out the base branch
+          mkdir ../pr-branch && cp -r . ../pr-branch
+          
+          # Switch to the target base branch (e.g., main/master)
+          git fetch origin ${{ github.base_ref }}
+          git checkout FETCH_HEAD
+          
+          # Collect memory sizes for the base branch
+          pio run -t sizes > ../base_sizes.txt || true
+          
+          # Restore the PR code
+          rm -rf * && cp -r ../pr-branch/. .
+        env:
+          PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
+
       - name: Build firmware
         run: pio run
         
+      - name: Collect Head Branch Sizes (PR only)
+        if: github.event_name == 'pull_request'
+        run: pio run -t sizes > ../head_sizes.txt || true
+
+      - name: Generate Memory Comparison Report
+        if: github.event_name == 'pull_request'
+        run: |
+          python3 -c "
+          import re, os
+
+          def parse_sizes(filepath):
+              if not os.path.exists(filepath): return {}
+              with open(filepath, 'r') as f:
+                  content = f.read()
+              
+              blocks = content.split('Environment ')
+              
+              data = {}
+              for block in blocks[1:]:
+                  lines = block.split('\n')
+                  if not lines: continue
+                  env_name = lines[0].split()[0]
+                  ram_val, ram_total, flash_val, flash_total = 0, 0, 0, 0
+                  for line in lines:
+                      if 'RAM:' in line:
+                          # Matches e.g., used 14192 bytes from 327680 bytes
+                          m = re.search(r'used\s+(\d+)\s+bytes\s+from\s+(\d+)\s+bytes', line)
+                          if m: 
+                              ram_val = int(m.group(1))
+                              ram_total = int(m.group(2))
+                      if 'Flash:' in line:
+                          m = re.search(r'used\s+(\d+)\s+bytes\s+from\s+(\d+)\s+bytes', line)
+                          if m: 
+                              flash_val = int(m.group(1))
+                              flash_total = int(m.group(2))
+                  data[env_name] = {'ram': ram_val, 'ram_total': ram_total, 'flash': flash_val, 'flash_total': flash_total}
+              return data
+
+          base_data = parse_sizes('../base_sizes.txt')
+          head_data = parse_sizes('../head_sizes.txt')
+
+          def fmt_diff(b):
+              if b == 0: return 'No change'
+              return f'{b:+d} B ({b/1024:+.2f} KB)'
+
+          def fmt_usage(used, total):
+              if total == 0: return f'{used/1024:.2f} KB'
+              pct = (used / total) * 100
+              return f'{used/1024:.2f} KB ({pct:.1f}%)'
+
+          report = '### 📊 ESP Memory Usage Summary (ROM / RAM)\n\n'
+          report += '| Environment | Memory | Base Branch | PR Branch (Usage %) | Difference |\n'
+          report += '| --- | --- | --- | --- | --- |\n'
+
+          all_envs = sorted(list(set(base_data.keys()) | set(head_data.keys())))
+          for env in all_envs:
+              b_ram = base_data.get(env, {}).get('ram', 0)
+              h_ram = head_data.get(env, {}).get('ram', 0)
+              h_ram_tot = head_data.get(env, {}).get('ram_total', 0)
+              
+              b_fl  = base_data.get(env, {}).get('flash', 0)
+              h_fl  = head_data.get(env, {}).get('flash', 0)
+              h_fl_tot  = head_data.get(env, {}).get('flash_total', 0)
+              
+              report += f'| **{env}** | RAM (Static) | {b_ram/1024:.2f} KB | {fmt_usage(h_ram, h_ram_tot)} | {fmt_diff(h_ram - b_ram)} |\n'
+              report += f'| | ROM (Flash) | {b_fl/1024:.2f} KB | {fmt_usage(h_fl, h_fl_tot)} | {fmt_diff(h_fl - b_fl)} |\n'
+
+          with open('../pr_comment.md', 'w') as f:
+              f.write(report)
+          "
+
+      - name: Post Comment to PR
+        if: github.event_name == 'pull_request'
+        uses: marooned/comment-on-pr@v1.3.0
+        with:
+          file: ../pr_comment.md
+          check_for_duplicate: true
+          comment_tag: esp_size_report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      # --- Unchanged original workflow steps from here on ---
       - name: Merge ESP32 flash files
         run: |
           cd .pio/build/esp32
@@ -93,9 +196,9 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     permissions:
-      contents: write   # to upload release artifacts
-      pages: write      # to deploy to Pages
-      id-token: write   # to verify the deployment originates from an appropriate source
+      contents: write   
+      pages: write      
+      id-token: write   
     runs-on: ubuntu-latest
     steps:
       - name: Download firmware artifacts
