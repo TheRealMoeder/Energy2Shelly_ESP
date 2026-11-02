@@ -139,7 +139,8 @@ Press 5 times reset button of the device within 60s. This will erase all configs
 
 # Currently supported microcontrollers
 * ESP32-C3
-* ESP32-S3
+* ESP32-S3 (>=4MByte Flash)
+* ESP32-S3-N8 (>=8MByte Flash)
 * ESP32
 * ESP8266
 
