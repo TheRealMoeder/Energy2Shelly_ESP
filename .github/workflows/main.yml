@@ -10,10 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
-  pull-requests: write
+  contents: read
 
 jobs:
   build:
@@ -59,79 +56,20 @@ jobs:
             pio run
           fi
         
-      - name: Generate Memory Comparison Report
+      - name: Save Pull Request Number
         if: github.event_name == 'pull_request'
-        run: |
-          python3 -c "
-          import re, os
+        run: echo "${{ github.event.pull_request.number }}" > ../pr_number.txt
 
-          def parse_sizes(filepath):
-              if not os.path.exists(filepath): return {}
-              with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-                  content = f.read()
-              
-              blocks = content.split('Processing ')
-              
-              data = {}
-              for block in blocks[1:]:
-                  lines = block.split('\n')
-                  if not lines or not lines[0].strip(): continue
-                  env_name = lines[0].split()[0]
-                  ram_val, ram_total, flash_val, flash_total = 0, 0, 0, 0
-                  for line in lines:
-                      if 'RAM:' in line:
-                          m = re.search(r'used\s+(\d+)\s+bytes\s+from\s+(\d+)\s+bytes', line)
-                          if m: 
-                              ram_val = int(m.group(1))
-                              ram_total = int(m.group(2))
-                      if 'Flash:' in line:
-                          m = re.search(r'used\s+(\d+)\s+bytes\s+from\s+(\d+)\s+bytes', line)
-                          if m: 
-                              flash_val = int(m.group(1))
-                              flash_total = int(m.group(2))
-                  if ram_val > 0 or flash_val > 0:
-                      data[env_name] = {'ram': ram_val, 'ram_total': ram_total, 'flash': flash_val, 'flash_total': flash_total}
-              return data
-
-          base_data = parse_sizes('../base_sizes.txt')
-          head_data = parse_sizes('../head_sizes.txt')
-
-          def fmt_diff(b):
-              if b == 0: return 'No change'
-              return f'{b:+d} B ({b/1024:+.2f} KB)'
-
-          def fmt_usage(used, total):
-              if total == 0: return f'{used/1024:.2f} KB'
-              pct = (used / total) * 100
-              return f'{used/1024:.2f} KB ({pct:.1f}%)'
-
-          report = '### 📊 ESP Memory Usage Summary (ROM / RAM)\n\n'
-          report += '| Environment | Memory | Base Branch | PR Branch (Usage %) | Difference |\n'
-          report += '| --- | --- | --- | --- | --- |\n'
-
-          all_envs = sorted(list(set(base_data.keys()) | set(head_data.keys())))
-          for env in all_envs:
-              b_ram = base_data.get(env, {}).get('ram', 0)
-              h_ram = head_data.get(env, {}).get('ram', 0)
-              h_ram_tot = head_data.get(env, {}).get('ram_total', 0)
-              
-              b_fl  = base_data.get(env, {}).get('flash', 0)
-              h_fl  = head_data.get(env, {}).get('flash', 0)
-              h_fl_tot  = head_data.get(env, {}).get('flash_total', 0)
-              
-              report += f'| **{env}** | RAM (Static) | {b_ram/1024:.2f} KB | {fmt_usage(h_ram, h_ram_tot)} | {fmt_diff(h_ram - b_ram)} |\n'
-              report += f'| | ROM (Flash) | {b_fl/1024:.2f} KB | {fmt_usage(h_fl, h_fl_tot)} | {fmt_diff(h_fl - b_fl)} |\n'
-
-          with open('pr_comment.md', 'w') as f:
-              f.write(report)
-          "
-
-      - name: Post Comment to PR
+      - name: Upload Size Artifacts (PR only)
         if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: actions/upload-artifact@v4
         with:
-          header: esp_size_report   
-          path: pr_comment.md    
+          name: size-logs
+          path: |
+            ../base_sizes.txt
+            ../head_sizes.txt
+            ../pr_number.txt
+          retention-days: 1
 
       - name: Merge ESP32 flash files
         run: |
@@ -159,7 +97,7 @@ jobs:
           cp .pio/build/esp32-c3/firmware.bin ./.github/pages/esp32-c3-ota.bin
           
       - name: Upload firmware artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: firmware
           path: |
@@ -175,7 +113,7 @@ jobs:
         uses: actions/configure-pages@v6
         
       - name: Upload webflash files
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./.github/pages/
           
@@ -192,11 +130,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download firmware artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: firmware
       - name: Upload release artifacts
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           fail_on_unmatched_files: true
           files: |
@@ -209,4 +147,4 @@ jobs:
             ./esp32-c3-ota.bin
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
