@@ -103,22 +103,38 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
 
 // Push status notifications to connected websocket clients like a real Shelly Pro 3EM.
 // Home Assistant only polls once on connect and relies on these notifications afterwards.
-#define NOTIFY_STATUS_INTERVAL 2000
+// Event driven: sent as soon as a data source has written new values. The minimum interval
+// merges updates that arrive in several parts (e.g. one MQTT message per phase).
+#define NOTIFY_STATUS_MIN_INTERVAL 500
 void notifyStatusWebSocket() {
+  static PowerData lastPower[3];
+  static EnergyData lastEnergy[3];
   static unsigned long lastNotify = 0;
-  if (webSocket.count() == 0 || millis() - lastNotify < NOTIFY_STATUS_INTERVAL) {
+  if (webSocket.count() == 0 || millis() - lastNotify < NOTIFY_STATUS_MIN_INTERVAL) {
     return;
   }
-  lastNotify = millis();
-  if (!webSocket.availableForWriteAll()) {
-    return; // a client is not consuming its queue, skip this cycle
+  bool powerChanged = memcmp(lastPower, PhasePower, sizeof(lastPower)) != 0;
+  bool energyChanged = memcmp(lastEnergy, PhaseEnergy, sizeof(lastEnergy)) != 0;
+  if (!powerChanged && !energyChanged) {
+    return;
   }
+  if (!webSocket.availableForWriteAll()) {
+    return; // a client is not consuming its queue, try again on the next pass
+  }
+  lastNotify = millis();
+  memcpy(lastPower, PhasePower, sizeof(lastPower));
+  memcpy(lastEnergy, PhaseEnergy, sizeof(lastEnergy));
   JsonDocument notify;
   notify["src"] = shelly_name;
   notify["method"] = "NotifyStatus";
   notify["params"]["ts"] = (double)time(nullptr);
-  fillEMStatus(notify["params"]["em:0"].to<JsonObject>());
-  fillEMDataStatus(notify["params"]["emdata:0"].to<JsonObject>());
+  // only changed components are sent, the client merges them into its status
+  if (powerChanged) {
+    fillEMStatus(notify["params"]["em:0"].to<JsonObject>());
+  }
+  if (energyChanged) {
+    fillEMDataStatus(notify["params"]["emdata:0"].to<JsonObject>());
+  }
   String message;
   serializeJson(notify, message);
   webSocket.textAll(message);
