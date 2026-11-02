@@ -270,7 +270,7 @@ void setup(void)
         request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
     } });
 
-  server.on("/json_preferences", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/json_config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
    
     if (isNotAuthorized(request)) {
             return request->requestAuthentication(); 
@@ -279,7 +279,7 @@ void setup(void)
     request->send(200, "application/json", json_prefs_string); 
   });
 
-server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST, 
+server.on("/json_config", AsyncWebRequestMethod::HTTP_POST, 
     [](AsyncWebServerRequest *request) {
         if (isNotAuthorized(request)) {
             request->send(401, "text/plain", "Unauthorized");
