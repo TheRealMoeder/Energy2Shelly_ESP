@@ -203,7 +203,7 @@ extern String json_prefs_string;
 extern JsonDocument update_config_doc;
 
 // ============================================================================
-// CONFIGURATION VARIABLES (stored in Preferences)
+// CONFIGURATION VARIABLES (stored in LittleFS)
 // ============================================================================
  #define INPUT_TYPE_LIST \
     X(NONE, 0) \

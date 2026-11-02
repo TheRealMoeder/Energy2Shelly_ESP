@@ -10,7 +10,7 @@ tm timeinfo;
 JsonDocument config_doc;
 
 // ============================================================================
-// CONFIGURATION VARIABLES (stored in Preferences)
+// CONFIGURATION VARIABLES (stored in LittleFS)
 // ============================================================================
 
 // Data source and server settings
@@ -349,7 +349,7 @@ void WifiManagerSetup(bool stationmode)
       LittleFS.begin();
     }
   #endif
-  load_parameters(); // Load parameters from Preferences
+  load_parameters(); // Load parameters from LittleFS
  
 
   static WiFiManager wifiManager;
@@ -408,7 +408,7 @@ void WifiManagerSetup(bool stationmode)
     
     config_doc["shelly"]["shelly_mac"] = macStr;  
   }
-  
+
   interprete_parameters();
 
   DEBUG_SERIAL.println(F("local ip"));
