@@ -52,12 +52,13 @@ jobs:
           PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
 
       - name: Build firmware
-        run: pio run
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            pio run | tee ../head_sizes.txt
+          else
+            pio run
+          fi
         
-      - name: Collect Head Branch Sizes (PR only)
-        if: github.event_name == 'pull_request'
-        run: pio run > ../head_sizes.txt || true
-
       - name: Generate Memory Comparison Report
         if: github.event_name == 'pull_request'
         run: |
@@ -74,7 +75,7 @@ jobs:
               data = {}
               for block in blocks[1:]:
                   lines = block.split('\n')
-                  if not lines: continue
+                  if not lines or not lines[0].strip(): continue
                   env_name = lines[0].split()[0]
                   ram_val, ram_total, flash_val, flash_total = 0, 0, 0, 0
                   for line in lines:
@@ -121,7 +122,7 @@ jobs:
               report += f'| **{env}** | RAM (Static) | {b_ram/1024:.2f} KB | {fmt_usage(h_ram, h_ram_tot)} | {fmt_diff(h_ram - b_ram)} |\n'
               report += f'| | ROM (Flash) | {b_fl/1024:.2f} KB | {fmt_usage(h_fl, h_fl_tot)} | {fmt_diff(h_fl - b_fl)} |\n'
 
-          with open('../pr_comment.md', 'w') as f:
+          with open('pr_comment.md', 'w') as f:
               f.write(report)
           "
 
@@ -130,7 +131,7 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: esp_size_report   
-          path: ../pr-comment.md    
+          path: pr_comment.md    
 
       - name: Merge ESP32 flash files
         run: |
