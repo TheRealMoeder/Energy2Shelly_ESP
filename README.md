@@ -138,7 +138,8 @@ To re-enter WiFiManager for updates or parameter changes:
 
 # Currently supported microcontrollers
 * ESP32-C3
-* ESP32-S3
+* ESP32-S3 (>=4MByte Flash)
+* ESP32-S3-N8 (>=8MByte Flash)
 * ESP32
 * ESP8266
 
