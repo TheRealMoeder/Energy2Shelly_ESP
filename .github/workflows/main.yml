@@ -1,16 +1,16 @@
 name: CI
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     paths-ignore:
       - '**.md'
       - '/doc/**'
       - '/screenshots/**'
   pull_request:
-    
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -37,9 +37,47 @@ jobs:
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
         
+      - name: Build Base Branch Sizes (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir ../pr-branch && rsync -a --exclude='.git' . ../pr-branch/
+          git fetch origin ${{ github.base_ref }}
+          git checkout FETCH_HEAD
+          pio run > ../base_sizes.txt || true
+          rm -rf * && cp -r ../pr-branch/. .
+        env:
+          PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
+
       - name: Build firmware
-        run: pio run
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            pio run | tee ../head_sizes.txt
+          else
+            pio run
+          fi
         
+      - name: Save Pull Request Number
+        if: github.event_name == 'pull_request'
+        run: echo "${{ github.event.pull_request.number }}" > ../pr_number.txt
+
+      - name: Prepare Logs for Upload
+        if: github.event_name == 'pull_request'
+        run: |
+          cp ../base_sizes.txt ./base_sizes.txt
+          cp ../head_sizes.txt ./head_sizes.txt
+          cp ../pr_number.txt ./pr_number.txt
+
+      - name: Upload Size Artifacts (PR only)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: size-logs
+          path: |
+            base_sizes.txt
+            head_sizes.txt
+            pr_number.txt
+          retention-days: 1
+
       - name: Merge ESP32 flash files
         run: |
           cd .pio/build/esp32
@@ -73,7 +111,7 @@ jobs:
           cp .pio/build/esp32-c3/firmware.bin ./.github/pages/esp32-c3-ota.bin
           
       - name: Upload firmware artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: firmware
           path: |
@@ -91,7 +129,7 @@ jobs:
         uses: actions/configure-pages@v6
         
       - name: Upload webflash files
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./.github/pages/
           
@@ -102,17 +140,17 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     permissions:
-      contents: write   # to upload release artifacts
-      pages: write      # to deploy to Pages
-      id-token: write   # to verify the deployment originates from an appropriate source
+      contents: write   
+      pages: write      
+      id-token: write   
     runs-on: ubuntu-latest
     steps:
       - name: Download firmware artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: firmware
       - name: Upload release artifacts
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           fail_on_unmatched_files: true
           files: |
@@ -127,4 +165,4 @@ jobs:
             ./esp32-c3-ota.bin
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
