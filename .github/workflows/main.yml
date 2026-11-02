@@ -43,17 +43,10 @@ jobs:
       - name: Build Base Branch Sizes (PR only)
         if: github.event_name == 'pull_request'
         run: |
-          # Temporarily stash the current PR code to check out the base branch
           mkdir ../pr-branch && cp -r . ../pr-branch
-          
-          # Switch to the target base branch (e.g., main/master)
           git fetch origin ${{ github.base_ref }}
           git checkout FETCH_HEAD
-          
-          # Collect memory sizes for the base branch
-          pio run -t sizes > ../base_sizes.txt || true
-          
-          # Restore the PR code
+          pio run > ../base_sizes.txt || true
           rm -rf * && cp -r ../pr-branch/. .
         env:
           PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
@@ -63,7 +56,7 @@ jobs:
         
       - name: Collect Head Branch Sizes (PR only)
         if: github.event_name == 'pull_request'
-        run: pio run -t sizes > ../head_sizes.txt || true
+        run: pio run > ../head_sizes.txt || true
 
       - name: Generate Memory Comparison Report
         if: github.event_name == 'pull_request'
@@ -73,10 +66,10 @@ jobs:
 
           def parse_sizes(filepath):
               if not os.path.exists(filepath): return {}
-              with open(filepath, 'r') as f:
+              with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
                   content = f.read()
               
-              blocks = content.split('Environment ')
+              blocks = content.split('Processing ')
               
               data = {}
               for block in blocks[1:]:
@@ -86,7 +79,6 @@ jobs:
                   ram_val, ram_total, flash_val, flash_total = 0, 0, 0, 0
                   for line in lines:
                       if 'RAM:' in line:
-                          # Matches e.g., used 14192 bytes from 327680 bytes
                           m = re.search(r'used\s+(\d+)\s+bytes\s+from\s+(\d+)\s+bytes', line)
                           if m: 
                               ram_val = int(m.group(1))
@@ -96,7 +88,8 @@ jobs:
                           if m: 
                               flash_val = int(m.group(1))
                               flash_total = int(m.group(2))
-                  data[env_name] = {'ram': ram_val, 'ram_total': ram_total, 'flash': flash_val, 'flash_total': flash_total}
+                  if ram_val > 0 or flash_val > 0:
+                      data[env_name] = {'ram': ram_val, 'ram_total': ram_total, 'flash': flash_val, 'flash_total': flash_total}
               return data
 
           base_data = parse_sizes('../base_sizes.txt')
@@ -136,8 +129,8 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          header: esp_size_report   # Unique identifier to find and update the same comment
-          path: ../pr_comment.md    # Path to the generated markdown file
+          header: esp_size_report   
+          path: ../pr-comment.md    
 
       - name: Merge ESP32 flash files
         run: |
