@@ -205,12 +205,12 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
     if (!SUNSPEC_REAL_ENERGY_IMPORTED0_NULL && SUNSPEC_REAL_ENERGY_IMPORTED0_INT >= 0)
     {
       double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED0_INT - SUNSPEC_BASE_INT, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_REAL_ENERGY_TYPE);
-      PhaseEnergy[0].consumption = p / 1000.0 * scale_real_energy;
+      PhaseEnergy[0].consumption = p * scale_real_energy;
     }
     if (!SUNSPEC_REAL_ENERGY_EXPORTED0_NULL && SUNSPEC_REAL_ENERGY_EXPORTED0_INT >= 0)
     {
       double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED0_INT - SUNSPEC_BASE_INT, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_REAL_ENERGY_TYPE);
-      PhaseEnergy[0].gridfeedin = p / 1000.0 * scale_real_energy;
+      PhaseEnergy[0].gridfeedin = p * scale_real_energy;
     }
 
     PhasePower[1].power = (!SUNSPEC_REAL_POWER1_NULL && SUNSPEC_REAL_POWER1_INT >= 0) ?convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_POWER1_INT - SUNSPEC_BASE_INT, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_REAL_POWER_TYPE) * scale_real_power + offsetPerPhase : 0;
@@ -225,12 +225,12 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
     if (!SUNSPEC_REAL_ENERGY_IMPORTED1_NULL && SUNSPEC_REAL_ENERGY_IMPORTED1_INT >= 0)
     {
         double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED1_INT - SUNSPEC_BASE_INT, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_REAL_ENERGY_TYPE);
-        PhaseEnergy[1].consumption = p / 1000.0 * scale_real_energy;
+        PhaseEnergy[1].consumption = p * scale_real_energy;
     }
     if (!SUNSPEC_REAL_ENERGY_EXPORTED1_NULL && SUNSPEC_REAL_ENERGY_EXPORTED1_INT >= 0)
     {
         double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED1_INT - SUNSPEC_BASE_INT, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_REAL_ENERGY_TYPE);
-        PhaseEnergy[1].gridfeedin = p / 1000.0 * scale_real_energy;
+        PhaseEnergy[1].gridfeedin = p * scale_real_energy;
     }
   
     PhasePower[2].power = (!SUNSPEC_REAL_POWER2_NULL && SUNSPEC_REAL_POWER2_INT >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_POWER2_INT - SUNSPEC_BASE_INT, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_REAL_POWER_TYPE) * scale_real_power + offsetPerPhase : 0;
@@ -245,12 +245,12 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
     if (!SUNSPEC_REAL_ENERGY_IMPORTED2_NULL && SUNSPEC_REAL_ENERGY_IMPORTED2_INT >= 0)
     {
       double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED2_INT - SUNSPEC_BASE_INT, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_REAL_ENERGY_TYPE);
-      PhaseEnergy[2].consumption = p / 1000.0 * scale_real_energy;
+      PhaseEnergy[2].consumption = p * scale_real_energy;
     }
     if (!SUNSPEC_REAL_ENERGY_EXPORTED2_NULL && SUNSPEC_REAL_ENERGY_EXPORTED2_INT >= 0)
     {
       double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED2_INT - SUNSPEC_BASE_INT, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_REAL_ENERGY_TYPE);
-      PhaseEnergy[2].gridfeedin = p / 1000.0 * scale_real_energy;
+      PhaseEnergy[2].gridfeedin = p * scale_real_energy;
     }
 
    
