@@ -1,12 +1,12 @@
 #include "utils.h"
 #include "config/Configuration.h"
-#ifdef ESP8266
-#include <LittleFS.h>
-#else
+#ifdef ESP32
 extern "C" {
-#include "nvs_flash.h"
+ #include "nvs_flash.h"
+  #include "nvs.h"
 }
 #endif
+#include <LittleFS.h>
 
 // 1. Variable definitions and platform separation
 #if defined(ESP32)
@@ -44,15 +44,17 @@ void wifi_reset()
 
 void reset_esp_to_default_and_reboot()
 {
+  if (LittleFS.begin()) {
+    LittleFS.format();
+  } 
+
+
   #ifdef ESP32
     nvs_flash_erase(); 
     nvs_flash_init(); 
     WiFi.disconnect(true, true);
 #else
 
-   if (LittleFS.begin()) {
-        LittleFS.format();
-  } 
     // WiFiManager may leave persistent=false; force it so disconnect(true)
     // actually erases the SDK-saved credentials in flash.
     WiFi.persistent(true);
@@ -66,6 +68,32 @@ void reset_esp_to_default_and_reboot()
    
 }
 
+#ifdef ESP32
+uint32_t read_reset_counter_from_nvs() {
+    uint32_t rtc_reset_counter = 0; // Default value
+    nvs_handle_t my_handle;
+    if (nvs_open("e2s_config", NVS_READONLY, &my_handle) == ESP_OK) {
+        uint32_t temp_counter = 0;
+        if (nvs_get_u32(my_handle, "reset_counter", &temp_counter) == ESP_OK) {
+            rtc_reset_counter = temp_counter;
+        } else {
+            rtc_reset_counter = 0; // Default value if not present
+        }
+        nvs_close(my_handle);
+    } else {
+        rtc_reset_counter = 0; // Default value if NVS open fails
+    }
+    return rtc_reset_counter;
+}
+void write_reset_counter_to_nvs(uint32_t rtc_reset_counter) {
+    nvs_handle_t my_handle;
+    if (nvs_open("e2s_config", NVS_READWRITE, &my_handle) == ESP_OK) {
+        nvs_set_u32(my_handle, "reset_counter", rtc_reset_counter);
+        nvs_commit(my_handle);
+        nvs_close(my_handle);
+    }
+}
+#endif
 
 Energy2Shelly_ResetReason clear_rtc_power_on(void)
 {
@@ -129,37 +157,35 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
 
 
   if ((rtc_reset_reason==Energy2Shelly_ResetReason::MANUAL_RESET)||(rtc_reset_reason==Energy2Shelly_ResetReason::POWER_ON)) {
-       #ifdef ESP8266
-          ESP.rtcUserMemoryRead(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
-       #else
-          preferences.begin("e2s_config", false);
-          rtc_reset_counter=preferences.getUInt("reset_counter", 0);          
-       #endif    
-       rtc_reset_counter++;
-       #ifdef ESP8266
-          ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
-       #else
-          preferences.putUInt("reset_counter", rtc_reset_counter); 
-          preferences.end();       
-       #endif
+      #ifdef ESP8266
+      ESP.rtcUserMemoryRead(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
+      #else
+      rtc_reset_counter = read_reset_counter_from_nvs(); // return 0 if not present
+      #endif    
+
+      rtc_reset_counter++;
+
+      #ifdef ESP8266
+      ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
+      #else
+      write_reset_counter_to_nvs(rtc_reset_counter);
+      #endif
      
        if (rtc_reset_counter>=5) {
           rtc_reset_counter=0;
           #ifdef ESP8266
           ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
           #else
-          // no need to set rtc_reset_counter in preferences, the next function will erase everything
+          // no need to set rtc_reset_counter in nvs, the next function will erase everything
           #endif
           reset_esp_to_default_and_reboot();
        } 
   }
   else {
-     #ifdef ESP8266
-     ESP.rtcUserMemoryRead(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
-     #else
-     preferences.begin("e2s_config", false);
-     rtc_reset_counter=preferences.getUInt("reset_counter", 0);  
-     preferences.end();    
+    #ifdef ESP8266
+    ESP.rtcUserMemoryRead(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
+    #else
+    rtc_reset_counter = read_reset_counter_from_nvs();
     #endif
   }
   DEBUG_SERIAL.print(F("Reset counter:"));
@@ -186,9 +212,7 @@ void set_rtc_reset_counter(uint32_t value)
 #if defined(ESP8266)
   ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, (uint32_t *)&rtc_reset_counter, sizeof(rtc_reset_counter));
 #else
-  preferences.begin("e2s_config", false);
-  preferences.putUInt("reset_counter", rtc_reset_counter); 
-  preferences.end();    
+  write_reset_counter_to_nvs(rtc_reset_counter);
 #endif
 }
 
