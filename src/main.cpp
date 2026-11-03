@@ -562,8 +562,7 @@ void loop()
     
     if (error!=DeserializationError::Ok) DEBUG_SERIAL.println("Config Error");
     DEBUG_SERIAL.handleQueue();
-    interprete_parameters();
-    update_config_doc.clear();        
+    interprete_parameters();     
     parametersUpdated = false;
   }
 

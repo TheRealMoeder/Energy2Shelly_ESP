@@ -1,5 +1,6 @@
 #include "Configuration.h"
 #include "../utils/utils.h"
+#include "../parsers/SunspecParser.h"
 const char* configPath = "/config.json";
 unsigned long startMillis = 0;
 unsigned long currentMillis;
@@ -140,9 +141,7 @@ void interprete_parameters()
         break;
     case input_type_enum::SUNSPEC:
         dataSUNSPEC = true;
-        modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
-        sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
-        modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
+        convert_json_to_sunspec_registers();
         DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
         break;
    case input_type_enum::TIBBERPULSE:
