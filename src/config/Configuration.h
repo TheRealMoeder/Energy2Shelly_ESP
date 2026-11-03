@@ -2,7 +2,6 @@
 #define CONFIGURATION_H
 
 #include <Arduino.h>
-#include <Preferences.h>
 
 // Fix WifiManager/WebServer conflicts
 #ifndef ESP32
@@ -207,7 +206,7 @@ extern String json_prefs_string;
 extern JsonDocument update_config_doc;
 
 // ============================================================================
-// CONFIGURATION VARIABLES (stored in Preferences)
+// CONFIGURATION VARIABLES (stored in LittleFS)
 // ============================================================================
  #define INPUT_TYPE_LIST \
     X(NONE, 0) \
@@ -351,9 +350,6 @@ extern bool ONA_validfrequency;
 extern bool ONA_validVoltage;
 #endif
 extern bool dataSMLSERIAL;
-
-extern Preferences preferences;
-
 
 // ============================================================================
 // NETWORK OBJECTS
