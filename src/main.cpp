@@ -158,7 +158,7 @@ void setup(void)
     });
 
     server.onNotFound([](AsyncWebServerRequest *request) {
-    DEBUG_SERIAL.printf("Not Found -> Redirect zu IP: %s\n", request->url().c_str());
+    DEBUG_SERIAL.printf("Not Found -> Redirect to IP: %s\n", request->url().c_str());
     request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
   });
 }
@@ -330,7 +330,8 @@ void setup(void)
   }
 
   if(!index){
-    DEBUG_SERIAL.printf("Update Started: %s\n", filename.c_str());
+    DEBUG_SERIAL.print(F("Update Started: "));
+    DEBUG_SERIAL.println(filename.c_str());
     
     #ifdef ESP32
       size_t updateSize = UPDATE_SIZE_UNKNOWN;
@@ -352,7 +353,9 @@ void setup(void)
   
   if(final){
     if(Update.end(true)){
-      DEBUG_SERIAL.printf("Update done: %u Bytes\n", index + len);
+      DEBUG_SERIAL.print(F("Update done: "));
+      DEBUG_SERIAL.print(index + len);
+      DEBUG_SERIAL.println(F(" bytes written"));
     } 
   }
  });

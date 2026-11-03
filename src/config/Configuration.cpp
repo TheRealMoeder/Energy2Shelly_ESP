@@ -155,13 +155,13 @@ void wifi_scan()
       WiFi_lastScanTime = millis();
     } 
     else if (scanResult == WIFI_SCAN_FAILED) {
-      DEBUG_SERIAL.println(F("Background-Scan failed."));
+      DEBUG_SERIAL.println(F("WiFi scan failed."));
       WiFi_scanInProgress = false;
       WiFi_lastScanTime = millis();
     }
   }
   if (!WiFi_scanInProgress && (millis() - WiFi_lastScanTime >= Wifi_scanInterval)) {
-    DEBUG_SERIAL.println(F("\nNew asyncron scan..."));
+    DEBUG_SERIAL.println(F("\nNew WiFi scan..."));
     WiFi.scanNetworks(true);
     WiFi_scanInProgress = true;
   }
