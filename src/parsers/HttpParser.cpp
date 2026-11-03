@@ -5,7 +5,7 @@
 void queryHTTP() {
   JsonDocument json;
   DEBUG_SERIAL.println(F("Querying HTTP source"));
-  http.begin(wifi_client, mqtt_server);
+  http.begin(wifi_client, http_server);
   http.GET();
   deserializeJson(json, http.getStream());
   if (strcmp(power_path, "") == 0) {

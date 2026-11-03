@@ -11,5 +11,7 @@ void parseSMA();
 void parseSUNSPEC();
 void parseTibberPulse();
 void parseRCT();
+void setupSMLSerial();
+void parseSMLSerial();
 
 #endif // PARSERS_H

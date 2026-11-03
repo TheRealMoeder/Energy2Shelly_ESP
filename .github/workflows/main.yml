@@ -1,59 +1,117 @@
 name: CI
 
 on:
-  # Runs on pushes targeting the default branch
   push:
     paths-ignore:
       - '**.md'
       - '/doc/**'
       - '/screenshots/**'
   pull_request:
-    
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      
       - uses: actions/cache@v6
         with:
           path: |
             ~/.cache/pip
             ~/.platformio/.cache
           key: ${{ runner.os }}-pio
+          
       - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
+          
+      - name: Install latest esptool
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade esptool
+          
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
+        
+      - name: Build Base Branch Sizes (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir ../pr-branch && rsync -a --exclude='.git' . ../pr-branch/
+          git fetch origin ${{ github.base_ref }}
+          git checkout FETCH_HEAD
+          pio run > ../base_sizes.txt || true
+          rm -rf * && cp -r ../pr-branch/. .
+        env:
+          PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
+
       - name: Build firmware
-        run: pio run
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            pio run | tee ../head_sizes.txt
+          else
+            pio run
+          fi
+        
+      - name: Save Pull Request Number
+        if: github.event_name == 'pull_request'
+        run: echo "${{ github.event.pull_request.number }}" > ../pr_number.txt
+
+      - name: Prepare Logs for Upload
+        if: github.event_name == 'pull_request'
+        run: |
+          cp ../base_sizes.txt ./base_sizes.txt
+          cp ../head_sizes.txt ./head_sizes.txt
+          cp ../pr_number.txt ./pr_number.txt
+
+      - name: Upload Size Artifacts (PR only)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: size-logs
+          path: |
+            base_sizes.txt
+            head_sizes.txt
+            pr_number.txt
+          retention-days: 1
+
       - name: Merge ESP32 flash files
         run: |
           cd .pio/build/esp32
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32 merge_bin -o merged-flash.bin --flash_mode dio --flash_size 4MB 0x1000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          python3 -m esptool --chip esp32 merge-bin -o merged-flash.bin --flash-mode dio --flash-size 4MB 0x1000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          
       - name: Merge ESP32-S3 flash files
         run: |
           cd .pio/build/esp32-s3
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32-s3 merge_bin -o merged-flash.bin --flash_mode dio --flash_freq 80m --flash_size 4MB 0x0000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          python3 -m esptool --chip esp32-s3 merge-bin -o merged-flash.bin --flash-mode dio --flash-freq 80m --flash-size 4MB 0x0000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+
+      - name: Merge ESP32-S3-N8 flash files
+        run: |
+          cd .pio/build/esp32-s3-N8
+          python3 -m esptool --chip esp32-s3 merge-bin -o merged-flash.bin --flash-mode dio --flash-freq 80m --flash-size 8MB 0x0000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          
       - name: Merge ESP32-C3 flash files
         run: |
           cd .pio/build/esp32-c3
-          python ~/.platformio/packages/tool-esptoolpy/esptool.py --chip esp32-c3 merge_bin -o merged-flash.bin --flash_mode dio --flash_freq 80m --flash_size 4MB 0x0000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          python3 -m esptool --chip esp32-c3 merge-bin -o merged-flash.bin --flash-mode dio --flash-freq 80m --flash-size 4MB 0x0000 bootloader.bin 0x8000 partitions.bin 0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin 0x10000 firmware.bin
+          
       - name: Copy firmware
         run: |
           cp .pio/build/esp32/merged-flash.bin ./.github/pages/esp32.bin
           cp .pio/build/esp32/firmware.bin ./.github/pages/esp32-ota.bin
           cp .pio/build/esp8266/firmware.bin ./.github/pages/esp8266.bin
           cp .pio/build/esp32-s3/merged-flash.bin ./.github/pages/esp32-s3.bin
-          cp .pio/build/esp32-c3/merged-flash.bin ./.github/pages/esp32-c3.bin
           cp .pio/build/esp32-s3/firmware.bin ./.github/pages/esp32-s3-ota.bin
+          cp .pio/build/esp32-s3-N8/merged-flash.bin ./.github/pages/esp32-s3-N8.bin
+          cp .pio/build/esp32-s3-N8/firmware.bin ./.github/pages/esp32-s3-N8-ota.bin
+          cp .pio/build/esp32-c3/merged-flash.bin ./.github/pages/esp32-c3.bin
           cp .pio/build/esp32-c3/firmware.bin ./.github/pages/esp32-c3-ota.bin
+          
       - name: Upload firmware artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: firmware
           path: |
@@ -62,12 +120,16 @@ jobs:
             ./.github/pages/esp8266.bin
             ./.github/pages/esp32-s3.bin
             ./.github/pages/esp32-s3-ota.bin
+            ./.github/pages/esp32-s3-N8.bin
+            ./.github/pages/esp32-s3-N8-ota.bin
             ./.github/pages/esp32-c3.bin
             ./.github/pages/esp32-c3-ota.bin
+            
       - name: Setup Github Page
         uses: actions/configure-pages@v6
+        
       - name: Upload webflash files
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./.github/pages/
           
@@ -78,17 +140,17 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     permissions:
-      contents: write   # to upload release artifacts
-      pages: write      # to deploy to Pages
-      id-token: write   # to verify the deployment originates from an appropriate source
+      contents: write   
+      pages: write      
+      id-token: write   
     runs-on: ubuntu-latest
     steps:
       - name: Download firmware artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: firmware
       - name: Upload release artifacts
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           fail_on_unmatched_files: true
           files: |
@@ -97,8 +159,10 @@ jobs:
             ./esp32-ota.bin
             ./esp32-s3.bin
             ./esp32-s3-ota.bin
+            ./esp32-s3-N8.bin
+            ./esp32-s3-N8-ota.bin
             ./esp32-c3.bin
             ./esp32-c3-ota.bin
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4

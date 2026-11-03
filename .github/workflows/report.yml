@@ -1,0 +1,137 @@
+name: PR Size Reporter
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+
+permissions:
+  pull-requests: write
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Size Logs
+        uses: actions/download-artifact@v4
+        with:
+          name: size-logs
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Read PR Number
+        id: pr_metadata
+        run: |
+          PR_NUM=$(cat pr_number.txt)
+          echo "num=$PR_NUM" >> $GITHUB_OUTPUT
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Generate Memory Comparison Report
+        run: |
+          python3 -c "
+          import re, os
+
+          def parse_sizes(filepath):
+              if not os.path.exists(filepath): 
+                  return {}
+              with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                  content = f.read()
+              
+              blocks = content.split('Processing ')
+              
+              data = {}
+              for block in blocks[1:]:
+                  lines = [l.strip() for l in block.split('\n') if l.strip()]
+                  if not lines: 
+                      continue
+                  
+                  env_name = lines[0].split()[0].replace('[', '').replace(']', '')
+                  
+                  ram_val, ram_total, flash_val, flash_total = 0, 0, 0, 0
+                  build_failed = True
+                  
+                  for line in lines:
+                      if 'SUCCESS' in line:
+                          build_failed = False
+                      if 'RAM:' in line:
+                          m = re.search(r'used\s+(\d+)\s+bytes\s+from\s+(\d+)\s+bytes', line)
+                          if m: 
+                              ram_val = int(m.group(1))
+                              ram_total = int(m.group(2))
+                      if 'Flash:' in line:
+                          m = re.search(r'used\s+(\d+)\s+bytes\s+from\s+(\d+)\s+bytes', line)
+                          if m: 
+                              flash_val = int(m.group(1))
+                              flash_total = int(m.group(2))
+                              
+                  if build_failed and ram_val == 0 and flash_val == 0:
+                      data[env_name] = {'failed': True}
+                  else:
+                      data[env_name] = {
+                          'failed': False,
+                          'ram': ram_val, 
+                          'ram_total': ram_total, 
+                          'flash': flash_val, 
+                          'flash_total': flash_total
+                      }
+              return data
+
+          base_data = parse_sizes('base_sizes.txt')
+          head_data = parse_sizes('head_sizes.txt')
+
+          def fmt_diff(b_val, h_val, failed):
+              if failed: return '---'
+              diff = h_val - b_val
+              if diff == 0: return 'No change'
+              return f'{diff:+d} B ({diff/1024:+.2f} KB)'
+
+          def fmt_usage(used, total, failed):
+              if failed: return '💥 **Build Failed**'
+              if total == 0: return f'{used/1024:.2f} KB'
+              pct = (used / total) * 100
+              return f'{used/1024:.2f} KB ({pct:.1f}%)'
+
+          def fmt_base(used, failed):
+              if failed or used == 0: return '---'
+              return f'{used/1024:.2f} KB'
+
+          report = '### 📊 ESP Memory Usage Summary (ROM / RAM)\n\n'
+          report += '| Environment | Memory | Base Branch | PR Branch (Usage %) | Difference |\n'
+          report += '| --- | --- | --- | --- | --- |\n'
+
+          all_envs = sorted(list(set(base_data.keys()) | set(head_data.keys())))
+          for env in all_envs:
+              b_env = base_data.get(env, {})
+              h_env = head_data.get(env, {})
+              
+              b_failed = b_env.get('failed', False)
+              h_failed = h_env.get('failed', False)
+              
+              b_ram = b_env.get('ram', 0)
+              h_ram = h_env.get('ram', 0)
+              h_ram_tot = h_env.get('ram_total', 0)
+              
+              b_fl  = b_env.get('flash', 0)
+              h_fl  = h_env.get('flash', 0)
+              h_fl_tot  = h_env.get('flash_total', 0)
+              
+              report += f'| **{env}** | RAM (Static) | {fmt_base(b_ram, b_failed)} | {fmt_usage(h_ram, h_ram_tot, h_failed)} | {fmt_diff(b_ram, h_ram, b_failed or h_failed)} |\n'
+              report += f'| | ROM (Flash) | {fmt_base(b_fl, b_failed)} | {fmt_usage(h_fl, h_fl_tot, h_failed)} | {fmt_diff(b_fl, h_fl, b_failed or h_failed)} |\n'
+
+          with open('pr_comment.md', 'w', encoding='utf-8') as f:
+              f.write(report)
+          "
+
+      - name: Post Comment to PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          number: ${{ steps.pr_metadata.outputs.num }}
+          header: esp_size_report   
+          path: pr_comment.md

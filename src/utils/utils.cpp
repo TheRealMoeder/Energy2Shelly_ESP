@@ -2,8 +2,8 @@
 #include "config/Configuration.h"
 // 1. Variable definitions and platform separation
 #if defined(ESP32)
-RTC_DATA_ATTR Energy2Shelly_ResetReason rtc_reset_reason;
-RTC_DATA_ATTR uint32_t rtcMagicNumber;
+RTC_NOINIT_ATTR Energy2Shelly_ResetReason rtc_reset_reason;
+RTC_NOINIT_ATTR uint32_t rtcMagicNumber;
 #elif defined(ESP8266)
 Energy2Shelly_ResetReason rtc_reset_reason; // Manually synced.
 // first 0..31 slots maybe used by OTA
@@ -11,7 +11,7 @@ Energy2Shelly_ResetReason rtc_reset_reason; // Manually synced.
 #define RTC_reset_reason_slot 127
 
 #endif
-
+Energy2Shelly_ResetReason ram_copy_rtc_reset_reason;
 
 
 Energy2Shelly_ResetReason clear_rtc_power_on(void)
@@ -70,8 +70,9 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
     ESP.rtcUserMemoryRead(RTC_reset_reason_slot, (uint32_t *)&rtc_reset_reason, sizeof(rtc_reset_reason));
   }
 #endif
-
-  return rtc_reset_reason;
+  ram_copy_rtc_reset_reason=rtc_reset_reason;
+  update_reset_reason(Energy2Shelly_ResetReason::OTHER); // set to unknown;
+  return ram_copy_rtc_reset_reason;
 }
 
 void update_reset_reason(Energy2Shelly_ResetReason reason)
@@ -164,7 +165,7 @@ void status_print(void)
   DEBUG_SERIAL.println(F(" h"));
  
   DEBUG_SERIAL.print(F("Reset reason: "));
-  switch (rtc_reset_reason)
+  switch (ram_copy_rtc_reset_reason)
   {
   case Energy2Shelly_ResetReason::POWER_ON:
     DEBUG_SERIAL.print(F("Power-on reset"));
