@@ -54,102 +54,114 @@ uint16_t SUNSPEC_REGISTER_COUNT = 64;
     #define SUNSPEC_VOLTAGE_SCALE config_doc["sunspec_registers"]["voltage_scale"]
     #define SUNSPEC_VOLTAGE_SCALE_INT config_doc["sunspec_registers"]["voltage_scale"].as<int>()
     #define SUNSPEC_VOLTAGE_SCALE_NULL config_doc["sunspec_registers"]["voltage_scale"].isNull()
-    #define SUNSPEC_CURRENT_SCALE config_doc["sunspec_registers"]["current_scale"]
+    #define SUNSPEC_VOLTAGE_TYPE config_doc["sunspec_registers"]["voltage_type"]
     #define SUNSPEC_POWER_FACTOR_SCALE config_doc["sunspec_registers"]["power_factor_scale"]
-    #define SUNSPEC_FREQUENCY_SCALE config_doc["sunspec_registers"]["frequency_scale"]
     #define SUNSPEC_FREQUENCY_SCALE_INT config_doc["sunspec_registers"]["frequency_scale"].as<int>()
     #define SUNSPEC_FREQUENCY_SCALE_NULL config_doc["sunspec_registers"]["frequency_scale"].isNull()
-    #define SUNSPEC_REAL_ENERGY_SCALE config_doc["sunspec_registers"]["real_energy_scale"]
     #define SUNSPEC_REAL_ENERGY_SCALE_INT config_doc["sunspec_registers"]["real_energy_scale"].as<int>()
     #define SUNSPEC_REAL_ENERGY_SCALE_NULL config_doc["sunspec_registers"]["real_energy_scale"].isNull()
-    #define SUNSPEC_REAL_ENERGY_IMPORTED0 config_doc["sunspec_registers"]["real_energy_imported0"]
-    #define SUNSPEC_REAL_ENERGY_IMPORTED1 config_doc["sunspec_registers"]["real_energy_imported1"]
-    #define SUNSPEC_REAL_POWER_SCALE config_doc["sunspec_registers"]["real_power_scale"]
     #define SUNSPEC_REAL_POWER_SCALE_INT config_doc["sunspec_registers"]["real_power_scale"].as<int>()
     #define SUNSPEC_REAL_POWER_SCALE_NULL config_doc["sunspec_registers"]["real_power_scale"].isNull()  
-    #define SUNSPEC_APPARANT_POWER_SCALE config_doc["sunspec_registers"]["apparent_power_scale"]
     #define SUNSPEC_APPARANT_POWER_SCALE_INT config_doc["sunspec_registers"]["apparent_power_scale"].as<int>()
     #define SUNSPEC_APPARANT_POWER_SCALE_NULL config_doc["sunspec_registers"]["apparent_power_scale"].isNull()
-    #define SUNSPEC_REAL_POWER_SCALE config_doc["sunspec_registers"]["real_power_scale"]
     #define SUNSPEC_REAL_POWER_SCALE_INT config_doc["sunspec_registers"]["real_power_scale"].as<int>()
     #define SUNSPEC_CURRENT_SCALE_INT config_doc["sunspec_registers"]["current_scale"].as<int>()
     #define SUNSPEC_CURRENT_SCALE_NULL config_doc["sunspec_registers"]["current_scale"].isNull()
     #define SUNSPEC_POWER_FACTOR_SCALE_INT config_doc["sunspec_registers"]["power_factor_scale"].as<int>()
     #define SUNSPEC_POWER_FACTOR_SCALE_NULL config_doc["sunspec_registers"]["power_factor_scale"].isNull()
-    #define SUNSPEC_BASE_INT config_doc["sunspec_registers"]["base"].as<int>()
-    #define SUNSPEC_REAL_POWER0 config_doc["sunspec_registers"]["real_power0"]
     #define SUNSPEC_REAL_POWER0_INT config_doc["sunspec_registers"]["real_power0"].as<int>()
     #define SUNSPEC_REAL_POWER0_NULL config_doc["sunspec_registers"]["real_power0"].isNull()
-    #define SUNSPEC_REAL_POWER1 config_doc["sunspec_registers"]["real_power1"]
     #define SUNSPEC_REAL_POWER1_INT config_doc["sunspec_registers"]["real_power1"].as<int>()
     #define SUNSPEC_REAL_POWER1_NULL config_doc["sunspec_registers"]["real_power1"].isNull()
-    #define SUNSPEC_REAL_POWER2 config_doc["sunspec_registers"]["real_power2"]
     #define SUNSPEC_REAL_POWER2_INT config_doc["sunspec_registers"]["real_power2"].as<int>()
     #define SUNSPEC_REAL_POWER2_NULL config_doc["sunspec_registers"]["real_power2"].isNull()
-    #define SUNSPEC_APPARANT_POWER0 config_doc["sunspec_registers"]["apparent_power0"]
     #define SUNSPEC_APPARANT_POWER0_INT config_doc["sunspec_registers"]["apparent_power0"].as<int>()
     #define SUNSPEC_APPARANT_POWER0_NULL config_doc["sunspec_registers"]["apparent_power0"].isNull()
-    #define SUNSPEC_APPARANT_POWER1 config_doc["sunspec_registers"]["apparent_power1"]
     #define SUNSPEC_APPARANT_POWER1_INT config_doc["sunspec_registers"]["apparent_power1"].as<int>()
     #define SUNSPEC_APPARANT_POWER1_NULL config_doc["sunspec_registers"]["apparent_power1"].isNull()
-    #define SUNSPEC_APPARANT_POWER2 config_doc["sunspec_registers"]["apparent_power2"]
     #define SUNSPEC_APPARANT_POWER2_INT config_doc["sunspec_registers"]["apparent_power2"].as<int>()
     #define SUNSPEC_APPARANT_POWER2_NULL config_doc["sunspec_registers"]["apparent_power2"].isNull()
-    #define SUNSPEC_CURRENT0 config_doc["sunspec_registers"]["current0"]
     #define SUNSPEC_CURRENT0_NULL config_doc["sunspec_registers"]["current0"].isNull()
     #define SUNSPEC_CURRENT0_INT config_doc["sunspec_registers"]["current0"].as<int>()
-    #define SUNSPEC_CURRENT1 config_doc["sunspec_registers"]["current1"]
     #define SUNSPEC_CURRENT1_NULL config_doc["sunspec_registers"]["current1"].isNull()
     #define SUNSPEC_CURRENT1_INT config_doc["sunspec_registers"]["current1"].as<int>()
-    #define SUNSPEC_CURRENT2 config_doc["sunspec_registers"]["current2"]
     #define SUNSPEC_CURRENT2_NULL config_doc["sunspec_registers"]["current2"].isNull()
     #define SUNSPEC_CURRENT2_INT config_doc["sunspec_registers"]["current2"].as<int>()
-    #define SUNSPEC_VOLTAGE0 config_doc["sunspec_registers"]["voltage0"]
     #define SUNSPEC_VOLTAGE0_NULL config_doc["sunspec_registers"]["voltage0"].isNull()
     #define SUNSPEC_VOLTAGE0_INT config_doc["sunspec_registers"]["voltage0"].as<int>()
-    #define SUNSPEC_VOLTAGE1 config_doc["sunspec_registers"]["voltage1"]
     #define SUNSPEC_VOLTAGE1_NULL config_doc["sunspec_registers"]["voltage1"].isNull()
     #define SUNSPEC_VOLTAGE1_INT config_doc["sunspec_registers"]["voltage1"].as<int>()
-    #define SUNSPEC_VOLTAGE2 config_doc["sunspec_registers"]["voltage2"]
     #define SUNSPEC_VOLTAGE2_NULL config_doc["sunspec_registers"]["voltage2"].isNull()
     #define SUNSPEC_VOLTAGE2_INT config_doc["sunspec_registers"]["voltage2"].as<int>()
-    #define SUNSPEC_POWER_FACTOR0 config_doc["sunspec_registers"]["power_factor0"]
     #define SUNSPEC_POWER_FACTOR0_NULL config_doc["sunspec_registers"]["power_factor0"].isNull()
     #define SUNSPEC_POWER_FACTOR0_INT config_doc["sunspec_registers"]["power_factor0"].as<int>()
-    #define SUNSPEC_POWER_FACTOR1 config_doc["sunspec_registers"]["power_factor1"]
     #define SUNSPEC_POWER_FACTOR1_NULL config_doc["sunspec_registers"]["power_factor1"].isNull()
     #define SUNSPEC_POWER_FACTOR1_INT config_doc["sunspec_registers"]["power_factor1"].as<int>()
-    #define SUNSPEC_POWER_FACTOR2 config_doc["sunspec_registers"]["power_factor2"]
     #define SUNSPEC_POWER_FACTOR2_NULL config_doc["sunspec_registers"]["power_factor2"].isNull()
     #define SUNSPEC_POWER_FACTOR2_INT config_doc["sunspec_registers"]["power_factor2"].as<int>()
-    #define SUNSPEC_FREQUENCY config_doc["sunspec_registers"]["frequency"]
     #define SUNSPEC_FREQUENCY_NULL config_doc["sunspec_registers"]["frequency"].isNull()
     #define SUNSPEC_FREQUENCY_INT config_doc["sunspec_registers"]["frequency"].as<int>()
-    #define SUNSPEC_REAL_ENERGY_IMPORTED0 config_doc["sunspec_registers"]["real_energy_imported0"]
     #define SUNSPEC_REAL_ENERGY_IMPORTED0_NULL config_doc["sunspec_registers"]["real_energy_imported0"].isNull()
     #define SUNSPEC_REAL_ENERGY_IMPORTED0_INT config_doc["sunspec_registers"]["real_energy_imported0"].as<int>()
-    #define SUNSPEC_REAL_ENERGY_IMPORTED1 config_doc["sunspec_registers"]["real_energy_imported1"]
     #define SUNSPEC_REAL_ENERGY_IMPORTED1_NULL config_doc["sunspec_registers"]["real_energy_imported1"].isNull()
     #define SUNSPEC_REAL_ENERGY_IMPORTED1_INT config_doc["sunspec_registers"]["real_energy_imported1"].as<int>()
-    #define SUNSPEC_REAL_ENERGY_IMPORTED2 config_doc["sunspec_registers"]["real_energy_imported2"]
     #define SUNSPEC_REAL_ENERGY_IMPORTED2_NULL config_doc["sunspec_registers"]["real_energy_imported2"].isNull()
-    #define SUNSPEC_REAL_ENERGY_IMPORTED2_INT config_doc["sunspec_registers"]["real_energy_imported2"].as<int>()
-    #define SUNSPEC_REAL_ENERGY_EXPORTED0 config_doc["sunspec_registers"]["real_energy_exported0"]
-    #define SUNSPEC_REAL_ENERGY_EXPORTED1 config_doc["sunspec_registers"]["real_energy_exported1"]
-    #define SUNSPEC_REAL_ENERGY_EXPORTED2 config_doc["sunspec_registers"]["real_energy_exported2"]  
+    #define SUNSPEC_REAL_ENERGY_IMPORTED2_INT config_doc["sunspec_registers"]["real_energy_imported2"].as<int>() 
     #define SUNSPEC_REAL_ENERGY_EXPORTED0_NULL config_doc["sunspec_registers"]["real_energy_exported0"].isNull()
     #define SUNSPEC_REAL_ENERGY_EXPORTED0_INT config_doc["sunspec_registers"]["real_energy_exported0"].as<int>()
     #define SUNSPEC_REAL_ENERGY_EXPORTED1_NULL config_doc["sunspec_registers"]["real_energy_exported1"].isNull()
     #define SUNSPEC_REAL_ENERGY_EXPORTED1_INT config_doc["sunspec_registers"]["real_energy_exported1"].as<int>()
     #define SUNSPEC_REAL_ENERGY_EXPORTED2_NULL config_doc["sunspec_registers"]["real_energy_exported2"].isNull()
     #define SUNSPEC_REAL_ENERGY_EXPORTED2_INT config_doc["sunspec_registers"]["real_energy_exported2"].as<int>()
+    #define SUNSPEC_REGISTER_COUNT_INT config_doc["sunspec_registers"]["register_count"].as<int>()
+    #define SUNSPEC_REGISTER_COUNT_NULL config_doc["sunspec_registers"]["register_count"].isNull()
+    #define SUNSPEC_BASE_NULL config_doc["sunspec_registers"]["base"].isNull()
+    #define SUNSPEC_BASE_INT config_doc["sunspec_registers"]["base"].as<int>()
 
+
+double convert_modbus_type(uint16_t *data, String type)
+{
+  if (type == "int16")
+  {
+    return (int16_t)data[0];
+  }
+  else if (type == "uint16")
+  {
+    return data[0];
+  }
+  else if (type == "int32")
+  {
+    int32_t value = ((int32_t)data[0] << 16) | data[1];
+    return value;
+  }
+  else if (type == "uint32")
+  {
+    uint32_t value = ((uint32_t)data[0] << 16) | data[1];
+    return value;
+  }
+  else if (type == "float32")
+  {
+    uint32_t value = ((uint32_t)data[0] << 16) | data[1];
+    float fvalue;
+    memcpy(&fvalue, &value, sizeof(fvalue));
+    return fvalue;
+  }
+  else
+  {
+    // Unsupported type
+    return NAN;
+  }
+}
 
 
 bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, void *data)
 {
 
-  if (event == Modbus::EX_SUCCESS)
+  if (event == Modbus::EX_SUCCESS && 
+     !SUNSPEC_REGISTER_COUNT_NULL && 
+     SUNSPEC_REGISTER_COUNT_INT > 0 &&
+     !SUNSPEC_BASE_NULL && 
+     SUNSPEC_BASE_INT >= 0)
   {
     // data available, process it
     int32_t power = 0;
