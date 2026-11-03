@@ -46,6 +46,106 @@ uint16_t SUNSPEC_REAL_ENERGY_IMPORTED2 = 40122;
 
 uint16_t SUNSPEC_REGISTER_COUNT = 64;
 
+
+
+
+
+
+    #define SUNSPEC_VOLTAGE_SCALE config_doc["sunspec_registers"]["voltage_scale"]
+    #define SUNSPEC_VOLTAGE_SCALE_INT config_doc["sunspec_registers"]["voltage_scale"].as<int>()
+    #define SUNSPEC_VOLTAGE_SCALE_NULL config_doc["sunspec_registers"]["voltage_scale"].isNull()
+    #define SUNSPEC_CURRENT_SCALE config_doc["sunspec_registers"]["current_scale"]
+    #define SUNSPEC_POWER_FACTOR_SCALE config_doc["sunspec_registers"]["power_factor_scale"]
+    #define SUNSPEC_FREQUENCY_SCALE config_doc["sunspec_registers"]["frequency_scale"]
+    #define SUNSPEC_FREQUENCY_SCALE_INT config_doc["sunspec_registers"]["frequency_scale"].as<int>()
+    #define SUNSPEC_FREQUENCY_SCALE_NULL config_doc["sunspec_registers"]["frequency_scale"].isNull()
+    #define SUNSPEC_REAL_ENERGY_SCALE config_doc["sunspec_registers"]["real_energy_scale"]
+    #define SUNSPEC_REAL_ENERGY_SCALE_INT config_doc["sunspec_registers"]["real_energy_scale"].as<int>()
+    #define SUNSPEC_REAL_ENERGY_SCALE_NULL config_doc["sunspec_registers"]["real_energy_scale"].isNull()
+    #define SUNSPEC_REAL_ENERGY_IMPORTED0 config_doc["sunspec_registers"]["real_energy_imported0"]
+    #define SUNSPEC_REAL_ENERGY_IMPORTED1 config_doc["sunspec_registers"]["real_energy_imported1"]
+    #define SUNSPEC_REAL_POWER_SCALE config_doc["sunspec_registers"]["real_power_scale"]
+    #define SUNSPEC_REAL_POWER_SCALE_INT config_doc["sunspec_registers"]["real_power_scale"].as<int>()
+    #define SUNSPEC_REAL_POWER_SCALE_NULL config_doc["sunspec_registers"]["real_power_scale"].isNull()  
+    #define SUNSPEC_APPARANT_POWER_SCALE config_doc["sunspec_registers"]["apparent_power_scale"]
+    #define SUNSPEC_APPARANT_POWER_SCALE_INT config_doc["sunspec_registers"]["apparent_power_scale"].as<int>()
+    #define SUNSPEC_APPARANT_POWER_SCALE_NULL config_doc["sunspec_registers"]["apparent_power_scale"].isNull()
+    #define SUNSPEC_REAL_POWER_SCALE config_doc["sunspec_registers"]["real_power_scale"]
+    #define SUNSPEC_REAL_POWER_SCALE_INT config_doc["sunspec_registers"]["real_power_scale"].as<int>()
+    #define SUNSPEC_CURRENT_SCALE_INT config_doc["sunspec_registers"]["current_scale"].as<int>()
+    #define SUNSPEC_CURRENT_SCALE_NULL config_doc["sunspec_registers"]["current_scale"].isNull()
+    #define SUNSPEC_POWER_FACTOR_SCALE_INT config_doc["sunspec_registers"]["power_factor_scale"].as<int>()
+    #define SUNSPEC_POWER_FACTOR_SCALE_NULL config_doc["sunspec_registers"]["power_factor_scale"].isNull()
+    #define SUNSPEC_BASE_INT config_doc["sunspec_registers"]["base"].as<int>()
+    #define SUNSPEC_REAL_POWER0 config_doc["sunspec_registers"]["real_power0"]
+    #define SUNSPEC_REAL_POWER0_INT config_doc["sunspec_registers"]["real_power0"].as<int>()
+    #define SUNSPEC_REAL_POWER0_NULL config_doc["sunspec_registers"]["real_power0"].isNull()
+    #define SUNSPEC_REAL_POWER1 config_doc["sunspec_registers"]["real_power1"]
+    #define SUNSPEC_REAL_POWER1_INT config_doc["sunspec_registers"]["real_power1"].as<int>()
+    #define SUNSPEC_REAL_POWER1_NULL config_doc["sunspec_registers"]["real_power1"].isNull()
+    #define SUNSPEC_REAL_POWER2 config_doc["sunspec_registers"]["real_power2"]
+    #define SUNSPEC_REAL_POWER2_INT config_doc["sunspec_registers"]["real_power2"].as<int>()
+    #define SUNSPEC_REAL_POWER2_NULL config_doc["sunspec_registers"]["real_power2"].isNull()
+    #define SUNSPEC_APPARANT_POWER0 config_doc["sunspec_registers"]["apparent_power0"]
+    #define SUNSPEC_APPARANT_POWER0_INT config_doc["sunspec_registers"]["apparent_power0"].as<int>()
+    #define SUNSPEC_APPARANT_POWER0_NULL config_doc["sunspec_registers"]["apparent_power0"].isNull()
+    #define SUNSPEC_APPARANT_POWER1 config_doc["sunspec_registers"]["apparent_power1"]
+    #define SUNSPEC_APPARANT_POWER1_INT config_doc["sunspec_registers"]["apparent_power1"].as<int>()
+    #define SUNSPEC_APPARANT_POWER1_NULL config_doc["sunspec_registers"]["apparent_power1"].isNull()
+    #define SUNSPEC_APPARANT_POWER2 config_doc["sunspec_registers"]["apparent_power2"]
+    #define SUNSPEC_APPARANT_POWER2_INT config_doc["sunspec_registers"]["apparent_power2"].as<int>()
+    #define SUNSPEC_APPARANT_POWER2_NULL config_doc["sunspec_registers"]["apparent_power2"].isNull()
+    #define SUNSPEC_CURRENT0 config_doc["sunspec_registers"]["current0"]
+    #define SUNSPEC_CURRENT0_NULL config_doc["sunspec_registers"]["current0"].isNull()
+    #define SUNSPEC_CURRENT0_INT config_doc["sunspec_registers"]["current0"].as<int>()
+    #define SUNSPEC_CURRENT1 config_doc["sunspec_registers"]["current1"]
+    #define SUNSPEC_CURRENT1_NULL config_doc["sunspec_registers"]["current1"].isNull()
+    #define SUNSPEC_CURRENT1_INT config_doc["sunspec_registers"]["current1"].as<int>()
+    #define SUNSPEC_CURRENT2 config_doc["sunspec_registers"]["current2"]
+    #define SUNSPEC_CURRENT2_NULL config_doc["sunspec_registers"]["current2"].isNull()
+    #define SUNSPEC_CURRENT2_INT config_doc["sunspec_registers"]["current2"].as<int>()
+    #define SUNSPEC_VOLTAGE0 config_doc["sunspec_registers"]["voltage0"]
+    #define SUNSPEC_VOLTAGE0_NULL config_doc["sunspec_registers"]["voltage0"].isNull()
+    #define SUNSPEC_VOLTAGE0_INT config_doc["sunspec_registers"]["voltage0"].as<int>()
+    #define SUNSPEC_VOLTAGE1 config_doc["sunspec_registers"]["voltage1"]
+    #define SUNSPEC_VOLTAGE1_NULL config_doc["sunspec_registers"]["voltage1"].isNull()
+    #define SUNSPEC_VOLTAGE1_INT config_doc["sunspec_registers"]["voltage1"].as<int>()
+    #define SUNSPEC_VOLTAGE2 config_doc["sunspec_registers"]["voltage2"]
+    #define SUNSPEC_VOLTAGE2_NULL config_doc["sunspec_registers"]["voltage2"].isNull()
+    #define SUNSPEC_VOLTAGE2_INT config_doc["sunspec_registers"]["voltage2"].as<int>()
+    #define SUNSPEC_POWER_FACTOR0 config_doc["sunspec_registers"]["power_factor0"]
+    #define SUNSPEC_POWER_FACTOR0_NULL config_doc["sunspec_registers"]["power_factor0"].isNull()
+    #define SUNSPEC_POWER_FACTOR0_INT config_doc["sunspec_registers"]["power_factor0"].as<int>()
+    #define SUNSPEC_POWER_FACTOR1 config_doc["sunspec_registers"]["power_factor1"]
+    #define SUNSPEC_POWER_FACTOR1_NULL config_doc["sunspec_registers"]["power_factor1"].isNull()
+    #define SUNSPEC_POWER_FACTOR1_INT config_doc["sunspec_registers"]["power_factor1"].as<int>()
+    #define SUNSPEC_POWER_FACTOR2 config_doc["sunspec_registers"]["power_factor2"]
+    #define SUNSPEC_POWER_FACTOR2_NULL config_doc["sunspec_registers"]["power_factor2"].isNull()
+    #define SUNSPEC_POWER_FACTOR2_INT config_doc["sunspec_registers"]["power_factor2"].as<int>()
+    #define SUNSPEC_FREQUENCY config_doc["sunspec_registers"]["frequency"]
+    #define SUNSPEC_FREQUENCY_NULL config_doc["sunspec_registers"]["frequency"].isNull()
+    #define SUNSPEC_FREQUENCY_INT config_doc["sunspec_registers"]["frequency"].as<int>()
+    #define SUNSPEC_REAL_ENERGY_IMPORTED0 config_doc["sunspec_registers"]["real_energy_imported0"]
+    #define SUNSPEC_REAL_ENERGY_IMPORTED0_NULL config_doc["sunspec_registers"]["real_energy_imported0"].isNull()
+    #define SUNSPEC_REAL_ENERGY_IMPORTED0_INT config_doc["sunspec_registers"]["real_energy_imported0"].as<int>()
+    #define SUNSPEC_REAL_ENERGY_IMPORTED1 config_doc["sunspec_registers"]["real_energy_imported1"]
+    #define SUNSPEC_REAL_ENERGY_IMPORTED1_NULL config_doc["sunspec_registers"]["real_energy_imported1"].isNull()
+    #define SUNSPEC_REAL_ENERGY_IMPORTED1_INT config_doc["sunspec_registers"]["real_energy_imported1"].as<int>()
+    #define SUNSPEC_REAL_ENERGY_IMPORTED2 config_doc["sunspec_registers"]["real_energy_imported2"]
+    #define SUNSPEC_REAL_ENERGY_IMPORTED2_NULL config_doc["sunspec_registers"]["real_energy_imported2"].isNull()
+    #define SUNSPEC_REAL_ENERGY_IMPORTED2_INT config_doc["sunspec_registers"]["real_energy_imported2"].as<int>()
+    #define SUNSPEC_REAL_ENERGY_EXPORTED0 config_doc["sunspec_registers"]["real_energy_exported0"]
+    #define SUNSPEC_REAL_ENERGY_EXPORTED1 config_doc["sunspec_registers"]["real_energy_exported1"]
+    #define SUNSPEC_REAL_ENERGY_EXPORTED2 config_doc["sunspec_registers"]["real_energy_exported2"]  
+    #define SUNSPEC_REAL_ENERGY_EXPORTED0_NULL config_doc["sunspec_registers"]["real_energy_exported0"].isNull()
+    #define SUNSPEC_REAL_ENERGY_EXPORTED0_INT config_doc["sunspec_registers"]["real_energy_exported0"].as<int>()
+    #define SUNSPEC_REAL_ENERGY_EXPORTED1_NULL config_doc["sunspec_registers"]["real_energy_exported1"].isNull()
+    #define SUNSPEC_REAL_ENERGY_EXPORTED1_INT config_doc["sunspec_registers"]["real_energy_exported1"].as<int>()
+    #define SUNSPEC_REAL_ENERGY_EXPORTED2_NULL config_doc["sunspec_registers"]["real_energy_exported2"].isNull()
+    #define SUNSPEC_REAL_ENERGY_EXPORTED2_INT config_doc["sunspec_registers"]["real_energy_exported2"].as<int>()
+
+
+
 bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, void *data)
 {
 
@@ -53,33 +153,34 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
   {
     // data available, process it
     int32_t power = 0;
-    double scale_V = SUNSPEC_scale(modbus_result[constrain(SUNSPEC_VOLTAGE_SCALE - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)]);
-    double scale_real_power = SUNSPEC_scale(modbus_result[constrain(SUNSPEC_REAL_POWER_SCALE - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)]);
-    double scale_apparant_power = SUNSPEC_scale(modbus_result[constrain(SUNSPEC_APPARANT_POWER_SCALE - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)]);
-    double scale_current = SUNSPEC_scale(modbus_result[constrain(SUNSPEC_CURRENT_SCALE - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)]);
-    double scale_powerfactor = SUNSPEC_scale(modbus_result[constrain(SUNSPEC_POWER_FACTOR_SCALE - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)]);
-    double scale_frequency = SUNSPEC_scale(modbus_result[constrain(SUNSPEC_FREQUENCY_SCALE - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)]);
-    double scale_real_energy = SUNSPEC_scale(modbus_result[constrain(SUNSPEC_REAL_ENERGY_SCALE - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)]);
 
-    PhasePower[0].power = modbus_result[constrain(SUNSPEC_REAL_POWER0 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_real_power + offsetPerPhase;
-    PhasePower[0].apparentPower = modbus_result[constrain(SUNSPEC_APPARANT_POWER0 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_apparant_power + offsetPerPhase;
-    PhasePower[0].current = modbus_result[constrain(SUNSPEC_CURRENT0 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_current;
-    PhasePower[0].powerFactor = modbus_result[constrain(SUNSPEC_POWER_FACTOR0 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_powerfactor;
-    PhasePower[0].voltage = modbus_result[constrain(SUNSPEC_VOLTAGE0 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_V;
-    PhasePower[0].frequency = modbus_result[constrain(SUNSPEC_FREQUENCY - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_frequency;
+    double scale_V = (!SUNSPEC_VOLTAGE_SCALE_NULL && SUNSPEC_VOLTAGE_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_VOLTAGE_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
+    double scale_real_power = (!SUNSPEC_REAL_POWER_SCALE_NULL && SUNSPEC_REAL_POWER_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_REAL_POWER_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
+    double scale_apparant_power = (!SUNSPEC_APPARANT_POWER_SCALE_NULL && SUNSPEC_APPARANT_POWER_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_APPARANT_POWER_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
+    double scale_current = (!SUNSPEC_CURRENT_SCALE_NULL && SUNSPEC_CURRENT_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_CURRENT_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
+    double scale_powerfactor = (!SUNSPEC_POWER_FACTOR_SCALE_NULL && SUNSPEC_POWER_FACTOR_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_POWER_FACTOR_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
+    double scale_frequency = (!SUNSPEC_FREQUENCY_SCALE_NULL && SUNSPEC_FREQUENCY_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_FREQUENCY_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
+    double scale_real_energy = (!SUNSPEC_REAL_ENERGY_SCALE_NULL && SUNSPEC_REAL_ENERGY_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_REAL_ENERGY_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
+
+    PhasePower[0].power = (!SUNSPEC_REAL_POWER0_NULL && SUNSPEC_REAL_POWER0_INT >= 0) ? modbus_result[constrain(SUNSPEC_REAL_POWER0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_real_power + offsetPerPhase : 0;
+    PhasePower[0].apparentPower = (!SUNSPEC_APPARANT_POWER0_NULL && SUNSPEC_APPARANT_POWER0_INT >= 0) ? modbus_result[constrain(SUNSPEC_APPARANT_POWER0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_apparant_power + offsetPerPhase : 0;
+    PhasePower[0].current = (!SUNSPEC_CURRENT0_NULL && SUNSPEC_CURRENT0_INT >= 0) ? modbus_result[constrain(SUNSPEC_CURRENT0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_current : 0;
+    PhasePower[0].powerFactor = (!SUNSPEC_POWER_FACTOR0_NULL && SUNSPEC_POWER_FACTOR0_INT >= 0) ? modbus_result[constrain(SUNSPEC_POWER_FACTOR0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_powerfactor : 0;
+    PhasePower[0].voltage = (!SUNSPEC_VOLTAGE0_NULL && SUNSPEC_VOLTAGE0_INT >= 0) ? modbus_result[constrain(SUNSPEC_VOLTAGE0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_V : 0;
+    PhasePower[0].frequency = (!SUNSPEC_FREQUENCY_NULL && SUNSPEC_FREQUENCY_INT >= 0) ? modbus_result[constrain(SUNSPEC_FREQUENCY_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_frequency : 0;
 
     power += PhasePower[0].power;
-
+    if (!SUNSPEC_REAL_ENERGY_IMPORTED0_NULL && SUNSPEC_REAL_ENERGY_IMPORTED0_INT >= 0 && !SUNSPEC_REAL_ENERGY_EXPORTED0_NULL && SUNSPEC_REAL_ENERGY_EXPORTED0_INT >= 0)
     {
       uint32_t p = 0;
-      uint8_t *p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED0 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 2)];
+      uint8_t *p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)];
       p |= ((uint32_t)p_u8[2]) << 0;
       p |= ((uint32_t)p_u8[3]) << 8;
       p |= ((uint32_t)p_u8[0]) << 16;
       p |= ((uint32_t)p_u8[1]) << 24;
       PhaseEnergy[0].consumption = p / 1000.0 * scale_real_energy;
       p = 0;
-      p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED0 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 2)];
+      p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)];
       p |= ((uint32_t)p_u8[2]) << 0;
       p |= ((uint32_t)p_u8[3]) << 8;
       p |= ((uint32_t)p_u8[0]) << 16;
@@ -87,62 +188,54 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
       PhaseEnergy[0].gridfeedin = p / 1000.0 * scale_real_energy;
     }
 
-    if (phase_number[0] == '3')
-    {
-      PhasePower[1].power = modbus_result[constrain(SUNSPEC_REAL_POWER1 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_real_power + offsetPerPhase;
-      PhasePower[1].apparentPower = modbus_result[constrain(SUNSPEC_APPARANT_POWER1 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_apparant_power + offsetPerPhase;
-      PhasePower[1].current = modbus_result[constrain(SUNSPEC_CURRENT1 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_current;
-      PhasePower[1].powerFactor = modbus_result[constrain(SUNSPEC_POWER_FACTOR1 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_powerfactor;
-      PhasePower[1].voltage = modbus_result[constrain(SUNSPEC_VOLTAGE1 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_V;
-      PhasePower[1].frequency = modbus_result[constrain(SUNSPEC_FREQUENCY - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_frequency;
+
+    PhasePower[1].power = (!SUNSPEC_REAL_POWER1_NULL && SUNSPEC_REAL_POWER1_INT >= 0) ? modbus_result[constrain(SUNSPEC_REAL_POWER1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_real_power + offsetPerPhase : 0;
+    PhasePower[1].apparentPower = (!SUNSPEC_APPARANT_POWER1_NULL && SUNSPEC_APPARANT_POWER1_INT >= 0) ? modbus_result[constrain(SUNSPEC_APPARANT_POWER1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_apparant_power + offsetPerPhase : 0;
+    PhasePower[1].current = (!SUNSPEC_CURRENT1_NULL && SUNSPEC_CURRENT1_INT >= 0) ? modbus_result[constrain(SUNSPEC_CURRENT1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_current : 0;
+    PhasePower[1].powerFactor = (!SUNSPEC_POWER_FACTOR1_NULL && SUNSPEC_POWER_FACTOR1_INT >= 0) ? modbus_result[constrain(SUNSPEC_POWER_FACTOR1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_powerfactor : 0;
+    PhasePower[1].voltage = (!SUNSPEC_VOLTAGE1_NULL && SUNSPEC_VOLTAGE1_INT >= 0) ? modbus_result[constrain(SUNSPEC_VOLTAGE1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_V : 0;
+    PhasePower[1].frequency = (!SUNSPEC_FREQUENCY_NULL && SUNSPEC_FREQUENCY_INT >= 0) ? modbus_result[constrain(SUNSPEC_FREQUENCY_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_frequency : 0;
 
       power += PhasePower[1].power;
-      {
+    
+    if (!SUNSPEC_REAL_ENERGY_IMPORTED1_NULL && SUNSPEC_REAL_ENERGY_IMPORTED1_INT >= 0 && !SUNSPEC_REAL_ENERGY_EXPORTED1_NULL && SUNSPEC_REAL_ENERGY_EXPORTED1_INT >= 0)
+    {
         uint32_t p = 0;
-        uint8_t *p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED1 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 2)];
+        uint8_t *p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)];
         p |= ((uint32_t)p_u8[2]) << 0;
         p |= ((uint32_t)p_u8[3]) << 8;
         p |= ((uint32_t)p_u8[0]) << 16;
         p |= ((uint32_t)p_u8[1]) << 24;
         PhaseEnergy[1].consumption = p / 1000.0 * scale_real_energy;
         p = 0;
-        p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED1 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 2)];
+        p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)];
         p |= ((uint32_t)p_u8[2]) << 0;
         p |= ((uint32_t)p_u8[3]) << 8;
         p |= ((uint32_t)p_u8[0]) << 16;
         p |= ((uint32_t)p_u8[1]) << 24;
         PhaseEnergy[1].gridfeedin = p / 1000.0 * scale_real_energy;
-      }
-
-      PhasePower[2].power = modbus_result[constrain(SUNSPEC_REAL_POWER2 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_real_power + offsetPerPhase;
-      PhasePower[2].apparentPower = modbus_result[constrain(SUNSPEC_APPARANT_POWER2 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_apparant_power + offsetPerPhase;
-      PhasePower[2].current = modbus_result[constrain(SUNSPEC_CURRENT2 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_current;
-      PhasePower[2].powerFactor = modbus_result[constrain(SUNSPEC_POWER_FACTOR2 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_powerfactor;
-      PhasePower[2].voltage = modbus_result[constrain(SUNSPEC_VOLTAGE2 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_V;
-      PhasePower[2].frequency = modbus_result[constrain(SUNSPEC_FREQUENCY - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_frequency;
-
-      power += PhasePower[2].power;
     }
-    else {
-      for (int n=1;n<3;n++) {
-        PhasePower[n].apparentPower=0;
-        PhasePower[n].current=0;
-        PhasePower[n].frequency=0;
-        PhasePower[n].power=0;
-        PhasePower[n].powerFactor=0;
-        PhasePower[n].voltage=0;
-      }
-    }
+
+    PhasePower[2].power = (!SUNSPEC_REAL_POWER2_NULL && SUNSPEC_REAL_POWER2_INT >= 0) ? modbus_result[constrain(SUNSPEC_REAL_POWER2_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_real_power + offsetPerPhase : 0;
+    PhasePower[2].apparentPower = (!SUNSPEC_APPARANT_POWER2_NULL && SUNSPEC_APPARANT_POWER2_INT >= 0) ? modbus_result[constrain(SUNSPEC_APPARANT_POWER2_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_apparant_power + offsetPerPhase : 0;
+    PhasePower[2].current = (!SUNSPEC_CURRENT2_NULL && SUNSPEC_CURRENT2_INT >= 0) ? modbus_result[constrain(SUNSPEC_CURRENT2_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_current : 0;
+    PhasePower[2].powerFactor = (!SUNSPEC_POWER_FACTOR2_NULL && SUNSPEC_POWER_FACTOR2_INT >= 0) ? modbus_result[constrain(SUNSPEC_POWER_FACTOR2_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_powerfactor : 0;
+    PhasePower[2].voltage = (!SUNSPEC_VOLTAGE2_NULL && SUNSPEC_VOLTAGE2_INT >= 0) ? modbus_result[constrain(SUNSPEC_VOLTAGE2_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_V : 0;
+    PhasePower[2].frequency = (!SUNSPEC_FREQUENCY_NULL && SUNSPEC_FREQUENCY_INT >= 0) ? modbus_result[constrain(SUNSPEC_FREQUENCY_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)] * scale_frequency : 0;
+
+    power += PhasePower[2].power;
+    
+    if (!SUNSPEC_REAL_ENERGY_IMPORTED2_NULL && SUNSPEC_REAL_ENERGY_IMPORTED2_INT >= 0 && !SUNSPEC_REAL_ENERGY_EXPORTED2_NULL && SUNSPEC_REAL_ENERGY_EXPORTED2_INT >= 0)
     {
       uint32_t p = 0;
-      uint8_t *p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED2 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 2)];
+      uint8_t *p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED2_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)];
       p |= ((uint32_t)p_u8[2]) << 0;
       p |= ((uint32_t)p_u8[3]) << 8;
       p |= ((uint32_t)p_u8[0]) << 16;
       p |= ((uint32_t)p_u8[1]) << 24;
       PhaseEnergy[2].consumption = p / 1000.0 * scale_real_energy;
       p = 0;
-      p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED2 - SUNSPEC_BASE, 0, SUNSPEC_REGISTER_COUNT - 2)];
+      p_u8 = (uint8_t *)&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED2_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)];
       p |= ((uint32_t)p_u8[2]) << 0;
       p |= ((uint32_t)p_u8[3]) << 8;
       p |= ((uint32_t)p_u8[0]) << 16;
@@ -180,113 +273,4 @@ void parseSUNSPEC()
     delay(10);
     modbus1.task();
   }
-}
-
-void setupSUNSPEC_power_register(char *s)
-{
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, s);
-  if (error)
-    return;
-  SUNSPEC_REAL_POWER0 = doc["A"] | SUNSPEC_REAL_POWER0;
-  SUNSPEC_REAL_POWER1 = doc["B"] | SUNSPEC_REAL_POWER1;
-  SUNSPEC_REAL_POWER2 = doc["C"] | SUNSPEC_REAL_POWER2;
-  SUNSPEC_POWER_FACTOR_SCALE = doc["S"] | SUNSPEC_POWER_FACTOR_SCALE;
-}
-
-void setupSUNSPEC_apparant_power_register(char *s)
-{
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, s);
-  if (error)
-    return;
-  SUNSPEC_APPARANT_POWER0 = doc["A"] | SUNSPEC_APPARANT_POWER0;
-  SUNSPEC_APPARANT_POWER1 = doc["B"] | SUNSPEC_APPARANT_POWER1;
-  SUNSPEC_APPARANT_POWER2 = doc["C"] | SUNSPEC_APPARANT_POWER2;
-  SUNSPEC_APPARANT_POWER_SCALE = doc["S"] | SUNSPEC_APPARANT_POWER_SCALE;
-}
-
-void setupSUNSPEC_voltage_register(char *s)
-{
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, s);
-  if (error)
-    return;
-  SUNSPEC_VOLTAGE0 = doc["A"] | SUNSPEC_VOLTAGE0;
-  SUNSPEC_VOLTAGE1 = doc["B"] | SUNSPEC_VOLTAGE1;
-  SUNSPEC_VOLTAGE2 = doc["C"] | SUNSPEC_VOLTAGE2;
-  SUNSPEC_VOLTAGE_SCALE = doc["S"] | SUNSPEC_VOLTAGE_SCALE;
-}
-
-void setupSUNSPEC_current_register(char *s)
-{
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, s);
-  if (error)
-    return;
-  SUNSPEC_CURRENT0 = doc["A"] | SUNSPEC_CURRENT0;
-  SUNSPEC_CURRENT1 = doc["B"] | SUNSPEC_CURRENT1;
-  SUNSPEC_CURRENT2 = doc["C"] | SUNSPEC_CURRENT2;
-  SUNSPEC_CURRENT_SCALE = doc["S"] | SUNSPEC_CURRENT_SCALE;
-}
-
-void setupSUNSPEC_frequency_register_base_and_count(char *s)
-{
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, s);
-  if (error)
-    return;
-  SUNSPEC_FREQUENCY = doc["F"] | SUNSPEC_FREQUENCY;
-  SUNSPEC_BASE = doc["B"] | SUNSPEC_BASE;
-  SUNSPEC_REGISTER_COUNT = doc["C"] | SUNSPEC_REGISTER_COUNT;
-  SUNSPEC_FREQUENCY_SCALE = doc["S"] | SUNSPEC_FREQUENCY_SCALE;
-}
-
-void setupSUNSPEC_power_factor_register(char *s)
-{
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, s);
-  if (error)
-    return;
-  SUNSPEC_POWER_FACTOR0 = doc["A"] | SUNSPEC_POWER_FACTOR0;
-  SUNSPEC_POWER_FACTOR1 = doc["B"] | SUNSPEC_POWER_FACTOR1;
-  SUNSPEC_POWER_FACTOR2 = doc["C"] | SUNSPEC_POWER_FACTOR2;
-  SUNSPEC_POWER_FACTOR_SCALE = doc["S"] | SUNSPEC_POWER_FACTOR_SCALE;
-}
-
-void setupSUNSPEC_real_energy_exported_register(char *s)
-{
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, s);
-  if (error)
-    return;
-  SUNSPEC_REAL_ENERGY_EXPORTED0 = doc["A"] | SUNSPEC_REAL_ENERGY_EXPORTED0;
-  SUNSPEC_REAL_ENERGY_EXPORTED1 = doc["B"] | SUNSPEC_REAL_ENERGY_EXPORTED1;
-  SUNSPEC_REAL_ENERGY_EXPORTED2 = doc["C"] | SUNSPEC_REAL_ENERGY_EXPORTED2;
-  SUNSPEC_REAL_ENERGY_SCALE = doc["S"] | SUNSPEC_REAL_ENERGY_SCALE;
-}
-
-void setupSUNSPEC_real_energy_imported_register(char *s)
-{
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, s);
-  if (error)
-    return;
-  SUNSPEC_REAL_ENERGY_IMPORTED0 = doc["A"] | SUNSPEC_REAL_ENERGY_IMPORTED0;
-  SUNSPEC_REAL_ENERGY_IMPORTED1 = doc["B"] | SUNSPEC_REAL_ENERGY_IMPORTED1;
-  SUNSPEC_REAL_ENERGY_IMPORTED2 = doc["C"] | SUNSPEC_REAL_ENERGY_IMPORTED2;
-  SUNSPEC_REAL_ENERGY_SCALE = doc["S"] | SUNSPEC_REAL_ENERGY_SCALE;
-}
-
-
-void setupSUNSPEC_from_configpage(void)
-{
-  setupSUNSPEC_power_register(power_path);
-  setupSUNSPEC_apparant_power_register(pwr_export_path);
-  setupSUNSPEC_voltage_register(power_l1_path);
-  setupSUNSPEC_current_register(power_l2_path);
-  setupSUNSPEC_power_factor_register(power_l3_path);
-  setupSUNSPEC_real_energy_exported_register(energy_in_path);
-  setupSUNSPEC_real_energy_imported_register(energy_out_path);
-  setupSUNSPEC_frequency_register_base_and_count(mqtt_topic);
 }
