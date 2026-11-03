@@ -161,6 +161,18 @@ double convert_modbus_type(int16_t *data, String type)
 
 bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, void *data)
 {
+ //fill with default values if no data is available
+  for (int n=0; n<3;n++) {
+    PhasePower[n].power = 0;
+    PhasePower[n].apparentPower = 0;
+    PhasePower[n].current = 0;
+    PhasePower[n].powerFactor = 1;
+    PhasePower[n].voltage = 230;
+    PhasePower[n].frequency = 50;
+    
+  }
+
+
   if (config_doc["sunspec_registers"].isNull()) return true;
   if (event == Modbus::EX_SUCCESS && 
      !SUNSPEC_REGISTER_COUNT_NULL && 
@@ -235,6 +247,7 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
       PhaseEnergy[2].gridfeedin = p / 1000.0 * scale_real_energy;
     }
 
+   
     DEBUG_SERIAL.print(F("SUNSPEC power: "));
     DEBUG_SERIAL.println(power);
   }
@@ -260,8 +273,15 @@ void parseSUNSPEC()
   }
   else
   {
-    // issue an holding register read to read the SUNSPEC registers, the callback will be called when the data is available
-    modbus1.readHreg(modbus_ip, SUNSPEC_BASE, (uint16_t *)&modbus_result[0], SUNSPEC_REGISTER_COUNT, modbusSunSpecCallback, modbusdev_int);
+    if (!config_doc["sunspec_registers"].isNull()) {
+      
+      if (!SUNSPEC_REGISTER_COUNT_NULL && SUNSPEC_REGISTER_COUNT_INT > 0 && !SUNSPEC_BASE_NULL && SUNSPEC_BASE_INT >= 0)
+      {
+        // issue an holding register read to read the SUNSPEC registers, the callback will be called when the data is available
+        modbus1.readHreg(modbus_ip, SUNSPEC_BASE_INT, (uint16_t *)&modbus_result[0], SUNSPEC_REGISTER_COUNT_INT, modbusSunSpecCallback, modbusdev_int);
+      }
+    }
+    
     delay(10);
     modbus1.task();
   }
