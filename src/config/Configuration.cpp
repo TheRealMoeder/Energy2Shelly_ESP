@@ -34,7 +34,7 @@ IPAddress multicastIP(239, 12, 255, 254);
 // MODBUS settings
 IPAddress modbus_ip;
 ModbusIP modbus1;
-int16_t modbus_result[256];
+int16_t modbus_result[MAX_MODBUS_REGISTERS];
 
 // Default electrical values and offset
 const uint8_t defaultVoltage = 230;
