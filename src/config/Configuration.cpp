@@ -51,14 +51,7 @@ bool shouldResetConfig = false;
 bool shouldupdate = false;
 
 // flags for data sources
-bool dataMQTT = false;
-bool dataSMA = false;
-bool dataSHRDZM = false;
-bool dataHTTP = false;
-bool dataSUNSPEC = false;
-bool dataTIBBERPULSE = false;
-bool dataRCT = false;
-bool dataSMLSERIAL = false;
+input_type_enum current_input_type  = input_type_enum::NONE;
 
 // ============================================================================
 // NETWORK OBJECTS
@@ -123,42 +116,33 @@ void handleblinkled()
 void interprete_parameters()
 {
   // Interpret the loaded parameters and set flags accordingly
-  input_type_enum current_input_type = static_cast<input_type_enum>(config_doc["basic"]["input_type"].as<uint32_t>());
-
+  current_input_type = static_cast<input_type_enum>(config_doc["basic"]["input_type"].as<uint32_t>());
   switch (current_input_type) {
     case input_type_enum::SMA:
-        dataSMA = true;
         DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
         break;
     case input_type_enum::SHRDZM:
-        dataSHRDZM = true;
         DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
         break;
     case input_type_enum::HTTP:
-        dataHTTP = true;
         DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
         break;
     case input_type_enum::SUNSPEC:
-        dataSUNSPEC = true;
         modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
         sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
         modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
         DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
         break;
    case input_type_enum::TIBBERPULSE:
-        dataTIBBERPULSE = true;
         DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
         break;
    case input_type_enum::SMLSERIAL:
-        dataSMLSERIAL = true;
         DEBUG_SERIAL.println(F("Enabling SML serial (UART) data input"));
         break;
    case input_type_enum::RCT:
-        dataRCT = true;
         DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
         break;
    case input_type_enum::MQTT:
-        dataMQTT = true;
         DEBUG_SERIAL.println(F("Enabling MQTT data input"));
         break;
    case input_type_enum::NONE:
@@ -205,9 +189,6 @@ void interprete_parameters()
 
 
 }
-
-String json_prefs_string;
-JsonDocument update_config_doc;
 
 void mergeJson(JsonVariant dst, JsonVariantConst src) {
   if (src.is<JsonObjectConst>()) {
