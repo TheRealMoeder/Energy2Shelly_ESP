@@ -2,20 +2,28 @@ import os
 import re
 Import("env")
 
-# Pfad zu deiner exakten Header-Datei
 TARGET_HEADER = os.path.join(env.get("PROJECT_DIR"), "src", "web", "html_home.h")
 
-def minify_web_code(content, is_html=True):
-    """Minimiert HTML, CSS und JS durch Entfernen von Kommentaren und Whitespace."""
-    # 1. HTML-Kommentare entfernen
+def minify_web_code(content):
+    """Minimiert HTML, CSS und JS sicher ohne Look-behind-Fehler."""
+    # 1. HTML-Kommentare entfernen (<!-- kommentar -->)
     content = re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
     
-    # 2. JS & CSS Multi-Line Kommentare entfernen
+    # 2. JS & CSS Multi-Line Kommentare entfernen (/* kommentar */)
     content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
     
-    # 3. JS Single-Line Kommentare entfernen (nur wenn es kein HTTP-Link ist)
-    # Verhindert das Zerstören von Links wie http:// oder ws://
-    content = re.sub(r'(?<!:|https|http|ws)\/\/.*', '', content)
+    # 3. JS Single-Line Kommentare (//) sicher entfernen
+    # Dieser Regex matcht Strings/URLs (wie "http://...") komplett, fängt sie ab 
+    # und löscht nur die echten Kommentare am Zeilenende.
+    def remove_js_comments(match):
+        matched_str = match.group(0)
+        if matched_str.startswith('//'):
+            return '' # Es ist ein echter Kommentar -> löschen
+        return matched_str # Es ist ein String oder eine URL -> behalten
+
+    # Matcht entweder Strings in Anführungszeichen, Template-Literale ODER Single-Line Kommentare
+    js_pattern = r'(?:"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'|`[^`\\]*(?:\\.[^`\\]*)*`|\/\/.*)'
+    content = re.sub(js_pattern, remove_js_comments, content)
     
     # 4. Alle Newlines, Tabs und mehrfache Leerzeichen in ein einzelnes Leerzeichen kollabieren
     content = re.sub(r'\s+', ' ', content)
@@ -35,9 +43,7 @@ def process_inline_header(source, target, env):
     with open(TARGET_HEADER, 'r', encoding='utf-8') as f:
         file_content = f.read()
 
-    # Regex zum Finden von C++ Raw-String-Literalen (z.B. R"=====(...)=====" oder R"rawliteral(...)rawliteral")
-    # Gruppe 1: Der Delimiter (z.B. ===== oder rawliteral)
-    # Gruppe 2: Der eigentliche HTML/JS/CSS Inhalt
+    # Findet alle C++ Raw-String-Literale wie R"=====(...)====="
     raw_string_pattern = r'R"([a-zA-Z0-9_=]*)\((.*?)\)\1"'
     
     original_size = len(file_content)
@@ -46,16 +52,13 @@ def process_inline_header(source, target, env):
         delimiter = match.group(1)
         inner_content = match.group(2)
         
-        # Inhalt minifizieren
+        # Inhalt fehlerfrei minifizieren
         minified_inner = minify_web_code(inner_content)
         
-        # Wieder als gültiges C++ Raw-String-Literal zusammensetzen
         return f'R"{delimiter}({minified_inner}){delimiter}"'
 
-    # Alle Vorkommen von Raw-Strings in der Datei suchen und ersetzen
     optimized_content = re.sub(raw_string_pattern, replace_literal, file_content, flags=re.DOTALL)
 
-    # Datei nur überschreiben, wenn sich wirklich etwas verkleinert hat
     if len(optimized_content) < original_size:
         with open(TARGET_HEADER, 'w', encoding='utf-8') as f:
             f.write(optimized_content)
@@ -63,5 +66,4 @@ def process_inline_header(source, target, env):
     else:
         print(">>> [Minifier] Keine Änderungen nötig. Die Datei ist bereits minifiziert.")
 
-# Hook registrieren, bevor das Programm gebaut wird
 env.AddPreAction("buildprog", process_inline_header)
