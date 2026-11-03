@@ -24,6 +24,8 @@ void update_reset_reason(Energy2Shelly_ResetReason reason);
 void stackWD(void);
 uint64_t extendedMillis();
 void status_print(void);
+void wifi_reset();
+void checkreset_counter();
 Energy2Shelly_ResetReason clear_rtc_power_on(void);
 
 String getISO8601Time();
