@@ -129,7 +129,7 @@ jobs:
           "
 
       - name: Post Comment to PR
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           number: ${{ steps.pr_metadata.outputs.num }}
