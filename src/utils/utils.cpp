@@ -42,31 +42,37 @@ void wifi_reset()
  
 }
 
+#ifdef ESP32
+#include <nvs_flash.h>
+#endif
+
 void reset_esp_to_default_and_reboot()
 {
-  if (LittleFS.begin()) {
-    LittleFS.format();
-  } 
+  // disconnect from WiFi and erase all credentials
+  #ifdef ESP32
+    WiFi.disconnect(true, true);
+  #else
+    WiFi.disconnect(true);      
+  #endif
 
+  LittleFS.format(); // format allways, to ensure a clean state
 
   #ifdef ESP32
-    nvs_flash_erase(); 
-    nvs_flash_init(); 
-    WiFi.disconnect(true, true);
-#else
+  // Erase NVS to remove all stored WiFi credentials and other settings
+    if (nvs_flash_erase() == ESP_OK) {
+        nvs_flash_init(); 
+    }
+  #endif
+  
+  update_reset_reason(Energy2Shelly_ResetReason::FACTORY_RESET);
+  
+  delay(1000);
+  
+  ESP.restart();
 
-    // WiFiManager may leave persistent=false; force it so disconnect(true)
-    // actually erases the SDK-saved credentials in flash.
-    WiFi.persistent(true);
-    WiFi.disconnect(true);
-    ESP.eraseConfig();
-#endif
-   update_reset_reason(Energy2Shelly_ResetReason::FACTORY_RESET);
-   delay(1000);
-   ESP.restart();
-   delay(1000);
-   
+  delay(1000);
 }
+
 
 #ifdef ESP32
 uint32_t read_reset_counter_from_nvs() {
