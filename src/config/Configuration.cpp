@@ -160,7 +160,7 @@ void wifi_scan()
       WiFi_lastScanTime = millis();
     }
   }
-  if (!WiFi_scanInProgress && (millis() - WiFi_lastScanTime >= Wifi_scanInterval)) {
+  if (!WiFi_scanInProgress && (millis() - WiFi_lastScanTime >= WIFI_SCAN_INTERVAL)) {
     DEBUG_SERIAL.println(F("\nNew WiFi scan..."));
     WiFi.scanNetworks(true);
     WiFi_scanInProgress = true;

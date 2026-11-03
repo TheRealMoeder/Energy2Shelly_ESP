@@ -367,7 +367,7 @@ extern DNSServer dnsServer;
 extern const byte DNS_PORT;
 
 extern unsigned long WiFi_lastScanTime;
-#define Wifi_scanInterval 15000 
+#define WIFI_SCAN_INTERVAL 15000 
 extern bool WiFi_scanInProgress;
 
 // Platform-specific UDP print macro
