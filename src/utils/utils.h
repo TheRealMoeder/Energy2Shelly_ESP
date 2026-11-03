@@ -11,8 +11,13 @@ enum class Energy2Shelly_ResetReason
   WIFI_DISCONNECT = 3,
   OTA_UPDATE = 4,
   RECONFIGURE = 5,
-  OTHER = 6
+  OTHER = 6,
+  WIFI_RECONFIG = 7,
+  FACTORY_RESET = 8
 };
+
+ #define RTC_RESET_COUNTER_THRESHOLD 5
+ #define RTC_RESET_COUNTER_CLEAR_INTERVAL_MS 60000ull // 1 minute
 
 void all_esp_reset(Energy2Shelly_ResetReason reason);
 void update_reset_reason(Energy2Shelly_ResetReason reason);

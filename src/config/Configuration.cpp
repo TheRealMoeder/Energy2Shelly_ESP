@@ -1,6 +1,5 @@
 #include "Configuration.h"
 #include "../utils/utils.h"
-#include <LittleFS.h>
 const char* configPath = "/config.json";
 unsigned long startMillis = 0;
 #ifdef ONA_ACTIVE
