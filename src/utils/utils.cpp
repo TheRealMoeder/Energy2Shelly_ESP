@@ -172,8 +172,8 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
       #else
       write_reset_counter_to_nvs(rtc_reset_counter);
       #endif
-     
-       if (rtc_reset_counter>=5) {
+    
+       if (rtc_reset_counter>=RTC_RESET_COUNTER_THRESHOLD) {
           rtc_reset_counter=0;
           #ifdef ESP8266
           ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
@@ -279,7 +279,7 @@ uint64_t extendedMillis()
 
 void checkreset_counter()
 {
-  if ((extendedMillis()>(60ull*1000ull)) && (rtc_reset_counter>0)) {
+  if ((extendedMillis()>RTC_RESET_COUNTER_CLEAR_INTERVAL_MS) && (rtc_reset_counter>0)) {
       DEBUG_SERIAL.println(F("Set reset counter to 0"));
       set_rtc_reset_counter(0);
   }
