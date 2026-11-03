@@ -408,8 +408,8 @@ void setup(void)
         updateTimestamp=millis();
         request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
     } });
-  #endif
-  server.on("/json_preferences", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+
+  server.on("/json_config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
    
     if (isNotAuthorized(request)) {
             return request->requestAuthentication(); 
@@ -430,7 +430,7 @@ void setup(void)
   });
 
 
-  server.on("/json_preferences", AsyncWebRequestMethod::HTTP_POST, 
+  server.on("/json_config", AsyncWebRequestMethod::HTTP_POST, 
     [](AsyncWebServerRequest *request) {
         if (isNotAuthorized(request)) {
             request->send(401, "text/plain", "Unauthorized");

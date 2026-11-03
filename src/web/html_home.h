@@ -1028,7 +1028,7 @@ document.getElementById('rebootBtn').addEventListener('click', async () => {
 
    async function loadConfig() {
     try {
-        const res = await fetch('/json_preferences');
+        const res = await fetch('/json_config');
         if (res.status === 401) {
             setTimeout(loadConfig, 500); 
             return; 
@@ -1277,7 +1277,7 @@ async function saveConfig() {
         statusText.innerText = "Saving to device...";
         statusText.style.color = "orange";
 
-        const res = await fetch('/json_preferences', {
+        const res = await fetch('/json_config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload) 

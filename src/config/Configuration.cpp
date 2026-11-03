@@ -1,7 +1,6 @@
 #include "Configuration.h"
 #include "../utils/utils.h"
 #include <LittleFS.h>
-#define FS_INSTANCE LittleFS
 const char* configPath = "/config.json";
 unsigned long startMillis = 0;
 unsigned long currentMillis;
@@ -11,7 +10,7 @@ tm timeinfo;
 JsonDocument config_doc;
 
 // ============================================================================
-// CONFIGURATION VARIABLES (stored in Preferences)
+// CONFIGURATION VARIABLES (stored in LittleFS)
 // ============================================================================
 
 // Data source and server settings
@@ -62,8 +61,6 @@ bool dataSUNSPEC = false;
 bool dataTIBBERPULSE = false;
 bool dataRCT = false;
 bool dataSMLSERIAL = false;
-
-Preferences preferences;
 
 // ============================================================================
 // NETWORK OBJECTS
@@ -258,27 +255,24 @@ void interprete_parameters()
 
 }
 
-void erase_preferences()
-{
-  preferences.begin("e2s_config", false);
-  preferences.clear();
-  preferences.end();
-}
-
-
-
-
 String json_prefs_string;
 JsonDocument update_config_doc;
 
-
 void mergeJson(JsonVariant dst, JsonVariantConst src) {
   if (src.is<JsonObjectConst>()) {
+    if (!dst.is<JsonObject>()) {
+      dst.to<JsonObject>();
+    } 
+    JsonObject dstObj = dst.as<JsonObject>();
+    
     for (JsonPairConst kv : src.as<JsonObjectConst>()) {
-      if (dst[kv.key()].is<JsonObject>()) {
-        mergeJson(dst[kv.key()], kv.value());
+      if (kv.value().is<JsonObjectConst>()) {
+        if (!dstObj[kv.key()].is<JsonObject>()) {
+          dstObj[kv.key()].to<JsonObject>();
+        }
+        mergeJson(dstObj[kv.key()], kv.value());
       } else {
-        dst[kv.key()] = kv.value();
+        dstObj[kv.key()] = kv.value();
       }
     }
   } else {
@@ -286,12 +280,11 @@ void mergeJson(JsonVariant dst, JsonVariantConst src) {
   }
 }
 
-
 bool save_parameters() {
    if (!config_doc["wifi"]["networks"].isNull()) {
     config_doc["wifi"].remove("networks"); 
   }
-  File configFile = FS_INSTANCE.open(configPath, "w");
+  File configFile = LittleFS.open(configPath, "w");
   if (!configFile) {
     DEBUG_SERIAL.println(F("Error: Could not open file"));
     return false;
@@ -343,18 +336,17 @@ const char DEFAULT_CONFIG_JSON[] PROGMEM = R"=====(
 
 void load_parameters() {
   config_doc.clear();
-  DeserializationError defaultError = deserializeJson(config_doc, (const __FlashStringHelper*)DEFAULT_CONFIG_JSON);
+  DeserializationError defaultError = deserializeJson(config_doc, FPSTR(DEFAULT_CONFIG_JSON));
   if (defaultError) {
     DEBUG_SERIAL.println(F("Error during default config initialization!"));
   }
- 
-  if (FS_INSTANCE.exists(configPath)) {
-    File configFile = FS_INSTANCE.open(configPath, "r");
+
+  if (LittleFS.exists(configPath)) {
+    File configFile = LittleFS.open(configPath, "r");
     if (configFile) {
       JsonDocument fs_doc;
       DeserializationError fsError = deserializeJson(fs_doc, configFile);
       configFile.close();
-
       if (fsError == DeserializationError::Ok) {
         mergeJson(config_doc.to<JsonVariant>(), fs_doc.as<JsonVariantConst>());
       }
@@ -410,7 +402,7 @@ void WifiManagerSetup(bool SW_update)
       LittleFS.begin();
     }
   #endif
-  load_parameters(); // Load parameters from Preferences
+  load_parameters(); // Load parameters from LittleFS
  
 
   if (config_doc["wifi"]["ssid"] == "" || config_doc["wifi"]["password"] == "") // check for valid WiFi credentials, if not present, start config portal
@@ -448,7 +440,7 @@ void WifiManagerSetup(bool SW_update)
     
     config_doc["shelly"]["shelly_mac"] = macStr;  
   }
-  
+
   interprete_parameters();
 
   DEBUG_SERIAL.println(F("local ip"));
