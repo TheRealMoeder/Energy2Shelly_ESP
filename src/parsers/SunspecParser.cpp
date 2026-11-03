@@ -106,6 +106,7 @@ uint16_t SUNSPEC_REGISTER_COUNT = 64;
     #define SUNSPEC_POWER_FACTOR2_INT config_doc["sunspec_registers"]["power_factor2"].as<int>()
     #define SUNSPEC_FREQUENCY_NULL config_doc["sunspec_registers"]["frequency"].isNull()
     #define SUNSPEC_FREQUENCY_INT config_doc["sunspec_registers"]["frequency"].as<int>()
+    #define SUNSPEC_REAL_ENERGY_TYPE config_doc["sunspec_registers"]["real_energy_type"].as<String>()
     #define SUNSPEC_REAL_ENERGY_IMPORTED0_NULL config_doc["sunspec_registers"]["real_energy_imported0"].isNull()
     #define SUNSPEC_REAL_ENERGY_IMPORTED0_INT config_doc["sunspec_registers"]["real_energy_imported0"].as<int>()
     #define SUNSPEC_REAL_ENERGY_IMPORTED1_NULL config_doc["sunspec_registers"]["real_energy_imported1"].isNull()
@@ -126,27 +127,28 @@ uint16_t SUNSPEC_REGISTER_COUNT = 64;
 
 double convert_modbus_type(int16_t *data, String type)
 {
+  uint16 *u16_data = (uint16 *)data;
   if (type == "int16")
   {
     return (int16_t)data[0];
   }
   else if (type == "uint16")
   {
-    return (uint16_t)data[0];
+    return (uint16_t)u16_data[0];
   }
   else if (type == "int32")
   {
-    int32_t value = ((int32_t)data[0] << 16) | data[1];
+    int32_t value = ((int32_t)u16_data[0] << 16) | u16_data[1];
     return value;
   }
   else if (type == "uint32")
   {
-    uint32_t value = ((uint32_t)data[0] << 16) | data[1];
+    uint32_t value = ((uint32_t)u16_data[0] << 16) | u16_data[1];
     return value;
   }
   else if (type == "float32")
   {
-    uint32_t value = ((uint32_t)data[0] << 16) | data[1];
+    uint32_t value = ((uint32_t)u16_data[0] << 16) | u16_data[1];
     float fvalue;
     memcpy(&fvalue, &value, sizeof(fvalue));
     return fvalue;
@@ -184,7 +186,6 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
 
  
     int32_t power = 0;
-    DEBUG_SERIAL.println(F("Processing SUNSPEC data...0"));
     double scale_V = (!SUNSPEC_VOLTAGE_SCALE_NULL && SUNSPEC_VOLTAGE_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_VOLTAGE_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
     double scale_real_power = (!SUNSPEC_REAL_POWER_SCALE_NULL && SUNSPEC_REAL_POWER_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_REAL_POWER_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
     double scale_apparant_power = (!SUNSPEC_APPARANT_POWER_SCALE_NULL && SUNSPEC_APPARANT_POWER_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_APPARANT_POWER_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
@@ -193,8 +194,6 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
     double scale_frequency = (!SUNSPEC_FREQUENCY_SCALE_NULL && SUNSPEC_FREQUENCY_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_FREQUENCY_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
     double scale_real_energy = (!SUNSPEC_REAL_ENERGY_SCALE_NULL && SUNSPEC_REAL_ENERGY_SCALE_INT >= 0) ? SUNSPEC_scale(modbus_result[constrain(SUNSPEC_REAL_ENERGY_SCALE_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)]) : 1.0;
 
-
-    DEBUG_SERIAL.println(F("Processing SUNSPEC data...1"));
     PhasePower[0].power = (!SUNSPEC_REAL_POWER0_NULL && SUNSPEC_REAL_POWER0_INT >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_POWER0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)], SUNSPEC_REAL_POWER_TYPE) * scale_real_power + offsetPerPhase : 0;
     PhasePower[0].apparentPower = (!SUNSPEC_APPARANT_POWER0_NULL && SUNSPEC_APPARANT_POWER0_INT >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_APPARANT_POWER0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)], SUNSPEC_APPARANT_POWER_TYPE) * scale_apparant_power + offsetPerPhase : 0;
     PhasePower[0].current = (!SUNSPEC_CURRENT0_NULL && SUNSPEC_CURRENT0_INT >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_CURRENT0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)], SUNSPEC_CURRENT_TYPE) * scale_current : 0;
@@ -203,16 +202,17 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
     PhasePower[0].frequency = (!SUNSPEC_FREQUENCY_NULL && SUNSPEC_FREQUENCY_INT >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_FREQUENCY_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)], SUNSPEC_FREQUENCY_TYPE) * scale_frequency : 0;
 
     power += PhasePower[0].power;
-    if (!SUNSPEC_REAL_ENERGY_IMPORTED0_NULL && SUNSPEC_REAL_ENERGY_IMPORTED0_INT >= 0 && !SUNSPEC_REAL_ENERGY_EXPORTED0_NULL && SUNSPEC_REAL_ENERGY_EXPORTED0_INT >= 0)
+    if (!SUNSPEC_REAL_ENERGY_IMPORTED0_NULL && SUNSPEC_REAL_ENERGY_IMPORTED0_INT >= 0)
     {
-      double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], "uint32");
+      double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], SUNSPEC_REAL_ENERGY_TYPE);
       PhaseEnergy[0].consumption = p / 1000.0 * scale_real_energy;
-      
-      p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], "uint32");
+    }
+    if (!SUNSPEC_REAL_ENERGY_EXPORTED0_NULL && SUNSPEC_REAL_ENERGY_EXPORTED0_INT >= 0)
+    {
+      double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED0_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], SUNSPEC_REAL_ENERGY_TYPE);
       PhaseEnergy[0].gridfeedin = p / 1000.0 * scale_real_energy;
     }
 
-    DEBUG_SERIAL.println(F("Processing SUNSPEC data...2"));
     PhasePower[1].power = (!SUNSPEC_REAL_POWER1_NULL && SUNSPEC_REAL_POWER1_INT >= 0) ?convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_POWER1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)], SUNSPEC_REAL_POWER_TYPE) * scale_real_power + offsetPerPhase : 0;
     PhasePower[1].apparentPower = (!SUNSPEC_APPARANT_POWER1_NULL && SUNSPEC_APPARANT_POWER1_INT >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_APPARANT_POWER1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)], SUNSPEC_APPARANT_POWER_TYPE) * scale_apparant_power + offsetPerPhase : 0;
     PhasePower[1].current = (!SUNSPEC_CURRENT1_NULL && SUNSPEC_CURRENT1_INT >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_CURRENT1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 1)], SUNSPEC_CURRENT_TYPE) * scale_current : 0;
@@ -222,11 +222,14 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
 
       power += PhasePower[1].power;
     
-    if (!SUNSPEC_REAL_ENERGY_IMPORTED1_NULL && SUNSPEC_REAL_ENERGY_IMPORTED1_INT >= 0 && !SUNSPEC_REAL_ENERGY_EXPORTED1_NULL && SUNSPEC_REAL_ENERGY_EXPORTED1_INT >= 0)
+    if (!SUNSPEC_REAL_ENERGY_IMPORTED1_NULL && SUNSPEC_REAL_ENERGY_IMPORTED1_INT >= 0)
     {
-        double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], "uint32");
+        double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], SUNSPEC_REAL_ENERGY_TYPE);
         PhaseEnergy[1].consumption = p / 1000.0 * scale_real_energy;
-        p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], "uint32");
+    }
+    if (!SUNSPEC_REAL_ENERGY_EXPORTED1_NULL && SUNSPEC_REAL_ENERGY_EXPORTED1_INT >= 0)
+    {
+        double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED1_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], SUNSPEC_REAL_ENERGY_TYPE);
         PhaseEnergy[1].gridfeedin = p / 1000.0 * scale_real_energy;
     }
     DEBUG_SERIAL.println(F("Processing SUNSPEC data...3"));
@@ -239,11 +242,14 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
 
     power += PhasePower[2].power;
     
-    if (!SUNSPEC_REAL_ENERGY_IMPORTED2_NULL && SUNSPEC_REAL_ENERGY_IMPORTED2_INT >= 0 && !SUNSPEC_REAL_ENERGY_EXPORTED2_NULL && SUNSPEC_REAL_ENERGY_EXPORTED2_INT >= 0)
+    if (!SUNSPEC_REAL_ENERGY_IMPORTED2_NULL && SUNSPEC_REAL_ENERGY_IMPORTED2_INT >= 0)
     {
-      double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED2_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], "uint32");
+      double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_IMPORTED2_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], SUNSPEC_REAL_ENERGY_TYPE);
       PhaseEnergy[2].consumption = p / 1000.0 * scale_real_energy;
-      p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED2_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], "uint32");
+    }
+    if (!SUNSPEC_REAL_ENERGY_EXPORTED2_NULL && SUNSPEC_REAL_ENERGY_EXPORTED2_INT >= 0)
+    {
+      double p = convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_ENERGY_EXPORTED2_INT - SUNSPEC_BASE_INT, 0, SUNSPEC_REGISTER_COUNT - 2)], SUNSPEC_REAL_ENERGY_TYPE);
       PhaseEnergy[2].gridfeedin = p / 1000.0 * scale_real_energy;
     }
 
@@ -277,6 +283,10 @@ void parseSUNSPEC()
       
       if (!SUNSPEC_REGISTER_COUNT_NULL && SUNSPEC_REGISTER_COUNT_INT > 0 && !SUNSPEC_BASE_NULL && SUNSPEC_BASE_INT >= 0)
       {
+        if (SUNSPEC_REGISTER_COUNT_INT> 256) {
+          DEBUG_SERIAL.println(F("SUNSPEC register count exceeds buffer size 256, please check your configuration!"));
+          return;
+        }
         // issue an holding register read to read the SUNSPEC registers, the callback will be called when the data is available
         modbus1.readHreg(modbus_ip, SUNSPEC_BASE_INT, (uint16_t *)&modbus_result[0], SUNSPEC_REGISTER_COUNT_INT, modbusSunSpecCallback, modbusdev_int);
       }
