@@ -71,7 +71,9 @@ void reset_esp_to_default_and_reboot()
 
 
 #ifdef ESP32
-uint32_t read_reset_counter_from_nvs() {
+
+uint32_t read_reset_counter_from_nvs()
+{
     uint32_t rtc_reset_counter = 0; // Default value
     nvs_handle_t my_handle;
     if (nvs_open("e2s_config", NVS_READONLY, &my_handle) == ESP_OK) {
@@ -87,7 +89,9 @@ uint32_t read_reset_counter_from_nvs() {
     }
     return rtc_reset_counter;
 }
-void write_reset_counter_to_nvs(uint32_t rtc_reset_counter) {
+
+void write_reset_counter_to_nvs(uint32_t rtc_reset_counter)
+{
     nvs_handle_t my_handle;
     if (nvs_open("e2s_config", NVS_READWRITE, &my_handle) == ESP_OK) {
         nvs_set_u32(my_handle, "reset_counter", rtc_reset_counter);
@@ -95,11 +99,10 @@ void write_reset_counter_to_nvs(uint32_t rtc_reset_counter) {
         nvs_close(my_handle);
     }
 }
-#endif
+
 
 Energy2Shelly_ResetReason clear_rtc_power_on(void)
 {
-#if defined(ESP32)
   esp_reset_reason_t reason = esp_reset_reason();
 
   // Check if hardware reports either a power-on or a hardware pin reset
@@ -120,14 +123,42 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
   // For all other reset reasons (e.g., Software Restart, Deep Sleep),
   // the old value of rtc_reset_reason is naturally preserved in the RTC RAM.
 
-#elif defined(ESP8266)
+  if ((rtc_reset_reason==Energy2Shelly_ResetReason::MANUAL_RESET)||(rtc_reset_reason==Energy2Shelly_ResetReason::POWER_ON)) {
+      rtc_reset_counter = read_reset_counter_from_nvs(); // return 0 if not present
+
+      rtc_reset_counter++;
+
+      write_reset_counter_to_nvs(rtc_reset_counter);
+    
+       if (rtc_reset_counter>=RTC_RESET_COUNTER_THRESHOLD) {
+          rtc_reset_counter=0;
+          // no need to set rtc_reset_counter in nvs, the next function will erase everything
+          reset_esp_to_default_and_reboot();
+       } 
+  }
+  else {
+    rtc_reset_counter = read_reset_counter_from_nvs();
+  }
+  DEBUG_SERIAL.print(F("Reset counter:"));
+  DEBUG_SERIAL.println(rtc_reset_counter); 
+  
+  
+  ram_copy_rtc_reset_reason=rtc_reset_reason;
+  update_reset_reason(Energy2Shelly_ResetReason::OTHER); // set to unknown;
+  return ram_copy_rtc_reset_reason;
+
+}
+
+
+#else
+Energy2Shelly_ResetReason clear_rtc_power_on(void)
+{
   rst_info *resetInfo = ESP.getResetInfoPtr();
 
   // Check if hardware reports a power-on or external reset
   if (resetInfo->reason == REASON_DEFAULT_RST || resetInfo->reason == REASON_EXT_SYS_RST)
   {
     uint32_t esp8266MagicNumber = 0;
-    // Read Slot 1
     ESP.rtcUserMemoryRead(RTC_magic_key_slot, &esp8266MagicNumber, sizeof(esp8266MagicNumber));
 
     if (esp8266MagicNumber != 0xDEADBEEF)
@@ -145,50 +176,28 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
       rtc_reset_reason = Energy2Shelly_ResetReason::MANUAL_RESET;
     }
 
-    // Save the evaluated state to Slot 0
      ESP.rtcUserMemoryWrite(RTC_reset_reason_slot, (uint32_t *)&rtc_reset_reason, sizeof(rtc_reset_reason));
   }
   else
   {
-    // Not a power-on/pin reset -> Restore previous state from Slot 0 (e.g., after software reset)
+    // Not a power-on/pin reset -> Restore previous state from slot (e.g., after software reset)
     ESP.rtcUserMemoryRead(RTC_reset_reason_slot, (uint32_t *)&rtc_reset_reason, sizeof(rtc_reset_reason));
   }
-#endif
-
-
-
 
   if ((rtc_reset_reason==Energy2Shelly_ResetReason::MANUAL_RESET)||(rtc_reset_reason==Energy2Shelly_ResetReason::POWER_ON)) {
-      #ifdef ESP8266
       ESP.rtcUserMemoryRead(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
-      #else
-      rtc_reset_counter = read_reset_counter_from_nvs(); // return 0 if not present
-      #endif    
-
       rtc_reset_counter++;
 
-      #ifdef ESP8266
       ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
-      #else
-      write_reset_counter_to_nvs(rtc_reset_counter);
-      #endif
     
-       if (rtc_reset_counter>=RTC_RESET_COUNTER_THRESHOLD) {
+      if (rtc_reset_counter>=RTC_RESET_COUNTER_THRESHOLD) {
           rtc_reset_counter=0;
-          #ifdef ESP8266
           ESP.rtcUserMemoryWrite(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
-          #else
-          // no need to set rtc_reset_counter in nvs, the next function will erase everything
-          #endif
           reset_esp_to_default_and_reboot();
        } 
   }
   else {
-    #ifdef ESP8266
     ESP.rtcUserMemoryRead(RTC_reset_counter_slot, &rtc_reset_counter, sizeof(rtc_reset_counter));
-    #else
-    rtc_reset_counter = read_reset_counter_from_nvs();
-    #endif
   }
   DEBUG_SERIAL.print(F("Reset counter:"));
   DEBUG_SERIAL.println(rtc_reset_counter); 
@@ -199,6 +208,11 @@ Energy2Shelly_ResetReason clear_rtc_power_on(void)
   return ram_copy_rtc_reset_reason;
 
 }
+
+
+
+#endif
+
 
 void update_reset_reason(Energy2Shelly_ResetReason reason)
 {
