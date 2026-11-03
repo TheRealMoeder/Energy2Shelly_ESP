@@ -13,8 +13,13 @@ enum class Energy2Shelly_ResetReason
   RECONFIGURE = 5,
   OTHER = 6,
   AP_TIMEOUT = 7,
-  REBOOT_REQUEST = 8
+  REBOOT_REQUEST = 8,
+  WIFI_RECONFIG = 9,
+  FACTORY_RESET = 10
 };
+
+ #define RTC_RESET_COUNTER_THRESHOLD 5
+ #define RTC_RESET_COUNTER_CLEAR_INTERVAL_MS 60000ull // 1 minute
 
 void all_esp_reset(Energy2Shelly_ResetReason reason);
 void update_reset_reason(Energy2Shelly_ResetReason reason);
@@ -22,7 +27,8 @@ void stackWD(void);
 uint64_t extendedMillis();
 void status_print(void);
 Energy2Shelly_ResetReason clear_rtc_power_on(void);
-
+void wifi_reset();
+void checkreset_counter();
 // to be tuned for ESP32 and ESP8266
 #if defined(ESP32)
 #define MIN_HEAP_SIZE 12000
