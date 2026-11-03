@@ -408,7 +408,7 @@ void setup(void)
         updateTimestamp=millis();
         request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
     } });
-
+#endif
   server.on("/json_config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
    
     if (isNotAuthorized(request)) {
