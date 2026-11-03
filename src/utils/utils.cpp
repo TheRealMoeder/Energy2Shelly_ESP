@@ -42,10 +42,6 @@ void wifi_reset()
  
 }
 
-#ifdef ESP32
-#include <nvs_flash.h>
-#endif
-
 void reset_esp_to_default_and_reboot()
 {
   // disconnect from WiFi and erase all credentials
