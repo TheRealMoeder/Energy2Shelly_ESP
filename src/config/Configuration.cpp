@@ -403,7 +403,7 @@ void WifiManagerSetup(bool SW_update)
   load_parameters(); // Load parameters from LittleFS
  
 
-  if (config_doc["wifi"]["ssid"] == "" || config_doc["wifi"]["password"] == "") // check for valid WiFi credentials, if not present, start config portal
+  if (config_doc["wifi"]["ssid"] == "") // check for valid WiFi credentials, if not present, start config portal
   {
       DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
       WiFi.mode(WIFI_AP_STA);
