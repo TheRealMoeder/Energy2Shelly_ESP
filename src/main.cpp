@@ -297,10 +297,6 @@ void setup(void)
         request->send(200, "text/plain", PSTR("Resetting WiFi configuration...\r\n"));
     } });
   
-
-
-  #if 1
-
     server.on("/update", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request){
        if (isNotAuthorized(request)) {
             return request->requestAuthentication(); 
@@ -327,7 +323,6 @@ void setup(void)
     response->addHeader("Connection", "close");
     request->send(response);
   }
-
 
 }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
   if (isNotAuthorized(request)) {
@@ -360,55 +355,7 @@ void setup(void)
       DEBUG_SERIAL.printf("Update done: %u Bytes\n", index + len);
     } 
   }
-});
-  #else
-
-
-
-
-    server.on("/update", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    bool hasPassword = (reset_password != nullptr && strlen(reset_password) > 0);
-    
-    size_t maxNeededLength = (sizeof(UPDATE_HTML) - 1) + (sizeof(UPDATE_HTML_END) - 1);
-    
-    if (hasPassword) {
-        maxNeededLength += (sizeof(PASSWORD_INPUT_HTML) - 1);
-    }
-    
-    String html;
-    html.reserve(maxNeededLength); 
-    
-    html += FPSTR(UPDATE_HTML);
-    if (hasPassword) {
-        html += FPSTR(PASSWORD_INPUT_HTML);
-    }
-    html += FPSTR(UPDATE_HTML_END);
-    
-    request->send(200, "text/html", html); });
-
-  server.on("/update", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request)
-            {
-    if (reset_password != nullptr && strlen(reset_password) > 0) {
-        if (request->hasParam("reset_password", true)) {
-            const char* submitted_pw = request->getParam("reset_password", true)->value().c_str();
-            
-            if (strcmp(reset_password, submitted_pw) == 0) {
-                  shouldupdate = true;
-                  updateTimestamp=millis();
-                  request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
-            } else {
-                request->send(403, "text/plain", PSTR("Unauthorized: Invalid reset password.\r\n"));
-            }
-        } else {
-            request->send(400, "text/plain", PSTR("Reset password missing.\r\n"));
-        }
-    } else {
-        shouldupdate = true;
-        updateTimestamp=millis();
-        request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
-    } });
-#endif
+ });
   server.on("/json_config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
    
     if (isNotAuthorized(request)) {
@@ -521,7 +468,6 @@ void setup(void)
   wsConsole.onEvent(onWsEvent);
   server.addHandler(&webSocket);
   server.addHandler(&wsConsole);
- 
   server.begin();
 
   // Set up RPC over UDP for Marstek users

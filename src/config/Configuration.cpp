@@ -142,7 +142,6 @@ void WiFi_processScanResult(int n) {
   }
 }
 
-
 void wifi_scan()
 {
   if (WiFi_scanInProgress) {

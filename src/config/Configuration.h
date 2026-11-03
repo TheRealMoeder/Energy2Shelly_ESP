@@ -370,8 +370,6 @@ extern unsigned long WiFi_lastScanTime;
 #define Wifi_scanInterval 15000 
 extern bool WiFi_scanInProgress;
 
-
-
 // Platform-specific UDP print macro
 #ifdef ESP32
 #define UDPPRINT print
