@@ -6,7 +6,7 @@ extern "C" {
   #include "nvs.h"
 }
 #endif
-#include <LittleFS.h>
+
 
 // 1. Variable definitions and platform separation
 #if defined(ESP32)
