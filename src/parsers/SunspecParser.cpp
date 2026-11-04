@@ -237,12 +237,7 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
   }
 
 
-  if (config_doc["sunspec_registers"].isNull()) return true;
-  if (event == Modbus::EX_SUCCESS && 
-     !SUNSPEC_REGISTER_COUNT_NULL && 
-     SUNSPEC_REGISTER_COUNT_INT > 0 &&
-     !SUNSPEC_BASE_NULL && 
-     SUNSPEC_BASE_INT >= 0)
+  if (event == Modbus::EX_SUCCESS)
   {
     // data available, process it
 
@@ -336,21 +331,13 @@ void parseSUNSPEC()
   }
   else
   {
-    if (!config_doc["sunspec_registers"].isNull()) {
-      
-      if (!SUNSPEC_REGISTER_COUNT_NULL && SUNSPEC_REGISTER_COUNT_INT > 0 && !SUNSPEC_BASE_NULL && SUNSPEC_BASE_INT >= 0)
-      {
-        if (SUNSPEC_REGISTER_COUNT_INT> MAX_MODBUS_REGISTERS-1) {
+    if (SUNSPEC_REGISTER_COUNT> MAX_MODBUS_REGISTERS-1) {
           DEBUG_SERIAL.println(F("SUNSPEC register count exceeds buffer size "));
           DEBUG_SERIAL.println(MAX_MODBUS_REGISTERS - 1);
           DEBUG_SERIAL.println(F(", please check your configuration!"));
           return;
-        }
-        // issue an holding register read to read the SUNSPEC registers, the callback will be called when the data is available
-        modbus1.readHreg(modbus_ip, SUNSPEC_BASE_INT, (uint16_t *)&modbus_result[0], SUNSPEC_REGISTER_COUNT_INT, modbusSunSpecCallback, modbusdev_int);
-      }
     }
-    
+    modbus1.readHreg(modbus_ip, SUNSPEC_BASE, (uint16_t *)&modbus_result[0], SUNSPEC_REGISTER_COUNT, modbusSunSpecCallback, modbusdev_int);
     delay(10);
     modbus1.task();
   }
