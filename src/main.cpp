@@ -275,7 +275,8 @@ void setup(void)
     if (isNotAuthorized(request)) {
             return request->requestAuthentication(); 
         }
-    serializeJson(config_doc, json_prefs_string);   
+    json_prefs_string=read_config_as_string();
+    //serializeJson(config_doc, json_prefs_string);   
     request->send(200, "application/json", json_prefs_string); 
   });
 

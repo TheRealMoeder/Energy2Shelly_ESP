@@ -120,15 +120,25 @@ void handleblinkled()
   }
 }
 
+void remove_filtered_parameters_ram(JsonDocument filter) {
+  // Direktes Iterieren über das übergebene Filter-Dokument
+  for (JsonPair p : filter.as<JsonObject>()) {
+    config_doc.remove(p.key());
+  }
+  DEBUG_SERIAL.println(F("Sections successfully removed from config_doc in RAM."));
+}
 
 void interprete_parameters()
 {
+  config_doc.clear();
   // Interpret the loaded parameters and set flags accordingly
+  load_filtered_parameters([](){ JsonDocument d;  d["shelly"]=true; d["basic"]=true; d["console"]=true; d["led"]=true; return d; }());
   input_type_enum current_input_type = static_cast<input_type_enum>(config_doc["basic"]["input_type"].as<uint32_t>());
 
   switch (current_input_type) {
     case input_type_enum::SMA:
         dataSMA = true;
+        load_filtered_parameters([](){ JsonDocument d; d["sma"]=true; return d; }());
         DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
         break;
     case input_type_enum::SHRDZM:
@@ -137,15 +147,20 @@ void interprete_parameters()
         break;
     case input_type_enum::HTTP:
         dataHTTP = true;
+        load_filtered_parameters([](){ JsonDocument d; d["http"]=true; d["json"]=true;  return d; }());
         DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
         break;
     case input_type_enum::SUNSPEC:
         dataSUNSPEC = true;
+        load_filtered_parameters([](){ JsonDocument d; d["sunspec"]=true; d["sunspec_registers"]=true; return d; }());
         convert_json_to_sunspec_registers();
+        remove_filtered_parameters_ram([](){ JsonDocument d; d["sunspec_registers"]=true; return d; }());
         DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
+
         break;
    case input_type_enum::TIBBERPULSE:
         dataTIBBERPULSE = true;
+        load_filtered_parameters([](){ JsonDocument d; d["tibber"]=true; return d; }());
         DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
         break;
    case input_type_enum::SMLSERIAL:
@@ -154,10 +169,12 @@ void interprete_parameters()
         break;
    case input_type_enum::RCT:
         dataRCT = true;
+        load_filtered_parameters([](){ JsonDocument d; d["rct"]=true; return d; }());
         DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
         break;
    case input_type_enum::MQTT:
         dataMQTT = true;
+        load_filtered_parameters([](){ JsonDocument d; d["mqtt"]=true; d["json"]=true;  return d; }());
         DEBUG_SERIAL.println(F("Enabling MQTT data input"));
         break;
    case input_type_enum::NONE:
@@ -279,29 +296,55 @@ const char DEFAULT_CONFIG_JSON[] PROGMEM = R"=====(
 }
 )=====";
 
-void load_parameters() {
+void init_parameters() {
   config_doc.clear();
-  DeserializationError defaultError = deserializeJson(config_doc, FPSTR(DEFAULT_CONFIG_JSON));
-  if (defaultError) {
-    DEBUG_SERIAL.println(F("Error during default config initialization!"));
-  }
 
   if (LittleFS.exists(configPath)) {
     File configFile = LittleFS.open(configPath, "r");
-    if (configFile) {
-      JsonDocument fs_doc;
-      DeserializationError fsError = deserializeJson(fs_doc, configFile);
+    if (configFile) { // exists?, super!
       configFile.close();
-      if (fsError == DeserializationError::Ok) {
-        mergeJson(config_doc.to<JsonVariant>(), fs_doc.as<JsonVariantConst>());
+      return; 
       }
-    }
-  } 
-
+  }
  
+  DEBUG_SERIAL.println(F("Config file does not exist, creating default..."));
+ 
+  // else write default file
+  File configFile = LittleFS.open(configPath, "w");
+  if (configFile) {
+    configFile.print(FPSTR(DEFAULT_CONFIG_JSON)); 
+    configFile.close();
+    DEBUG_SERIAL.println(F("Default config text successfully written to LittleFS."));
+  }
 }
 
 
+
+void load_filtered_parameters(JsonVariantConst filter) {
+  if (!LittleFS.exists(configPath)) {
+    DEBUG_SERIAL.println(F("Config file does not exist for filtered loading."));
+    return;
+  }
+
+  File configFile = LittleFS.open(configPath, "r");
+  if (!configFile) {
+    DEBUG_SERIAL.println(F("Failed to open config file for filtered loading."));
+    return;
+  }
+
+  JsonDocument temp;
+
+  DeserializationError error = deserializeJson(temp, configFile, DeserializationOption::Filter(filter));
+  mergeJson(config_doc,temp);
+  configFile.close();
+
+  if (error) {
+    DEBUG_SERIAL.print(F("Error during filtered deserialization: "));
+    DEBUG_SERIAL.println(error.f_str());
+  } else {
+    DEBUG_SERIAL.println(F("Filtered parameters successfully loaded."));
+  }
+}
 
 
 
@@ -347,8 +390,7 @@ void WifiManagerSetup(bool stationmode)
       LittleFS.begin();
     }
   #endif
-  load_parameters(); // Load parameters from LittleFS
- 
+  init_parameters();
 
   static WiFiManager wifiManager;
   wifiManager.setDebugOutput(false);
@@ -397,14 +439,17 @@ void WifiManagerSetup(bool stationmode)
   
   DEBUG_SERIAL.println(F("connected"));
  
+  load_filtered_parameters([](){ JsonDocument d; d["shelly"]=true;  return d; }());
   // Set Shelly ID to ESP's MAC address by default
   String currentMac = config_doc["shelly"]["shelly_mac"].as<String>();
+ 
   if (currentMac == "null" || currentMac.length() == 0) {
     
     String macStr = WiFi.macAddress(); 
     macStr.replace(":", "");        
     
-    config_doc["shelly"]["shelly_mac"] = macStr;  
+    config_doc["shelly"]["shelly_mac"] = macStr;
+    save_parameters();
   }
 
   interprete_parameters();
@@ -412,6 +457,32 @@ void WifiManagerSetup(bool stationmode)
   DEBUG_SERIAL.println(F("local ip"));
   DEBUG_SERIAL.println(WiFi.localIP());
 }
+
+
+String read_config_as_string() {
+  if (!LittleFS.exists(configPath)) {
+    DEBUG_SERIAL.println(F("Config file does not exist."));
+    return "";
+  }
+
+  File configFile = LittleFS.open(configPath, "r");
+  if (!configFile) {
+    DEBUG_SERIAL.println(F("Failed to open config file for reading."));
+    return "";
+  }
+
+  String jsonString = "";
+  
+  jsonString.reserve(configFile.size());
+
+  while (configFile.available()) {
+    jsonString += (char)configFile.read();
+  }
+
+  configFile.close();
+  return jsonString;
+}
+
 
 void setupMdns()
 {

@@ -391,7 +391,8 @@ void WifiManagerSetup(bool stationmode);
 void setupMdns();
 void interprete_parameters();
 bool save_parameters();
-void load_parameters();
+void load_filtered_parameters(JsonVariantConst filter);
+String read_config_as_string();
 void mergeJson(JsonObject target, JsonObjectConst source);
-
+void remove_filtered_parameters_ram(JsonVariantConst filter);
 #endif // CONFIGURATION_H
