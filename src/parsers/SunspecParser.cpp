@@ -254,10 +254,10 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
     PhasePower[0].power = (SUNSPEC_REAL_POWER0 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_POWER0 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_REAL_POWER_TYPE) * scale_real_power + offsetPerPhase : 0;
     PhasePower[0].apparentPower = (SUNSPEC_APPARANT_POWER0 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_APPARANT_POWER0 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_APPARANT_POWER_TYPE) * scale_apparant_power + offsetPerPhase : 0;
     PhasePower[0].current = (SUNSPEC_CURRENT0 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_CURRENT0 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_CURRENT_TYPE) * scale_current : 0;
-    PhasePower[0].powerFactor = (SUNSPEC_POWER_FACTOR0 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_POWER_FACTOR0 - SUNSPEC_BASE_INT, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_POWER_FACTOR_TYPE) * scale_powerfactor : 0;
+    PhasePower[0].powerFactor = (SUNSPEC_POWER_FACTOR0 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_POWER_FACTOR0 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_POWER_FACTOR_TYPE) * scale_powerfactor : 0;
     PhasePower[0].voltage = (SUNSPEC_VOLTAGE0 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_VOLTAGE0 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_VOLTAGE_TYPE) * scale_V : 0;
     PhasePower[0].frequency = (SUNSPEC_FREQUENCY >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_FREQUENCY - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_FREQUENCY_TYPE) * scale_frequency : 0;
-
+   
     power += PhasePower[0].power;
     if (SUNSPEC_REAL_ENERGY_IMPORTED0 >= 0)
     {
@@ -273,7 +273,7 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
     PhasePower[1].power = (SUNSPEC_REAL_POWER1 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_POWER1 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_REAL_POWER_TYPE) * scale_real_power + offsetPerPhase : 0;
     PhasePower[1].apparentPower = (SUNSPEC_APPARANT_POWER1 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_APPARANT_POWER1 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_APPARANT_POWER_TYPE) * scale_apparant_power + offsetPerPhase : 0;
     PhasePower[1].current = (SUNSPEC_CURRENT1 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_CURRENT1 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_CURRENT_TYPE) * scale_current : 0;
-    PhasePower[1].powerFactor = (SUNSPEC_POWER_FACTOR1 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_POWER_FACTOR1 - SUNSPEC_BASE_INT, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_POWER_FACTOR_TYPE) * scale_powerfactor : 0;
+    PhasePower[1].powerFactor = (SUNSPEC_POWER_FACTOR1 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_POWER_FACTOR1 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_POWER_FACTOR_TYPE) * scale_powerfactor : 0;
     PhasePower[1].voltage = (SUNSPEC_VOLTAGE1 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_VOLTAGE1 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_VOLTAGE_TYPE) * scale_V : 0;
     PhasePower[1].frequency = (SUNSPEC_FREQUENCY >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_FREQUENCY - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_FREQUENCY_TYPE) * scale_frequency : 0;
 
@@ -292,7 +292,7 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
     PhasePower[2].power = (SUNSPEC_REAL_POWER2 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_REAL_POWER2 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_REAL_POWER_TYPE) * scale_real_power + offsetPerPhase : 0;
     PhasePower[2].apparentPower = (SUNSPEC_APPARANT_POWER2 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_APPARANT_POWER2 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_APPARANT_POWER_TYPE) * scale_apparant_power + offsetPerPhase : 0;
     PhasePower[2].current = (SUNSPEC_CURRENT2 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_CURRENT2 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_CURRENT_TYPE) * scale_current : 0;
-    PhasePower[2].powerFactor = (SUNSPEC_POWER_FACTOR2 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_POWER_FACTOR2 - SUNSPEC_BASE_INT, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_POWER_FACTOR_TYPE) * scale_powerfactor : 0;
+    PhasePower[2].powerFactor = (SUNSPEC_POWER_FACTOR2 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_POWER_FACTOR2 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_POWER_FACTOR_TYPE) * scale_powerfactor : 0;
     PhasePower[2].voltage = (SUNSPEC_VOLTAGE2 >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_VOLTAGE2 - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_VOLTAGE_TYPE) * scale_V : 0;
     PhasePower[2].frequency = (SUNSPEC_FREQUENCY >= 0) ? convert_modbus_type(&modbus_result[constrain(SUNSPEC_FREQUENCY - SUNSPEC_BASE, 0, MAX_MODBUS_REGISTERS - 2)], SUNSPEC_FREQUENCY_TYPE) * scale_frequency : 0;
 
