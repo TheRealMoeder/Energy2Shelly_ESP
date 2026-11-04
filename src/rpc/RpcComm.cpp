@@ -1,6 +1,7 @@
 #include "RpcHandlers.h"
 #include "../config/Configuration.h"
 #include "../data/DataStructures.h"
+#include "RpcComm.h"
 
 void scriptGetCode() {
   JsonDocument jsonResponse;
@@ -104,8 +105,8 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
 // Push status notifications to connected websocket clients like a real Shelly Pro 3EM.
 // Home Assistant only polls once on connect and relies on these notifications afterwards.
 // Event driven: sent as soon as a data source has written new values. The minimum interval
-// merges updates that arrive in several parts (e.g. one MQTT message per phase).
-#define NOTIFY_STATUS_MIN_INTERVAL 500
+// (NOTIFY_STATUS_MIN_INTERVAL) merges updates that arrive in several parts (e.g. one MQTT message per phase).
+// Uses its own buffer instead of serJsonResponse, which is written by the HTTP/websocket handlers in the async_tcp task.
 void notifyStatusWebSocket() {
   static PowerData lastPower[3];
   static EnergyData lastEnergy[3];
@@ -137,6 +138,8 @@ void notifyStatusWebSocket() {
   }
   String message;
   serializeJson(notify, message);
+  DEBUG_SERIAL.print(F("NotifyStatus: "));
+  DEBUG_SERIAL.println(message);
   webSocket.textAll(message);
 }
 
