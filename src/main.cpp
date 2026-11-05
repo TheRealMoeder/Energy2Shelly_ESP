@@ -553,7 +553,6 @@ void loop()
   }
   if (parametersUpdated) {
     DEBUG_SERIAL.println(F("New keys"));
-    load_parameters();
     serializeJsonPretty(config_doc, DEBUG_SERIAL);
     DEBUG_SERIAL.println();    
     interprete_parameters();
