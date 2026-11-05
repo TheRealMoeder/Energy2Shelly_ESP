@@ -365,12 +365,19 @@ void setup(void)
         return request->requestAuthentication(); 
     }
     
-    if (LittleFS.exists(configPath)) {
-        request->send(LittleFS, configPath, "application/json");
-    } else {
-        request->send(404, "application/json", "{\"error\":\"File not found\"}");
+    if (WiFi.getMode() == WIFI_AP_STA) {
+        String temp;
+        serializeJson(config_doc, temp);   
+        request->send(200, "application/json", temp); 
     }
-    });
+    else {
+         if (LittleFS.exists(configPath)) {
+            request->send(LittleFS, configPath, "application/json");
+         } else {
+            request->send(404, "application/json", "{\"error\":\"File not found\"}");
+         }
+    }
+   });
 
 
   server.on("/reboot", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {  
