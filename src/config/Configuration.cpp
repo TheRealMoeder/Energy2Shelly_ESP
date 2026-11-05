@@ -140,27 +140,49 @@ void WiFi_processScanResult(int n) {
 
 void wifi_scan()
 {
-  if (WiFi_scanInProgress) {
-    int16_t scanResult = WiFi.scanComplete();
-
-    if (scanResult >= 0) {
-      WiFi_processScanResult(scanResult);
+  #if defined(ESP32)
+    if (millis() - WiFi_lastScanTime >= WIFI_SCAN_INTERVAL) {
+      DEBUG_SERIAL.println(F("\nSynchron blocking ESP32 WiFi-Scan..."));
       
-      WiFi.scanDelete();
-      WiFi_scanInProgress = false;
-      WiFi_lastScanTime = millis();
-    } 
-    else if (scanResult == WIFI_SCAN_FAILED) {
-      DEBUG_SERIAL.println(F("WiFi scan failed."));
-      WiFi_scanInProgress = false;
+      WiFi.scanDelete(); 
+      
+      // ESP32 only scans syncron  works :(
+      int16_t scanResult = WiFi.scanNetworks(false, false, false); 
+      
+      if (scanResult >= 0) {
+        WiFi_processScanResult(scanResult);
+      } else {
+        DEBUG_SERIAL.println(F("ESP32 WiFi-Scan Error."));
+      }
+      
+      WiFi.scanDelete(); 
       WiFi_lastScanTime = millis();
     }
-  }
-  if (!WiFi_scanInProgress && (millis() - WiFi_lastScanTime >= WIFI_SCAN_INTERVAL)) {
-    DEBUG_SERIAL.println(F("\nNew WiFi scan..."));
-    WiFi.scanNetworks(true);
-    WiFi_scanInProgress = true;
-  }
+
+  #elif defined(ESP8266)
+    if (WiFi_scanInProgress) {
+      int16_t scanResult = WiFi.scanComplete();
+
+      if (scanResult >= 0) {
+        WiFi_processScanResult(scanResult);
+        WiFi.scanDelete();
+        WiFi_scanInProgress = false;
+        WiFi_lastScanTime = millis();
+      } 
+      else if (scanResult == WIFI_SCAN_FAILED) {
+        DEBUG_SERIAL.println(F("ESP8266 WiFi-Scan Error."));
+        WiFi.scanDelete();
+        WiFi_scanInProgress = false;
+        WiFi_lastScanTime = millis();
+      }
+    }
+
+    if (!WiFi_scanInProgress && (millis() - WiFi_lastScanTime >= WIFI_SCAN_INTERVAL)) {
+      DEBUG_SERIAL.println(F("\nStart asynchron ESP8266 WiFi-Scan..."));
+      WiFi.scanNetworks(true); // async=true
+      WiFi_scanInProgress = true;
+    }
+  #endif
 }
 
 void interprete_parameters()
@@ -374,8 +396,16 @@ void WifiManagerSetup(bool SW_update)
   WiFi.setAutoReconnect(true);
  
   #if defined(ESP32)
-    if (!LittleFS.begin(true)) {
-      DEBUG_SERIAL.println(F("LittleFS Mounting Error!"));
+    if (!LittleFS.begin(false)) {
+      DEBUG_SERIAL.println(F("LittleFS Mount error. Formating..."));    
+      if (LittleFS.format()) {
+        DEBUG_SERIAL.println(F("Success! Retry mounting"));
+        if (!LittleFS.begin(false)) {
+          DEBUG_SERIAL.println(F("Critical Error: could not mount LittleLS after formating!"));
+        }
+      } else {
+        DEBUG_SERIAL.println(F("Error: Formating!"));
+      }
     }
   #elif defined(ESP8266)
     if (!LittleFS.begin()) {
@@ -390,8 +420,18 @@ void WifiManagerSetup(bool SW_update)
   if (config_doc["wifi"]["ssid"] == "") // check for valid WiFi credentials, if not present, start config portal
   {
       DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
+#ifdef ESP32
       WiFi.mode(WIFI_AP_STA);
+#else
+      WiFi.mode(WIFI_AP_STA);
+#endif
       WiFi.softAP("Energy2Shelly", "");
+
+#if defined(ESP32)
+      WiFi.disconnect(false); 
+      WiFi.setSleep(false);
+       
+#endif
   }
   else { //try to connect to WiFi with stored credentials
       WiFi.mode(WIFI_STA);
@@ -404,9 +444,19 @@ void WifiManagerSetup(bool SW_update)
       }
       if (WiFi.status() != WL_CONNECTED) // if connection failed, start config portal
       {
-        WiFi.mode(WIFI_AP_STA); 
+#ifdef ESP32
+      WiFi.mode(WIFI_AP_STA);
+#else
+      WiFi.mode(WIFI_AP_STA);
+#endif
         WiFi.softAP("Energy2Shelly", "");
         DEBUG_SERIAL.println(F("Failed to connect to WiFi, starting config portal..."));
+#if defined(ESP32)
+        WiFi.disconnect(false);
+        WiFi.setSleep(false); 
+       
+#endif
+
       }
   }
   

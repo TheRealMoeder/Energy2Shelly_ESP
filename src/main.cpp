@@ -122,10 +122,7 @@ void setup(void)
       digitalWrite(led, HIGH);
     }
   }
-  if (WiFi.getMode() == WIFI_AP_STA) {
-     WiFi.scanNetworks(true);
-     WiFi_scanInProgress = true;
-     WiFi_lastScanTime = millis();
+  if ((WiFi.getMode() == WIFI_AP_STA)||(WiFi.getMode()==WIFI_AP))  {
      dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
      dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
      server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {     
@@ -365,7 +362,7 @@ void setup(void)
         return request->requestAuthentication(); 
     }
     
-    if (WiFi.getMode() == WIFI_AP_STA) {
+    if ((WiFi.getMode() == WIFI_AP_STA)||(WiFi.getMode()==WIFI_AP)) {
         String temp;
         serializeJson(config_doc, temp);   
         request->send(200, "application/json", temp); 
@@ -660,7 +657,7 @@ void loop()
       enableConsoleOutputSerial=false;
   }
 
-  if (WiFi.getMode() == WIFI_AP_STA) {
+  if ((WiFi.getMode() == WIFI_AP_STA)||(WiFi.getMode()==WIFI_AP))  {
      dnsServer.processNextRequest();
      wifi_scan();
      if ((extendedMillis()>15ull*60ull*1000ull) && (WiFi.softAPgetStationNum()==0)) { // Reset device after 15 minutes in AP mode, to avoid being stuck in AP mode forever
