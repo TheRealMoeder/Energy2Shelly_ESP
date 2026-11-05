@@ -23,12 +23,12 @@
 // Web & JSON libraries
 #include <ArduinoJson.h>
 #define WM_MDNS  
-#include <WiFiManager.h>
 #include <PubSubClient.h>
 #include <WiFiClient.h>
 #include <ESPAsyncWebServer.h>
 #include <WiFiUdp.h>
 #include <ModbusIP_ESP8266.h>
+#include <DNSServer.h>
 
 // File system
 #include <LittleFS.h>
@@ -340,6 +340,7 @@ extern char rpcUser[20];
 extern bool shouldSaveConfig;
 extern bool shouldResetConfig;
 extern bool shouldupdate;
+extern bool shouldReboot;
 
 // flags for data sources
 extern input_type_enum current_input_type;
@@ -365,6 +366,14 @@ extern WiFiUDP Udp;
 extern HTTPClient http;
 extern WiFiUDP UdpRPC;
 extern void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+
+
+extern DNSServer dnsServer;
+extern const byte DNS_PORT;
+
+extern unsigned long WiFi_lastScanTime;
+#define WIFI_SCAN_INTERVAL 15000 
+extern bool WiFi_scanInProgress;
 
 // Platform-specific UDP print macro
 #ifdef ESP32
@@ -397,5 +406,5 @@ void interprete_parameters();
 bool save_parameters();
 void load_parameters();
 void mergeJson(JsonObject target, JsonObjectConst source);
-
+void wifi_scan();
 #endif // CONFIGURATION_H

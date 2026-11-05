@@ -12,8 +12,10 @@ enum class Energy2Shelly_ResetReason
   OTA_UPDATE = 4,
   RECONFIGURE = 5,
   OTHER = 6,
-  WIFI_RECONFIG = 7,
-  FACTORY_RESET = 8
+  AP_TIMEOUT = 7,
+  REBOOT_REQUEST = 8,
+  WIFI_RECONFIG = 9,
+  FACTORY_RESET = 10
 };
 
  #define RTC_RESET_COUNTER_THRESHOLD 5

@@ -52,6 +52,7 @@ char rpcUser[20] = "user_1";
 bool shouldSaveConfig = false;
 bool shouldResetConfig = false;
 bool shouldupdate = false;
+bool shouldReboot = false;
 
 // flags for data sources
 input_type_enum current_input_type  = input_type_enum::NONE;
@@ -76,7 +77,10 @@ WiFiUDP Udp;
 HTTPClient http;
 WiFiUDP UdpRPC;
 uint16_t wifi_reconnect_attempts = 0;
-
+DNSServer dnsServer;
+const byte DNS_PORT = 53;
+unsigned long WiFi_lastScanTime = 0;
+bool WiFi_scanInProgress = false;
 // ============================================================================
 // MDNS RESPONDER HANDLES (ESP8266 only)
 // ============================================================================
@@ -122,6 +126,52 @@ void handleblinkled()
   }
 }
 
+void WiFi_processScanResult(int n) {
+  if (!config_doc["wifi"]["networks"].isNull()) {
+    config_doc["wifi"].remove("networks"); 
+  }
+  
+  JsonArray networks = config_doc["wifi"]["networks"].to<JsonArray>();
+  
+  for (int i = 0; i < n; ++i) {
+    JsonObject net = networks.add<JsonObject>();
+    
+    net["ssid"] = WiFi.SSID(i);
+    net["rssi"] = WiFi.RSSI(i);
+    net["channel"] = WiFi.channel(i);
+    
+#if defined(ESP32)
+    net["encryption"] = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? "Open" : "Secured";
+#elif defined(ESP8266)
+    net["encryption"] = (WiFi.encryptionType(i) == ENC_TYPE_NONE) ? "Open" : "Secured";
+#endif
+  }
+}
+
+void wifi_scan()
+{
+  if (WiFi_scanInProgress) {
+    int16_t scanResult = WiFi.scanComplete();
+
+    if (scanResult >= 0) {
+      WiFi_processScanResult(scanResult);
+      
+      WiFi.scanDelete();
+      WiFi_scanInProgress = false;
+      WiFi_lastScanTime = millis();
+    } 
+    else if (scanResult == WIFI_SCAN_FAILED) {
+      DEBUG_SERIAL.println(F("WiFi scan failed."));
+      WiFi_scanInProgress = false;
+      WiFi_lastScanTime = millis();
+    }
+  }
+  if (!WiFi_scanInProgress && (millis() - WiFi_lastScanTime >= WIFI_SCAN_INTERVAL)) {
+    DEBUG_SERIAL.println(F("\nNew WiFi scan..."));
+    WiFi.scanNetworks(true);
+    WiFi_scanInProgress = true;
+  }
+}
 
 void interprete_parameters()
 {
@@ -228,9 +278,10 @@ void mergeJson(JsonVariant dst, JsonVariantConst src) {
   }
 }
 
-
-
 bool save_parameters() {
+   if (!config_doc["wifi"]["networks"].isNull()) {
+    config_doc["wifi"].remove("networks"); 
+  }
   File configFile = LittleFS.open(configPath, "w");
   if (!configFile) {
     DEBUG_SERIAL.println(F("Error: Could not open file"));
@@ -249,6 +300,10 @@ bool save_parameters() {
 
 const char DEFAULT_CONFIG_JSON[] PROGMEM = R"=====(
 {
+  "wifi": {
+    "ssid": "",
+    "password": ""
+  },
   "basic": {
     "ntp_server": "de.pool.ntp.org",
     "timezone": "CET-1CEST,M3.5.0/2,M10.5.0/3",
@@ -330,7 +385,7 @@ void saveConfigCallback() {
     delay(5000);
 }
 
-void WifiManagerSetup(bool stationmode)
+void WifiManagerSetup(bool SW_update)
 {
   WiFi.setAutoReconnect(true);
  
@@ -348,52 +403,31 @@ void WifiManagerSetup(bool stationmode)
   load_parameters(); // Load parameters from LittleFS
  
 
-  WiFiManager wifiManager;
-  wifiManager.setDebugOutput(false);
-  wifiManager.setShowStaticFields(true);
-
-  wifiManager.setTitle(String("Energy2Shelly for ESP ") + VERSION_BUILD);
-  wifiManager.setSaveConfigCallback(saveConfigCallback);
-  wifiManager.setConfigPortalTimeout(180);
-  std::vector<const char *> usermenu = {"wifi","info","exit","sep","update"};
-  wifiManager.setMenu(usermenu);
-  if (stationmode)
+  if (config_doc["wifi"]["ssid"] == "") // check for valid WiFi credentials, if not present, start config portal
   {
-    WiFi.mode(WIFI_STA);
-    WiFi.begin();
-    unsigned long startAttemptTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000)
-    {
-      delay(500);
-      Serial.print(".");
-    }
-    update_reset_reason(Energy2Shelly_ResetReason::OTA_UPDATE);
-    if (WiFi.status() == WL_CONNECTED)
-    {
-      shouldSaveConfig=true;      
-      wifiManager.startWebPortal();
-      startAttemptTime = millis();
-      while (wifiManager.getWebPortalActive())
-      {
-        wifiManager.process();
-        delay(10);
-      }
-     
-    }
+      DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
+      WiFi.mode(WIFI_AP_STA);
+      WiFi.softAP("Energy2Shelly", "");
   }
-  else
-  {
-    if (!wifiManager.autoConnect("Energy2Shelly"))
-    {
-      DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
-     
-      delay(3000);
-      ESP.restart();
-      delay(5000);
-    }
+  else { //try to connect to WiFi with stored credentials
+      WiFi.mode(WIFI_STA);
+      WiFi.begin(config_doc["wifi"]["ssid"].as<const char*>(), config_doc["wifi"]["password"].as<const char*>());
+      unsigned long startAttemptTime = millis();
+      while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000)
+      {
+        delay(500);
+        DEBUG_SERIAL.print(".");
+      }
+      if (WiFi.status() != WL_CONNECTED) // if connection failed, start config portal
+      {
+        WiFi.mode(WIFI_AP_STA); 
+        WiFi.softAP("Energy2Shelly", "");
+        DEBUG_SERIAL.println(F("Failed to connect to WiFi, starting config portal..."));
+      }
   }
   
-  DEBUG_SERIAL.println(F("connected"));
+  
+  
  
   // Set Shelly ID to ESP's MAC address by default
   String currentMac = config_doc["shelly"]["shelly_mac"].as<String>();
