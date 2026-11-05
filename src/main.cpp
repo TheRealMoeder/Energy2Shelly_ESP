@@ -541,7 +541,7 @@ void setup(void)
     DEBUG_SERIAL.println(F("No source"));
   }
   
-#if defined(ONA_ACTIVE)
+#if defined(ONA_ACTIVE) && defined(ESP32)
   ONA_Setup();
 #endif
   // Set up mDNS responder
