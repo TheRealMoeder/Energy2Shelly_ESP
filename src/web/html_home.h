@@ -538,9 +538,85 @@ const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
 </head>
 <body>
   <h2>System reboots...</h2>
-  <p>The device will be reachable again in WiFiManager-Mode within your local network shortly.</p>
+  <p>The device will be reachable again within your local network shortly.</p>
   <div class='loader'></div>
   <div class='countdown'>Redirecting in <span id='count'>20</span> seconds...</div>
+</body></html>
+)rawhtml";
+
+// Beautiful upload interface in English
+const char UPDATE_INDEX_HTML[] PROGMEM = R"rawhtml(
+<!DOCTYPE html><html><head><title>Firmware Update</title>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<meta charset='UTF-8'>
+<style>
+  body{font-family:Arial,sans-serif;text-align:center;padding:40px 20px;background-color:#f9f9f9;}
+  .card{background:white;padding:30px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.05);max-width:400px;margin:0 auto;}
+  .icon{font-size:50px;color:#0275d8;margin-bottom:15px;}
+  h2{color:#333;margin-top:0;margin-bottom:10px;}
+  p{color:#666;font-size:14px;margin-bottom:25px;line-height:1.4;}
+  .file-input-wrapper {margin-bottom: 20px;}
+  input[type='file'] {width: 100%; box-sizing: border-box; padding: 10px; background: #f0f0f0; border: 1px dashed #ccc; border-radius: 4px; cursor: pointer;}
+  .btn{display:block;width:100%;padding:12px;background-color:#0275d8;color:white;border:none;border-radius:4px;font-weight:bold;font-size:16px;cursor:pointer;transition:background 0.2s;}
+  .btn:hover{background-color:#01549b;}
+  .btn:disabled{background-color:#cccccc;cursor:not-allowed;}
+  .loader-text {display:none; color:#0275d8; font-weight:bold; margin-top:15px;}
+  .loader {display:none; border: 4px solid #f3f3f3; border-top: 4px solid #0275d8; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 15px auto 0 auto;}
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
+<script>
+  function startUpload() {
+    const fileInput = document.getElementById('file-field');
+    if(fileInput.files.length === 0) {
+      alert('Please select a .bin file first!');
+      return false;
+    }
+    document.getElementById('submit-btn').disabled = true;
+    document.getElementById('loader-element').style.display = 'block';
+    document.getElementById('status-text').style.display = 'block';
+    return true;
+  }
+</script>
+</head>
+<body>
+  <div class='card'>
+    <div class='icon'>⭱</div>
+    <h2>Firmware Update</h2>
+    <p>Select your compiled <strong>firmware.bin</strong> file to perform an asynchronous over-the-air update.</p>
+    <form method='POST' action='/update' enctype='multipart/form-data' onsubmit='return startUpload();'>
+      <div class='file-input-wrapper'>
+        <input type='file' name='update' id='file-field' accept='.bin'>
+      </div>
+      <input type='submit' value='Start Update' id='submit-btn' class='btn'>
+    </form>
+    <div class='loader' id='loader-element'></div>
+    <div class='loader-text' id='status-text'>Uploading & Flashing...<br><small>Please do not close this page.</small></div>
+  </div>
+</body></html>
+)rawhtml";
+
+
+const char UPDATE_ERROR_HTML[] PROGMEM = R"rawhtml(
+<!DOCTYPE html><html><head><title>Update Failed</title>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<meta charset='UTF-8'>
+<style>
+  body{font-family:Arial,sans-serif;text-align:center;padding:40px 20px;background-color:#f9f9f9;}
+  .card{background:white;padding:30px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.1);max-width:400px;margin:0 auto;border-top:5px solid #d9534f;}
+  .icon{font-size:50px;color:#d9534f;margin-bottom:15px;}
+  h2{color:#d9534f;margin-top:0;}
+  p{color:#666;line-height:1.5;}
+  .btn{display:inline-block;padding:12px 24px;background-color:#777;color:white;text-decoration:none;border-radius:4px;font-weight:bold;margin-top:15px;transition:background 0.2s;}
+  .btn:hover{background-color:#555;}
+</style>
+</head>
+<body>
+  <div class='card'>
+    <div class='icon'>⚠</div>
+    <h2>Update Aborted</h2>
+    <p>An error occurred while transmitting or verifying the firmware file. Please check your binary file and try again.</p>
+    <a href='/update' class='btn'>Back to Upload</a>
+  </div>
 </body></html>
 )rawhtml";
 
@@ -581,6 +657,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         <div id="configForm">Loading configuration...</div>
         
         <button id="saveBtn" style="margin-top: 15px;">Save Changes</button>
+        <button id="rebootBtn" style="margin-top: 15px; background-color: #dc3545; color: white;">Restart Device</button>
         <p id="status"></p>
     </div>
 
@@ -595,11 +672,64 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         }
     }
     
+document.getElementById('rebootBtn').addEventListener('click', async () => {
+
+    const statusText = document.getElementById('status');
+    statusText.innerText = "Sending reboot command...";
+    statusText.style.color = "orange";
+
+    const redirectToHome = () => {
+        setTimeout(() => {
+            window.location.href = '/'; 
+        }, 20000); 
+    };
+    try {
+        const res = await fetch('/reboot', { method: 'POST' }); 
+        
+        if (res.ok) {
+            statusText.innerText = "Device is restarting... Redirecting to homepage in 20 seconds.";
+            statusText.style.color = "green";
+            
+            document.getElementById('saveBtn').disabled = true;
+            document.getElementById('rebootBtn').disabled = true;
+
+            redirectToHome();
+        } else {
+            statusText.innerText = `Reboot failed (Status: ${res.status}).`;
+            statusText.style.color = "red";
+        }
+    } catch (err) {
+        statusText.innerText = "Device disconnected. Restarting... Redirecting to homepage in 20 seconds.";
+        statusText.style.color = "green";
+        
+        document.getElementById('saveBtn').disabled = true;
+        document.getElementById('rebootBtn').disabled = true;
+        
+        redirectToHome();
+    }
+});
+
+
+
         const formContainer = document.getElementById('configForm');
         const saveBtn = document.getElementById('saveBtn');
         const statusText = document.getElementById('status');
         let currentConfig = {};
         const CONFIG_DICTIONARY = {
+            wifi: {
+                _label: "WiFi Settings",
+                _description: "Settings for connecting to WiFi networks.",
+                ssid: {
+                    label: "SSID",
+                    max_length : 32,
+                    description: "The name of the WiFi network."
+                },
+                password: {
+                    label: "Password",
+                    max_length : 64,
+                    description: "The password for the WiFi network."
+                }
+            },
             basic: {
                 _label: "Basic Settings",
                 _description: "General settings for the device.",
@@ -1069,6 +1199,23 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         
         currentConfig = await res.json();
        
+        if (currentConfig.wifi && currentConfig.wifi.networks) {
+            const uniqueNetworksMap = new Map();
+    
+            currentConfig.wifi.networks.forEach(net => {
+                if (net.ssid && net.ssid.trim() !== "") {
+                    const existing = uniqueNetworksMap.get(net.ssid);
+                    if (!existing || net.rssi > existing.rssi) {
+                        uniqueNetworksMap.set(net.ssid, net);
+                    }
+                }
+            });
+
+            CONFIG_DICTIONARY.wifi.ssid.options = Array.from(uniqueNetworksMap.values());
+            delete currentConfig.wifi.networks;   
+        }
+
+
         formContainer.innerHTML = ''; 
         generateFormFromDictionary(CONFIG_DICTIONARY, currentConfig, formContainer);
           const inputTypeField = document.getElementById('input_basic_input_type');
@@ -1197,25 +1344,36 @@ function generateFormFromDictionary(dictionary, currentConfig, container, curren
         let input;
         const configValue = (currentConfigNode && currentConfigNode[key] !== undefined) ? currentConfigNode[key] : '';
         
-        if (entry.options) {
-            input = document.createElement('select');
-            input.id = 'input_' + currentPath; 
+if (entry.options) {
+    input = document.createElement('select');
+    input.id = 'input_' + currentPath; 
 
-            entry.options.forEach(optValue => {
-                const option = document.createElement('option');
-                option.text = optValue; 
-                
-                const mappedValue = INPUT_TYPE_ENUM[optValue] !== undefined ? INPUT_TYPE_ENUM[optValue] : optValue;
-                option.value = mappedValue;
+    entry.options.forEach(opt => {
+        const option = document.createElement('option');
+        
+        const isNetworkObj = typeof opt === 'object' && opt !== null;
+        const ssidValue = isNetworkObj ? opt.ssid : opt;
+        const rssiValue = isNetworkObj ? opt.rssi : null;
 
-                if (configValue === mappedValue || String(configValue) === String(mappedValue) || configValue === optValue) {
-                    option.selected = true;
-                }
-                input.appendChild(option);
-            });
+        let signalText = "";
+        if (rssiValue !== null) {
+            const percentage = Math.min(Math.max(2 * (rssiValue + 100), 0), 100);            
+            signalText = ` (${percentage}%)`;
+        }
 
-            inputWrapper.appendChild(input);
-        } 
+        option.text = ssidValue + signalText; 
+        
+        const mappedValue = INPUT_TYPE_ENUM[ssidValue] !== undefined ? INPUT_TYPE_ENUM[ssidValue] : ssidValue;
+        option.value = mappedValue;
+
+        if (configValue === mappedValue || String(configValue) === String(mappedValue) || configValue === ssidValue) {
+            option.selected = true;
+        }
+        input.appendChild(option);
+    });
+
+    inputWrapper.appendChild(input);
+       }  
         else {
             input = document.createElement('input');
             input.id = 'input_' + currentPath; 
@@ -1272,7 +1430,12 @@ async function saveConfig() {
             const inputField = document.getElementById('input_' + currentPath);
 
             if (inputField) {
-                result[key] = castValue(inputField.value);
+                const lowerKey = key.toLowerCase();
+                if (lowerKey.includes('password') || lowerKey.includes('ssid')) {
+                    result[key] = String(inputField.value); // Niemals in Number konvertieren
+                } else {
+                    result[key] = castValue(inputField.value); // Normale Konvertierung für den Rest
+                }
             } else if (typeof dictionaryObj[key] === 'object' && dictionaryObj[key] !== null && !dictionaryObj[key].hasOwnProperty('label')) {
                 const subConfig = (configObj && configObj[key]) ? configObj[key] : {};
                 result[key] = buildPayload(subConfig, dictionaryObj[key], currentPath);
@@ -1304,7 +1467,7 @@ async function saveConfig() {
         });
 
         if (res.ok) {
-            statusText.innerText = "Successfully saved to flash storage!";
+            statusText.innerText = "Successfully saved to flash storage! Please restart the device to make sure all changes are in effect.";
             statusText.style.color = "green";
         } else {
             statusText.innerText = "Device rejected the save request.";
