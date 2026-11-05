@@ -554,14 +554,6 @@ void loop()
     DEBUG_SERIAL.println(F("New keys"));
     load_parameters();
     serializeJsonPretty(config_doc, DEBUG_SERIAL);
-    #if 0
-    DeserializationError error = deserializeJson(config_doc, json_prefs_string);
-    size_t chunkSize=40; // ESP8266 low memory has some troubles to cope with larger strings in webconsole
-    for (size_t i = 0; i < json_prefs_string.length(); i += chunkSize) {
-         DEBUG_SERIAL.println(json_prefs_string.substring(i, i + chunkSize));
-         DEBUG_SERIAL.handleQueue();
-    }
-    #endif
     DEBUG_SERIAL.println();    
     interprete_parameters();
     parametersUpdated = false;
