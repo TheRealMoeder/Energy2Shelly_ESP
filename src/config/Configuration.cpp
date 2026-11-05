@@ -140,7 +140,7 @@ void WiFi_processScanResult(int n) {
 
 void wifi_scan()
 {
-  #if defined(ESP32)
+#if defined(ESP32)
     if (millis() - WiFi_lastScanTime >= WIFI_SCAN_INTERVAL) {
       DEBUG_SERIAL.println(F("\nSynchron blocking ESP32 WiFi-Scan..."));
       
@@ -159,7 +159,7 @@ void wifi_scan()
       WiFi_lastScanTime = millis();
     }
 
-  #elif defined(ESP8266)
+#elif defined(ESP8266)
     if (WiFi_scanInProgress) {
       int16_t scanResult = WiFi.scanComplete();
 
@@ -182,7 +182,7 @@ void wifi_scan()
       WiFi.scanNetworks(true); // async=true
       WiFi_scanInProgress = true;
     }
-  #endif
+#endif
 }
 
 void interprete_parameters()
@@ -395,42 +395,37 @@ void WifiManagerSetup(bool SW_update)
 {
   WiFi.setAutoReconnect(true);
  
-  #if defined(ESP32)
+#if defined(ESP32)
     if (!LittleFS.begin(false)) {
       DEBUG_SERIAL.println(F("LittleFS Mount error. Formating..."));    
       if (LittleFS.format()) {
         DEBUG_SERIAL.println(F("Success! Retry mounting"));
         if (!LittleFS.begin(false)) {
-          DEBUG_SERIAL.println(F("Critical Error: could not mount LittleLS after formating!"));
+          DEBUG_SERIAL.println(F("Critical Error: could not mount LittleFS after formating!"));
         }
       } else {
         DEBUG_SERIAL.println(F("Error: Formating!"));
       }
     }
-  #elif defined(ESP8266)
+#elif defined(ESP8266)
     if (!LittleFS.begin()) {
       DEBUG_SERIAL.println(F("LittleFS Mounting Error. Try formating..."));
       LittleFS.format();
       LittleFS.begin();
     }
-  #endif
+#endif
   load_parameters(); // Load parameters from LittleFS
  
 
   if (config_doc["wifi"]["ssid"] == "") // check for valid WiFi credentials, if not present, start config portal
   {
       DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
-#ifdef ESP32
       WiFi.mode(WIFI_AP_STA);
-#else
-      WiFi.mode(WIFI_AP_STA);
-#endif
       WiFi.softAP("Energy2Shelly", "");
 
 #if defined(ESP32)
       WiFi.disconnect(false); 
-      WiFi.setSleep(false);
-       
+      WiFi.setSleep(false);       
 #endif
   }
   else { //try to connect to WiFi with stored credentials
@@ -444,17 +439,12 @@ void WifiManagerSetup(bool SW_update)
       }
       if (WiFi.status() != WL_CONNECTED) // if connection failed, start config portal
       {
-#ifdef ESP32
-      WiFi.mode(WIFI_AP_STA);
-#else
-      WiFi.mode(WIFI_AP_STA);
-#endif
+        WiFi.mode(WIFI_AP_STA);
         WiFi.softAP("Energy2Shelly", "");
         DEBUG_SERIAL.println(F("Failed to connect to WiFi, starting config portal..."));
 #if defined(ESP32)
         WiFi.disconnect(false);
-        WiFi.setSleep(false); 
-       
+        WiFi.setSleep(false);       
 #endif
 
       }
