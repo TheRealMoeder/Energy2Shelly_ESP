@@ -432,7 +432,7 @@ server.on("/json_config", AsyncWebRequestMethod::HTTP_POST,
     DEBUG_SERIAL.println(F("No source"));
   }
   
-#if defined(ONA_ACTIVE) && defined(ESP32)
+#if defined(ONA_ACTIVE)
   ONA_Setup();
 #endif
   // Set up mDNS responder
