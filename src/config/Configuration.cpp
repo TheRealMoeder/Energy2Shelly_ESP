@@ -122,6 +122,8 @@ void remove_filtered_parameters_ram(JsonDocument filter) {
     config_doc.remove(p.key());
   }
   DEBUG_SERIAL.println(F("Sections successfully removed from config_doc in RAM."));
+}
+
 void WiFi_processScanResult(int n) {
   if (!config_doc["wifi"]["networks"].isNull()) {
     config_doc["wifi"].remove("networks"); 
