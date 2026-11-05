@@ -1036,13 +1036,22 @@ document.getElementById('rebootBtn').addEventListener('click', async () => {
         
         currentConfig = await res.json();
        
-         if (currentConfig.wifi && currentConfig.wifi.networks) {
-            const scannedSSIDs = currentConfig.wifi.networks.map(net => net.ssid);
-            const uniqueSSIDs = [...new Set(scannedSSIDs)].filter(ssid => ssid && ssid.trim() !== "");
-            
-            CONFIG_DICTIONARY.wifi.ssid.options = uniqueSSIDs;
-            delete currentConfig.wifi.networks;
+        if (currentConfig.wifi && currentConfig.wifi.networks) {
+            const uniqueNetworksMap = new Map();
+    
+            currentConfig.wifi.networks.forEach(net => {
+                if (net.ssid && net.ssid.trim() !== "") {
+                    const existing = uniqueNetworksMap.get(net.ssid);
+                    if (!existing || net.rssi > existing.rssi) {
+                        uniqueNetworksMap.set(net.ssid, net);
+                    }
+                }
+            });
+
+            CONFIG_DICTIONARY.wifi.ssid.options = Array.from(uniqueNetworksMap.values());
+            delete currentConfig.wifi.networks;   
         }
+
 
         formContainer.innerHTML = ''; 
         generateFormFromDictionary(CONFIG_DICTIONARY, currentConfig, formContainer);
@@ -1172,25 +1181,41 @@ function generateFormFromDictionary(dictionary, currentConfig, container, curren
         let input;
         const configValue = (currentConfigNode && currentConfigNode[key] !== undefined) ? currentConfigNode[key] : '';
         
-        if (entry.options) {
-            input = document.createElement('select');
-            input.id = 'input_' + currentPath; 
+if (entry.options) {
+    input = document.createElement('select');
+    input.id = 'input_' + currentPath; 
 
-            entry.options.forEach(optValue => {
-                const option = document.createElement('option');
-                option.text = optValue; 
-                
-                const mappedValue = INPUT_TYPE_ENUM[optValue] !== undefined ? INPUT_TYPE_ENUM[optValue] : optValue;
-                option.value = mappedValue;
+    entry.options.forEach(opt => {
+        const option = document.createElement('option');
+        
+        const isNetworkObj = typeof opt === 'object' && opt !== null;
+        const ssidValue = isNetworkObj ? opt.ssid : opt;
+        const rssiValue = isNetworkObj ? opt.rssi : null;
 
-                if (configValue === mappedValue || String(configValue) === String(mappedValue) || configValue === optValue) {
-                    option.selected = true;
-                }
-                input.appendChild(option);
-            });
+        let signalText = "";
+        if (rssiValue !== null) {
+            const percentage = Math.min(Math.max(2 * (rssiValue + 100), 0), 100); 
+            let bars = "📶";
+            if (rssiValue < -80) bars = "❌ 🛑"; 
+            else if (rssiValue < -70) bars = "📶 🪫"; 
+            else if (rssiValue < -60) bars = "📶 ⚡"; 
+            
+            signalText = ` (${bars} ${percentage}%)`;
+        }
 
-            inputWrapper.appendChild(input);
-        } 
+        option.text = ssidValue + signalText; 
+        
+        const mappedValue = INPUT_TYPE_ENUM[ssidValue] !== undefined ? INPUT_TYPE_ENUM[ssidValue] : ssidValue;
+        option.value = mappedValue;
+
+        if (configValue === mappedValue || String(configValue) === String(mappedValue) || configValue === ssidValue) {
+            option.selected = true;
+        }
+        input.appendChild(option);
+    });
+
+    inputWrapper.appendChild(input);
+       }  
         else {
             input = document.createElement('input');
             input.id = 'input_' + currentPath; 
