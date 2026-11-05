@@ -270,37 +270,40 @@ void setup(void)
         request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
     } });
 
-  server.on("/json_config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-   
+    server.on("/json_config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     if (isNotAuthorized(request)) {
-            return request->requestAuthentication(); 
-        }
-    json_prefs_string=read_config_as_string();
-    //serializeJson(config_doc, json_prefs_string);   
-    request->send(200, "application/json", json_prefs_string); 
-  });
+        return request->requestAuthentication(); 
+    }
+    
+    if (LittleFS.exists(configPath)) {
+        request->send(LittleFS, configPath, "application/json");
+    } else {
+        request->send(404, "application/json", "{\"error\":\"File not found\"}");
+    }
+    });
 
 server.on("/json_config", AsyncWebRequestMethod::HTTP_POST, 
     [](AsyncWebServerRequest *request) {
         if (isNotAuthorized(request)) {
             request->send(401, "text/plain", "Unauthorized");
-            json_prefs_string = "";
             return;
         }
+                
         AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\":\"OK\"}");
         response->addHeader("Connection", "close");
         request->send(response);
-        parametersUpdated = true;
+        
+        parametersUpdated = true; 
     },
     NULL, 
     [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-        if (index == 0) {
-            json_prefs_string = "";
-            json_prefs_string.reserve(total); 
+        if (isNotAuthorized(request)) return;
+    
+        File file = LittleFS.open(configPath, index == 0 ? "w" : "a");
+        if (file) {
+            file.write(data, len);
+            file.close();
         }
-        
-        
-        json_prefs_string += String((const char*)data).substring(0, len);
     }
 );
 
@@ -377,8 +380,9 @@ server.on("/json_config", AsyncWebRequestMethod::HTTP_POST,
   UdpRPC.begin(shelly_port);
 
   // Set up MQTT
-  if (dataMQTT)
-  {
+  switch (current_input_type) { 
+    case input_type_enum::MQTT:
+  
     mqtt_client.setBufferSize(2048);
     if (isValidIPAddress(mqtt_server))
     {
@@ -389,45 +393,42 @@ server.on("/json_config", AsyncWebRequestMethod::HTTP_POST,
       mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
     }
     mqtt_client.setCallback(mqtt_callback);
-  }
-
-  // Set Up Multicast for SMA Energy Meter
-  if (dataSMA)
-  {
-    Udp.begin(multicastPort);
+    break;
+    
+    case input_type_enum::SMA:
+      Udp.begin(multicastPort);
 #ifdef ESP8266
     Udp.beginMulticast(WiFi.localIP(), multicastIP, multicastPort);
 #else
     Udp.beginMulticast(multicastIP, multicastPort);
 #endif
-  }
-
+     break;
+    
+     case input_type_enum::SHRDZM:
   // Set Up UDP for SHRDZM smart meter interface
-  if (dataSHRDZM)
-  {
     Udp.begin(multicastPort);
-  }
+    break;
 
-  // Set Up Modbus TCP for SUNSPEC register query
-  if (dataSUNSPEC)
-  {
+    case input_type_enum::SUNSPEC:
+  
     modbus1.client();
     DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
     modbus1.connect(modbus_ip, sunspec_port_int);
-  }
+    break;
 
-  // Set up UART for SML reading head
-  if (dataSMLSERIAL)
-  {
+
+    case input_type_enum::SMLSERIAL:
     setupSMLSerial();
-  }
+    break;
 
-  // Set Up HTTP query
-  if (dataHTTP)
-  {
+    case input_type_enum::HTTP:
     http.useHTTP10(true);
-  }
+    break;
 
+    case input_type_enum::NONE:
+    default:
+    DEBUG_SERIAL.println(F("No source"));
+  }
   // Set up mDNS responder
   setupMdns();
 
@@ -441,6 +442,7 @@ void worker_loop(int currentMillis)
   MDNS.update();
 #endif
   parseUdpRPC();
+  notifyStatusWebSocket();
   if (shouldupdate && (currentMillis - updateTimestamp >= 2000))
   {
     all_esp_reset(Energy2Shelly_ResetReason::RECONFIGURE);
@@ -450,58 +452,57 @@ void worker_loop(int currentMillis)
   {
      wifi_reset();
   }
-  if (dataMQTT)
-  {
-    if (!mqtt_client.connected())
-    {
+
+  switch (current_input_type) {
+    case input_type_enum::MQTT:
+      if (!mqtt_client.connected())
+      {
       mqtt_reconnect();
-    }
-    mqtt_client.loop();
-  }
-  if (dataSMA)
-  {
-    parseSMA();
-  }
-  if (dataSHRDZM)
-  {
-    parseSHRDZM();
-  }
-  if (dataSUNSPEC)
-  {
-    modbus1.task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
-    if (currentMillis - startMillis >= query_period_modbus_u32)
-    {
-      parseSUNSPEC();
-      startMillis = currentMillis;
-    }
-  }
-  if (dataHTTP)
-  {
-    if (currentMillis - startMillis >= query_period_http_u32)
-    {
-      queryHTTP();
-      startMillis = currentMillis;
-    }
-  }
-  if (dataTIBBERPULSE)
-  {
+      }
+      mqtt_client.loop();
+     break;
+    case input_type_enum::SMA:
+       parseSMA();
+     break;
+    case input_type_enum::SHRDZM:
+      parseSHRDZM();
+      break;
+    case input_type_enum::SUNSPEC:
+       modbus1.task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
+      if (currentMillis - startMillis >= query_period_modbus_u32)
+      {
+         parseSUNSPEC();
+         startMillis = currentMillis;
+      }
+      break;
+    case input_type_enum::HTTP:
+      if (currentMillis - startMillis >= query_period_http_u32)
+      {
+         queryHTTP();
+         startMillis = currentMillis;
+      }
+     break;
+    case input_type_enum::TIBBERPULSE:
     if (currentMillis - startMillis >= query_period_tibber_u32)
     {
       parseTibberPulse();
       startMillis = currentMillis;
     }
-  }
-  if (dataSMLSERIAL)
-  {
-    parseSMLSerial(); // non-blocking, consumes the bytes received since the last call
-  }
-  if (dataRCT)
-  {
-    if (currentMillis - startMillis >= query_period_rct_u32)
-    {
+    break;
+    case input_type_enum::SMLSERIAL:
+       parseSMLSerial(); // non-blocking, consumes the bytes received since the last call
+      break;
+
+    case input_type_enum::RCT:
+       if (currentMillis - startMillis >= query_period_rct_u32)
+       {
       parseRCT();
       startMillis = currentMillis;
-    }
+      }
+    break;
+    case input_type_enum::NONE:
+    default:
+    delay(10);
   }
   DEBUG_SERIAL.handleQueue();
 }
@@ -538,9 +539,9 @@ void loop()
     WDTimer = currentMillis;
   }
 
-  if (enableConsoleOutputSerial && (extendedMillis()>(config_doc["console"]["serial_console_time"].as<int>()*60000ll))) {
+  if (enableConsoleOutputSerial && (extendedMillis() > static_cast<uint64_t>(config_doc["console"]["serial_console_time"].as<int>() * 60000ll))) {
+      DEBUG_SERIAL.println(F("Disabled serial debug messages"));
       enableConsoleOutputSerial=false;
-      DEBUG_SERIAL.println(F("Disabled serial plottin"));
   }
 
   // check if WiFi connection has been lost for more than the allowed interval
@@ -552,18 +553,10 @@ void loop()
   }
   if (parametersUpdated) {
     DEBUG_SERIAL.println(F("New keys"));
-    DeserializationError error = deserializeJson(config_doc, json_prefs_string);
-    save_parameters();
-    size_t chunkSize=40; // ESP8266 low memory has some troubles to cope with larger strings in webconsole
-    for (size_t i = 0; i < json_prefs_string.length(); i += chunkSize) {
-         DEBUG_SERIAL.println(json_prefs_string.substring(i, i + chunkSize));
-         DEBUG_SERIAL.handleQueue();
-    }
-    DEBUG_SERIAL.println();
-    
-    if (error!=DeserializationError::Ok) DEBUG_SERIAL.println("Config Error");
-    DEBUG_SERIAL.handleQueue();
-    interprete_parameters();     
+    load_parameters();
+    serializeJsonPretty(config_doc, DEBUG_SERIAL);
+    DEBUG_SERIAL.println();    
+    interprete_parameters();
     parametersUpdated = false;
   }
 

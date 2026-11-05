@@ -52,14 +52,7 @@ bool shouldResetConfig = false;
 bool shouldupdate = false;
 
 // flags for data sources
-bool dataMQTT = false;
-bool dataSMA = false;
-bool dataSHRDZM = false;
-bool dataHTTP = false;
-bool dataSUNSPEC = false;
-bool dataTIBBERPULSE = false;
-bool dataRCT = false;
-bool dataSMLSERIAL = false;
+input_type_enum current_input_type  = input_type_enum::NONE;
 
 // ============================================================================
 // NETWORK OBJECTS
@@ -137,43 +130,34 @@ void interprete_parameters()
 
   switch (current_input_type) {
     case input_type_enum::SMA:
-        dataSMA = true;
         load_filtered_parameters([](){ JsonDocument d; d["sma"]=true; return d; }());
         DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
         break;
     case input_type_enum::SHRDZM:
-        dataSHRDZM = true;
         DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
         break;
     case input_type_enum::HTTP:
-        dataHTTP = true;
         load_filtered_parameters([](){ JsonDocument d; d["http"]=true; d["json"]=true;  return d; }());
         DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
         break;
     case input_type_enum::SUNSPEC:
-        dataSUNSPEC = true;
         load_filtered_parameters([](){ JsonDocument d; d["sunspec"]=true; d["sunspec_registers"]=true; return d; }());
         convert_json_to_sunspec_registers();
         remove_filtered_parameters_ram([](){ JsonDocument d; d["sunspec_registers"]=true; return d; }());
         DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
-
         break;
    case input_type_enum::TIBBERPULSE:
-        dataTIBBERPULSE = true;
         load_filtered_parameters([](){ JsonDocument d; d["tibber"]=true; return d; }());
         DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
         break;
    case input_type_enum::SMLSERIAL:
-        dataSMLSERIAL = true;
         DEBUG_SERIAL.println(F("Enabling SML serial (UART) data input"));
         break;
    case input_type_enum::RCT:
-        dataRCT = true;
         load_filtered_parameters([](){ JsonDocument d; d["rct"]=true; return d; }());
         DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
         break;
    case input_type_enum::MQTT:
-        dataMQTT = true;
         load_filtered_parameters([](){ JsonDocument d; d["mqtt"]=true; d["json"]=true;  return d; }());
         DEBUG_SERIAL.println(F("Enabling MQTT data input"));
         break;
@@ -181,7 +165,7 @@ void interprete_parameters()
    default:
         DEBUG_SERIAL.println(F("None"));
   }
- 
+
   if (led_gpio_i!=NULL && strlen(led_gpio_i)>=4 && strcmp(led_gpio_i, "true") == 0)
   {
     led_i = true;
@@ -196,12 +180,12 @@ void interprete_parameters()
     enableConsoleOutputWeb=true;
   }
   else {
-     enableConsoleOutputWeb=false;
+    enableConsoleOutputWeb=false;
   }
- 
-  config_doc["console"]["serial_console_time"]  =    config_doc["console"]["serial_console_time"].as<int>() ? config_doc["console"]["serial_console_time"].as<int>() : (int)1;
+
+  config_doc["console"]["serial_console_time"] = config_doc["console"]["serial_console_time"].as<int>() ? config_doc["console"]["serial_console_time"].as<int>() : (int)1;
   if (config_doc["console"]["serial_console_time"].as<int>()>0) {
-     enableConsoleOutputSerial=true;
+    enableConsoleOutputSerial=true;
   }
   else {
     enableConsoleOutputSerial=false;
@@ -214,16 +198,13 @@ void interprete_parameters()
   String mac_str  = config_doc["shelly"]["shelly_mac"] | "";
   shelly_name = name_str + mac_str;
 
- if (shelly_name.length() > 128) {
+  if (shelly_name.length() > 128) {
     shelly_name = shelly_name.substring(0, 128);
- }
+  }
 
 
 
 }
-
-String json_prefs_string;
-JsonDocument update_config_doc;
 
 void mergeJson(JsonVariant dst, JsonVariantConst src) {
   if (src.is<JsonObjectConst>()) {

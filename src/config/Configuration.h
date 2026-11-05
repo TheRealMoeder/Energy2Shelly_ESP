@@ -229,6 +229,8 @@ enum class input_type_enum : uint32_t
 #undef X_LAST
 };
 
+extern const char* configPath;
+
 // Data source and server settings
 #define reset_password (config_doc["basic"]["reset_password"]| "")
 #define input_type (config_doc["basic"]["input_type"] | "")
@@ -338,14 +340,7 @@ extern bool shouldResetConfig;
 extern bool shouldupdate;
 
 // flags for data sources
-extern bool dataMQTT;
-extern bool dataSMA;
-extern bool dataSHRDZM;
-extern bool dataHTTP;
-extern bool dataSUNSPEC;
-extern bool dataTIBBERPULSE;
-extern bool dataRCT;
-extern bool dataSMLSERIAL;
+extern input_type_enum current_input_type;
 
 // ============================================================================
 // NETWORK OBJECTS
