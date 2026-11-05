@@ -673,9 +673,6 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
     }
     
 document.getElementById('rebootBtn').addEventListener('click', async () => {
-    //if (!confirm("Are you sure you want to restart the device?")) {
-    //    return;
-    //}
 
     const statusText = document.getElementById('status');
     statusText.innerText = "Sending reboot command...";
@@ -1304,7 +1301,7 @@ async function saveConfig() {
         });
 
         if (res.ok) {
-            statusText.innerText = "Successfully saved to flash storage!";
+            statusText.innerText = "Successfully saved to flash storage! Please restart the device to make sure all changes are in effect";
             statusText.style.color = "green";
         } else {
             statusText.innerText = "Device rejected the save request.";
