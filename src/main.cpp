@@ -449,6 +449,7 @@ void worker_loop(int currentMillis)
   MDNS.update();
 #endif
   parseUdpRPC();
+  notifyStatusWebSocket();
   if (shouldupdate && (currentMillis - updateTimestamp >= 2000))
   {
     all_esp_reset(Energy2Shelly_ResetReason::RECONFIGURE);
@@ -556,9 +557,9 @@ void loop()
     WDTimer = currentMillis;
   }
 
-  if (enableConsoleOutputSerial && (extendedMillis()>(config_doc["console"]["serial_console_time"].as<uint64_t>()*60000ull))) {
+  if (enableConsoleOutputSerial && (extendedMillis() > static_cast<uint64_t>(config_doc["console"]["serial_console_time"].as<int>() * 60000ll))) {
+      DEBUG_SERIAL.println(F("Disabled serial debug messages"));
       enableConsoleOutputSerial=false;
-      DEBUG_SERIAL.println(F("Disabled serial plottin"));
   }
 
   // check if WiFi connection has been lost for more than the allowed interval
@@ -578,11 +579,11 @@ void loop()
          DEBUG_SERIAL.handleQueue();
     }
     DEBUG_SERIAL.println();
-    
+
     if (error!=DeserializationError::Ok) DEBUG_SERIAL.println("Config Error");
     DEBUG_SERIAL.handleQueue();
     interprete_parameters();
-    update_config_doc.clear();        
+    update_config_doc.clear();
     parametersUpdated = false;
   }
 
