@@ -120,9 +120,12 @@ void WiFi_processScanResult(int n) {
   if (!config_doc["wifi"]["networks"].isNull()) {
     config_doc["wifi"].remove("networks"); 
   }
-  JsonArray networks = config_doc["wifi"].createNestedArray("networks");
+  
+  JsonArray networks = config_doc["wifi"]["networks"].to<JsonArray>();
+  
   for (int i = 0; i < n; ++i) {
-    JsonObject net = networks.createNestedObject();
+    JsonObject net = networks.add<JsonObject>();
+    
     net["ssid"] = WiFi.SSID(i);
     net["rssi"] = WiFi.RSSI(i);
     net["channel"] = WiFi.channel(i);
