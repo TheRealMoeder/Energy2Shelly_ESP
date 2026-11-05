@@ -174,24 +174,22 @@ void ONA_loop_state_machine() {
             break;
 
         case ONA_WAITING_FOR_RESPONSE:
-            if (ona_lastResponseCode != HTTPC_ERROR_CONNECTION_REFUSED) {
-                if (ona_lastResponseCode > 0) {
-                    ona_lastResponse = http_client.getString();
-                } else {
-                    ona_lastResponse = http_client.errorToString(ona_lastResponseCode);
-                }
-                
-                ona_responseReady = true;
-                ona_esp8266_has_data = false; 
-                http_client.end();
-                ona_currentState = ONA_IDLE;
-            }
-           
-            else if (millis() - ona_timeoutStart > ONA_TIMEOUT_MS) {
+            if (millis() - ona_timeoutStart > ONA_TIMEOUT_MS) {
                 ona_lastResponseCode = -11;
                 ona_lastResponse = "Software Timeout - No Server Response";
                 ona_responseReady = true;
                 
+                ona_esp8266_has_data = false; 
+                http_client.end();
+                ona_currentState = ONA_IDLE;
+            }
+            else {
+                if (ona_lastResponseCode > 0) {
+                    ona_lastResponse = http_client.getString();
+                } else {
+                    ona_lastResponse = http_client.errorToString(ona_lastResponseCode);
+                }   
+                ona_responseReady = true;
                 ona_esp8266_has_data = false; 
                 http_client.end();
                 ona_currentState = ONA_IDLE;
