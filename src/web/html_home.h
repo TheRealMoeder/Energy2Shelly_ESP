@@ -1301,7 +1301,7 @@ async function saveConfig() {
         });
 
         if (res.ok) {
-            statusText.innerText = "Successfully saved to flash storage! Please restart the device to make sure all changes are in effect";
+            statusText.innerText = "Successfully saved to flash storage! Please restart the device to make sure all changes are in effect.";
             statusText.style.color = "green";
         } else {
             statusText.innerText = "Device rejected the save request.";
