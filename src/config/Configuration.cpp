@@ -212,7 +212,7 @@ void interprete_parameters()
    default:
         DEBUG_SERIAL.println(F("None"));
   }
- 
+
   if (led_gpio_i!=NULL && strlen(led_gpio_i)>=4 && strcmp(led_gpio_i, "true") == 0)
   {
     led_i = true;
@@ -227,12 +227,12 @@ void interprete_parameters()
     enableConsoleOutputWeb=true;
   }
   else {
-     enableConsoleOutputWeb=false;
+    enableConsoleOutputWeb=false;
   }
- 
-  config_doc["console"]["serial_console_time"]  =    config_doc["console"]["serial_console_time"].as<int>() ? config_doc["console"]["serial_console_time"].as<int>() : (int)1;
+
+  config_doc["console"]["serial_console_time"] = config_doc["console"]["serial_console_time"].as<int>() ? config_doc["console"]["serial_console_time"].as<int>() : (int)1;
   if (config_doc["console"]["serial_console_time"].as<int>()>0) {
-     enableConsoleOutputSerial=true;
+    enableConsoleOutputSerial=true;
   }
   else {
     enableConsoleOutputSerial=false;
@@ -245,9 +245,9 @@ void interprete_parameters()
   String mac_str  = config_doc["shelly"]["shelly_mac"] | "";
   shelly_name = name_str + mac_str;
 
- if (shelly_name.length() > 128) {
+  if (shelly_name.length() > 128) {
     shelly_name = shelly_name.substring(0, 128);
- }
+  }
 
 
 
