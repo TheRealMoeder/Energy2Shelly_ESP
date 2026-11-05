@@ -80,6 +80,16 @@ MDNSResponder::hMDNSService hMDNSService = 0;  // handle of the http service in 
 MDNSResponder::hMDNSService hMDNSService2 = 0; // handle of the shelly service in the MDNS responder
 #endif
 
+
+
+#ifdef ESP32
+#define LITTLEFS_BEGIN() LittleFS.begin(false)
+#else
+#define LITTLEFS_BEGIN() LittleFS.begin()
+#endif
+
+
+
 // Blink LED handlers
 void blinkled(int duration)
 {
@@ -391,29 +401,17 @@ void saveConfigCallback() {
     delay(5000);
 }
 
+
 void WifiManagerSetup(bool SW_update)
 {
   WiFi.setAutoReconnect(true);
  
-#if defined(ESP32)
-    if (!LittleFS.begin(false)) {
-      DEBUG_SERIAL.println(F("LittleFS Mount error. Formating..."));    
-      if (LittleFS.format()) {
-        DEBUG_SERIAL.println(F("Success! Retry mounting"));
-        if (!LittleFS.begin(false)) {
-          DEBUG_SERIAL.println(F("Critical Error: could not mount LittleFS after formating!"));
-        }
-      } else {
-        DEBUG_SERIAL.println(F("Error: Formating!"));
-      }
-    }
-#elif defined(ESP8266)
-    if (!LittleFS.begin()) {
+  if (!LITTLEFS_BEGIN()) {
       DEBUG_SERIAL.println(F("LittleFS Mounting Error. Try formating..."));
       LittleFS.format();
-      LittleFS.begin();
-    }
-#endif
+      LITTLEFS_BEGIN();
+  }
+
   load_parameters(); // Load parameters from LittleFS
  
 
