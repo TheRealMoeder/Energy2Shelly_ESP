@@ -673,9 +673,9 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
     }
     
 document.getElementById('rebootBtn').addEventListener('click', async () => {
-    if (!confirm("Are you sure you want to restart the device?")) {
-        return;
-    }
+    //if (!confirm("Are you sure you want to restart the device?")) {
+    //    return;
+    //}
 
     const statusText = document.getElementById('status');
     statusText.innerText = "Sending reboot command...";
@@ -1194,13 +1194,8 @@ if (entry.options) {
 
         let signalText = "";
         if (rssiValue !== null) {
-            const percentage = Math.min(Math.max(2 * (rssiValue + 100), 0), 100); 
-            let bars = "📶";
-            if (rssiValue < -80) bars = "❌ 🛑"; 
-            else if (rssiValue < -70) bars = "📶 🪫"; 
-            else if (rssiValue < -60) bars = "📶 ⚡"; 
-            
-            signalText = ` (${bars} ${percentage}%)`;
+            const percentage = Math.min(Math.max(2 * (rssiValue + 100), 0), 100);            
+            signalText = ` (${percentage}%)`;
         }
 
         option.text = ssidValue + signalText; 
