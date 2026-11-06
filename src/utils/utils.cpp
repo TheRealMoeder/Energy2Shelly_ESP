@@ -325,7 +325,7 @@ void status_print(void)
   DEBUG_SERIAL.print(F("Ontime: "));
   DEBUG_SERIAL.print(days);
   DEBUG_SERIAL.print(F(" days, "));
-  DEBUG_SERIAL.printf("%02d:%02d", hours, minutes);
+  DEBUG_SERIAL.printf("%02d:%02d", (int)hours, (int)minutes);
   DEBUG_SERIAL.println(F(" h"));
  
   DEBUG_SERIAL.print(F("Reset reason: "));
