@@ -382,7 +382,7 @@ const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         if (document.referrer) {
             window.history.back();
         } else {
-            window.location.href = 'index.html'; 
+            window.location.href = '/'; 
         }
     }
     </script>
@@ -668,7 +668,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         if (document.referrer) {
             window.history.back();
         } else {
-            window.location.href = 'index.html'; 
+            window.location.href = '/'; 
         }
     }
     
