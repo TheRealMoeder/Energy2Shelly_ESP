@@ -392,10 +392,11 @@ void WifiManagerSetup(bool SW_update)
 {
   WiFi.setAutoReconnect(true);
  
-  if (!LITTLEFS_BEGIN()) {
+   if (!LITTLEFS_BEGIN()) {
       DEBUG_SERIAL.println(F("LittleFS Mounting Error. Try formating..."));
+      LittleFS.end();
       LittleFS.format();
-      LITTLEFS_BEGIN();
+      LITTLEFS_BEGIN(); 
   }
 
   load_parameters(); // Load parameters from LittleFS
