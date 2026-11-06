@@ -8,3 +8,5 @@
 .DS_Store
 .vscode/settings.json
 src/web/chart_js.h
+src/web/webconsole_html.h
+src/web/webplotter_html.h

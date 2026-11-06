@@ -131,37 +131,37 @@ void setup(void)
      server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {     
       size_t totalLen = strlen_P(HTML_HOME); 
       AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-      size_t remaining = totalLen - index;
-      if (remaining == 0) return 0;
+        size_t remaining = totalLen - index;
+        if (remaining == 0) return 0;
 
-      size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
 
-      memcpy_P(buffer, HTML_HOME + index, toCopy);
-        
-        return toCopy; 
+        memcpy_P(buffer, HTML_HOME + index, toCopy);
+          
+          return toCopy; 
+      });
+
+      response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      response->addHeader("Pragma", "no-cache");
+      response->addHeader("Expires", "-1");
+
+      request->send(response);
+    });
+    // Android / Google Hotspot
+    server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
     });
 
-    response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    response->addHeader("Pragma", "no-cache");
-    response->addHeader("Expires", "-1");
-
-    request->send(response);
-});
-  // Android / Google Hotspot
-     server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-     request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
-    });
-
-  // Windows / Microsoft 
+    // Windows / Microsoft 
     server.on("/connecttest.txt", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
+      request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
     });
 
     server.onNotFound([](AsyncWebServerRequest *request) {
-    DEBUG_SERIAL.printf("Not Found -> Redirect to IP: %s\n", request->url().c_str());
-    request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
-  });
-}
+      DEBUG_SERIAL.printf("Not Found -> Redirect to IP: %s\n", request->url().c_str());
+      request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
+    });
+  }
 
   // Set up web server and endpoints
   server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -178,20 +178,25 @@ void setup(void)
     });
 
     request->send(response); 
-});
-  server.on("/plot", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {  size_t totalLen = strlen_P(webplotter_html); 
-    AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(webplotter_html), [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-      size_t remaining = totalLen - index;
-        if (remaining == 0) return 0; 
+  });
+  server.on("/plot", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    AsyncWebServerResponse *response = request->beginResponse(
+        "text/html",
+        webplotter_html_len, // Generated in generate_web_assets.py
+        [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+            size_t remaining = webplotter_html_len - index;
+            if (remaining == 0) return 0;
 
-        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
-        memcpy_P(buffer, webplotter_html + index, toCopy); 
-        
-        return toCopy; 
-    });
-    request->send(response); });
- server.on("/chart.min.js", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+            size_t toCopy = (remaining < maxLen) ? remaining : maxLen;
+            memcpy_P(buffer, webplotter_html + index, toCopy);
+            return toCopy;
+        }
+    );
+
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
+  });
+  server.on("/chart.min.js", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse("application/javascript", chart_js_len, [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
         size_t remaining = chart_js_len - index;
         size_t toCopy = (remaining < maxLen) ? remaining : maxLen;
@@ -202,7 +207,7 @@ void setup(void)
     
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); 
-});
+  });
   server.on("/favicon.ico", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
               request->send(204); // 204 "No Content"
@@ -218,19 +223,23 @@ void setup(void)
     request->redirect("/");
    });
 
-  server.on("/console", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {  size_t totalLen = strlen_P(htmlPage_console); 
-      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(htmlPage_console), [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-        // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
-          size_t remaining = totalLen - index;
-        if (remaining == 0) return 0; 
+  server.on("/console", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+      AsyncWebServerResponse *response = request->beginResponse(
+          "text/html",
+          webconsole_html_len,
+          [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+              size_t remaining =webconsole_html_len - index;
+              if (remaining == 0) return 0;
 
-        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
-        memcpy_P(buffer, htmlPage_console + index, toCopy); 
-        
-        return toCopy; 
-    });
-    request->send(response); });
+              size_t toCopy = (remaining < maxLen) ? remaining : maxLen;
+              memcpy_P(buffer, webconsole_html + index, toCopy);
+              return toCopy;
+          }
+      );
+
+      response->addHeader("Content-Encoding", "gzip");
+      request->send(response);
+  });
 
   server.on("/config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {  size_t totalLen = strlen_P(CONFIG_PAGE_HTML); 
