@@ -1274,7 +1274,7 @@ if (entry.options) {
 }
 async function saveConfig() {
     const castValue = (val) => isNaN(val) || val.trim() === "" ? val : Number(val);
-
+   
    function buildPayload(configObj, dictionaryObj, prefix = '') {
         const result = {};
 
@@ -1311,7 +1311,13 @@ async function saveConfig() {
     }
     const payload = buildPayload(currentConfig, CONFIG_DICTIONARY);
 
+
+    const saveBtn = document.getElementById('saveBtn');
+    const rebootBtn = document.getElementById('rebootBtn');
     try {
+        saveBtn.disabled = true;
+        rebootBtn.disabled = true;
+
         statusText.innerText = "Saving to device...";
         statusText.style.color = "orange";
 
@@ -1331,6 +1337,9 @@ async function saveConfig() {
     } catch (err) {
         statusText.innerText = "Network error while saving.";
         statusText.style.color = "red";
+    } finally {
+        saveBtn.disabled = false;
+        rebootBtn.disabled = false;
     }
 }
             saveBtn.addEventListener('click', saveConfig);

@@ -160,49 +160,35 @@ void WiFi_processScanResult(int n) {
 
 void wifi_scan()
 {
-#if defined(ESP32)
-    if (millis() - WiFi_lastScanTime >= WIFI_SCAN_INTERVAL) {
-      DEBUG_SERIAL.println(F("\nSynchron blocking ESP32 WiFi-Scan..."));
-      
-      WiFi.scanDelete(); 
-      
-      // ESP32 only scans syncron  works :(
-      int16_t scanResult = WiFi.scanNetworks(false, false, false); 
-      
-      if (scanResult >= 0) {
+  if (WiFi_scanInProgress) {
+    int16_t scanResult = WiFi.scanComplete();
+
+    if (scanResult >= 0) {
         WiFi_processScanResult(scanResult);
-      } else {
-        DEBUG_SERIAL.println(F("ESP32 WiFi-Scan Error."));
-      }
-      
-      WiFi.scanDelete(); 
+        WiFi.scanDelete();
+        WiFi_scanInProgress = false;
+        WiFi_lastScanTime = millis();
+    } 
+    else if (scanResult == WIFI_SCAN_FAILED) {
+      DEBUG_SERIAL.println(F("ESP8266 WiFi-Scan Error."));
+      WiFi.scanDelete();
+      WiFi_scanInProgress = false;
       WiFi_lastScanTime = millis();
     }
-
-#elif defined(ESP8266)
-    if (WiFi_scanInProgress) {
-      int16_t scanResult = WiFi.scanComplete();
-
-      if (scanResult >= 0) {
-        WiFi_processScanResult(scanResult);
-        WiFi.scanDelete();
-        WiFi_scanInProgress = false;
-        WiFi_lastScanTime = millis();
-      } 
-      else if (scanResult == WIFI_SCAN_FAILED) {
-        DEBUG_SERIAL.println(F("ESP8266 WiFi-Scan Error."));
-        WiFi.scanDelete();
-        WiFi_scanInProgress = false;
-        WiFi_lastScanTime = millis();
-      }
-    }
-
-    if (!WiFi_scanInProgress && (millis() - WiFi_lastScanTime >= WIFI_SCAN_INTERVAL)) {
+  }
+  if (!WiFi_scanInProgress && (millis() - WiFi_lastScanTime >= WIFI_SCAN_INTERVAL)) {
       DEBUG_SERIAL.println(F("\nStart asynchron ESP8266 WiFi-Scan..."));
+#ifdef ESP8266
       WiFi.scanNetworks(true); // async=true
-      WiFi_scanInProgress = true;
-    }
+#else      
+
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+      WiFi.scanNetworks(true, false, false); 
 #endif
+#endif
+      WiFi_scanInProgress = true;
+  }
+
 }
 
 void interprete_parameters()
@@ -359,7 +345,7 @@ const char DEFAULT_CONFIG_JSON[] PROGMEM = R"=====(
   },
   "console": {
     "web_console": "true",
-    "serial_console_time": 1
+    "serial_console_time": 10
   }
 }
 )=====";
