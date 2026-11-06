@@ -26,10 +26,10 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
   JsonDocument json;
   switch (type) {
     case WS_EVT_DISCONNECT:
-      DEBUG_SERIAL.printf("[%u] Websocket: disconnected!\n", client->id());
+      DEBUG_SERIAL.printf("[%u] Websocket: disconnected!\n", (unsigned int)client->id());
       break;
     case WS_EVT_CONNECT:
-      DEBUG_SERIAL.printf("[%u] Websocket: connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      DEBUG_SERIAL.printf("[%u] Websocket: connected from %s\n", (unsigned int)client->id(), client->remoteIP().toString().c_str());
       break;
     case WS_EVT_DATA:
       {
