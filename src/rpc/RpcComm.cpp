@@ -1,6 +1,7 @@
 #include "RpcHandlers.h"
 #include "../config/Configuration.h"
 #include "../data/DataStructures.h"
+#include "RpcComm.h"
 
 void scriptGetCode() {
   JsonDocument jsonResponse;
@@ -25,10 +26,10 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
   JsonDocument json;
   switch (type) {
     case WS_EVT_DISCONNECT:
-      DEBUG_SERIAL.printf("[%u] Websocket: disconnected!\n", client->id());
+      DEBUG_SERIAL.printf("[%u] Websocket: disconnected!\n", (unsigned int)client->id());
       break;
     case WS_EVT_CONNECT:
-      DEBUG_SERIAL.printf("[%u] Websocket: connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      DEBUG_SERIAL.printf("[%u] Websocket: connected from %s\n", (unsigned int)client->id(), client->remoteIP().toString().c_str());
       break;
     case WS_EVT_DATA:
       {
@@ -99,6 +100,47 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
     case WS_EVT_ERROR:
       break;
   }
+}
+
+// Push status notifications to connected websocket clients like a real Shelly Pro 3EM.
+// Home Assistant only polls once on connect and relies on these notifications afterwards.
+// Event driven: sent as soon as a data source has written new values. The minimum interval
+// (NOTIFY_STATUS_MIN_INTERVAL) merges updates that arrive in several parts (e.g. one MQTT message per phase).
+// Uses its own buffer instead of serJsonResponse, which is written by the HTTP/websocket handlers in the async_tcp task.
+void notifyStatusWebSocket() {
+  static PowerData lastPower[3];
+  static EnergyData lastEnergy[3];
+  static unsigned long lastNotify = 0;
+  if (webSocket.count() == 0 || millis() - lastNotify < NOTIFY_STATUS_MIN_INTERVAL) {
+    return;
+  }
+  bool powerChanged = memcmp(lastPower, PhasePower, sizeof(lastPower)) != 0;
+  bool energyChanged = memcmp(lastEnergy, PhaseEnergy, sizeof(lastEnergy)) != 0;
+  if (!powerChanged && !energyChanged) {
+    return;
+  }
+  if (!webSocket.availableForWriteAll()) {
+    return; // a client is not consuming its queue, try again on the next pass
+  }
+  lastNotify = millis();
+  memcpy(lastPower, PhasePower, sizeof(lastPower));
+  memcpy(lastEnergy, PhaseEnergy, sizeof(lastEnergy));
+  JsonDocument notify;
+  notify["src"] = shelly_name;
+  notify["method"] = "NotifyStatus";
+  notify["params"]["ts"] = (double)time(nullptr);
+  // only changed components are sent, the client merges them into its status
+  if (powerChanged) {
+    fillEMStatus(notify["params"]["em:0"].to<JsonObject>());
+  }
+  if (energyChanged) {
+    fillEMDataStatus(notify["params"]["emdata:0"].to<JsonObject>());
+  }
+  String message;
+  serializeJson(notify, message);
+  DEBUG_SERIAL.print(F("NotifyStatus: "));
+  DEBUG_SERIAL.println(message);
+  webSocket.textAll(message);
 }
 
 void parseUdpRPC() {

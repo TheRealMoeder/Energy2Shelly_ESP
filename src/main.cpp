@@ -20,6 +20,12 @@
 // Web content
 #include "web/html_home.h"
 
+#if defined(ESP32)
+#include <Update.h>
+#else
+#include <Updater.h>
+#endif
+
 // Utils function for monitoring and reset
 #include "utils/utils.h"
 
@@ -116,21 +122,73 @@ void setup(void)
       digitalWrite(led, HIGH);
     }
   }
+  if (WiFi.getMode() == WIFI_AP_STA) {
+     WiFi.scanNetworks(true);
+     WiFi_scanInProgress = true;
+     WiFi_lastScanTime = millis();
+     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+     dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+     server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {     
+      size_t totalLen = strlen_P(HTML_HOME); 
+      AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+      size_t remaining = totalLen - index;
+      if (remaining == 0) return 0;
+
+      size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+
+      memcpy_P(buffer, HTML_HOME + index, toCopy);
+        
+        return toCopy; 
+    });
+
+    response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    response->addHeader("Pragma", "no-cache");
+    response->addHeader("Expires", "-1");
+
+    request->send(response);
+});
+  // Android / Google Hotspot
+     server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+     request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
+    });
+
+  // Windows / Microsoft 
+    server.on("/connecttest.txt", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
+    });
+
+    server.onNotFound([](AsyncWebServerRequest *request) {
+    DEBUG_SERIAL.printf("Not Found -> Redirect to IP: %s\n", request->url().c_str());
+    request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
+  });
+}
 
   // Set up web server and endpoints
-  server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(HTML_HOME), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-        // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
-        memcpy_P(buffer, HTML_HOME + index, maxLen); return maxLen;
-    });
-    request->send(response); });
+  server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    size_t totalLen = strlen_P(HTML_HOME);
 
+    AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+        size_t remaining = totalLen - index;
+        if (remaining == 0) return 0; 
+
+        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+        memcpy_P(buffer, HTML_HOME + index, toCopy); 
+        
+        return toCopy; 
+    });
+
+    request->send(response); 
+});
   server.on("/plot", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(webplotter_html), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-        // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
-        memcpy_P(buffer, webplotter_html + index, maxLen); return maxLen;
+            {  size_t totalLen = strlen_P(webplotter_html); 
+    AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(webplotter_html), [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+      size_t remaining = totalLen - index;
+        if (remaining == 0) return 0; 
+
+        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+        memcpy_P(buffer, webplotter_html + index, toCopy); 
+        
+        return toCopy; 
     });
     request->send(response); });
  server.on("/chart.min.js", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -161,18 +219,30 @@ void setup(void)
    });
 
   server.on("/console", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(htmlPage_console), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+            {  size_t totalLen = strlen_P(htmlPage_console); 
+      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(htmlPage_console), [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
         // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
-        memcpy_P(buffer, htmlPage_console + index, maxLen); return maxLen;
+          size_t remaining = totalLen - index;
+        if (remaining == 0) return 0; 
+
+        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+        memcpy_P(buffer, htmlPage_console + index, toCopy); 
+        
+        return toCopy; 
     });
     request->send(response); });
 
   server.on("/config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(CONFIG_PAGE_HTML), [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+            {  size_t totalLen = strlen_P(CONFIG_PAGE_HTML); 
+      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(CONFIG_PAGE_HTML), [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
         // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
-        memcpy_P(buffer, CONFIG_PAGE_HTML + index, maxLen); return maxLen;
+          size_t remaining = totalLen - index;
+        if (remaining == 0) return 0; 
+
+        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+        memcpy_P(buffer, CONFIG_PAGE_HTML + index, toCopy); 
+        
+        return toCopy; 
     });
     request->send(response); });
 
@@ -227,79 +297,122 @@ void setup(void)
         request->send(200, "text/plain", PSTR("Resetting WiFi configuration...\r\n"));
     } });
   
-    server.on("/update", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    bool hasPassword = (reset_password != nullptr && strlen(reset_password) > 0);
-    
-    size_t maxNeededLength = (sizeof(UPDATE_HTML) - 1) + (sizeof(UPDATE_HTML_END) - 1);
-    
-    if (hasPassword) {
-        maxNeededLength += (sizeof(PASSWORD_INPUT_HTML) - 1);
-    }
-    
-    String html;
-    html.reserve(maxNeededLength); 
-    
-    html += FPSTR(UPDATE_HTML);
-    if (hasPassword) {
-        html += FPSTR(PASSWORD_INPUT_HTML);
-    }
-    html += FPSTR(UPDATE_HTML_END);
-    
-    request->send(200, "text/html", html); });
-
-  server.on("/update", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request)
-            {
-    if (reset_password != nullptr && strlen(reset_password) > 0) {
-        if (request->hasParam("reset_password", true)) {
-            const char* submitted_pw = request->getParam("reset_password", true)->value().c_str();
-            
-            if (strcmp(reset_password, submitted_pw) == 0) {
-                  shouldupdate = true;
-                  updateTimestamp=millis();
-                  request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
-            } else {
-                request->send(403, "text/plain", PSTR("Unauthorized: Invalid reset password.\r\n"));
-            }
-        } else {
-            request->send(400, "text/plain", PSTR("Reset password missing.\r\n"));
+    server.on("/update", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request){
+       if (isNotAuthorized(request)) {
+            return request->requestAuthentication(); 
         }
-    } else {
-        shouldupdate = true;
-        updateTimestamp=millis();
-        request->send(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
-    } });
+        request->send(200, "text/html", FPSTR(UPDATE_INDEX_HTML));
+    });
 
+  server.on("/update", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request){
+    if (isNotAuthorized(request)) {
+            return request->requestAuthentication(); 
+  }
+  
+  bool success = !Update.hasError();
+  
+   if(success) {
+    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
+    response->addHeader("Connection", "close");
+    request->send(response);
+    
+    updateTimestamp=millis();
+    shouldReboot=true;
+  } else {
+    AsyncWebServerResponse *response = request->beginResponse(500, "text/html", FPSTR(UPDATE_ERROR_HTML));
+    response->addHeader("Connection", "close");
+    request->send(response);
+  }
+
+}, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
+  if (isNotAuthorized(request)) {
+            return request->requestAuthentication(); 
+  }
+
+  if(!index){
+    DEBUG_SERIAL.print(F("Update Started: "));
+    DEBUG_SERIAL.println(filename.c_str());
+    
+    #ifdef ESP32
+      size_t updateSize = UPDATE_SIZE_UNKNOWN;
+    #elif defined(ESP8266)
+      size_t updateSize = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+       Update.runAsync(true); 
+    #endif
+
+    if(!Update.begin(updateSize, U_FLASH)) { 
+      DEBUG_SERIAL.println(F("Error flash"));
+    }
+  }
+  #ifdef ESP8266
+    ESP.wdtFeed(); 
+  #endif
+  if(Update.write(data, len) != len){
+    DEBUG_SERIAL.println(F("Error flash"));
+  }
+  
+  if(final){
+    if(Update.end(true)){
+      DEBUG_SERIAL.print(F("Update done: "));
+      DEBUG_SERIAL.print(index + len);
+      DEBUG_SERIAL.println(F(" bytes written"));
+    } 
+  }
+ });
   server.on("/json_config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
    
     if (isNotAuthorized(request)) {
+        return request->requestAuthentication(); 
+    }
+    
+    if (WiFi.getMode() == WIFI_AP_STA) {
+        String temp;
+        serializeJson(config_doc, temp);   
+        request->send(200, "application/json", temp); 
+    }
+    else {
+         if (LittleFS.exists(configPath)) {
+            request->send(LittleFS, configPath, "application/json");
+         } else {
+            request->send(404, "application/json", "{\"error\":\"File not found\"}");
+         }
+    }
+   });
+
+
+  server.on("/reboot", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {  
+    if (isNotAuthorized(request)) {
             return request->requestAuthentication(); 
         }
-    serializeJson(config_doc, json_prefs_string);   
-    request->send(200, "application/json", json_prefs_string); 
+    request->send(200, "text/plain", FPSTR(UPDATE_SUCCESS_HTML));
+    updateTimestamp=millis();
+    shouldReboot=true;
+    
   });
 
-server.on("/json_config", AsyncWebRequestMethod::HTTP_POST, 
+
+  server.on("/json_config", AsyncWebRequestMethod::HTTP_POST, 
     [](AsyncWebServerRequest *request) {
         if (isNotAuthorized(request)) {
             request->send(401, "text/plain", "Unauthorized");
-            json_prefs_string = "";
             return;
         }
+                
         AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\":\"OK\"}");
         response->addHeader("Connection", "close");
         request->send(response);
-        parametersUpdated = true;
+        
+        parametersUpdated = true; 
     },
     NULL, 
     [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-        if (index == 0) {
-            json_prefs_string = "";
-            json_prefs_string.reserve(total); 
+        if (isNotAuthorized(request)) return;
+    
+        File file = LittleFS.open(configPath, index == 0 ? "w" : "a");
+        if (file) {
+            file.write(data, len);
+            file.close();
         }
-        
-        
-        json_prefs_string += String((const char*)data).substring(0, len);
     }
 );
 
@@ -376,8 +489,9 @@ server.on("/json_config", AsyncWebRequestMethod::HTTP_POST,
   UdpRPC.begin(shelly_port);
 
   // Set up MQTT
-  if (dataMQTT)
-  {
+  switch (current_input_type) { 
+    case input_type_enum::MQTT:
+  
     mqtt_client.setBufferSize(2048);
     if (isValidIPAddress(mqtt_server))
     {
@@ -388,45 +502,42 @@ server.on("/json_config", AsyncWebRequestMethod::HTTP_POST,
       mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
     }
     mqtt_client.setCallback(mqtt_callback);
-  }
-
-  // Set Up Multicast for SMA Energy Meter
-  if (dataSMA)
-  {
-    Udp.begin(multicastPort);
+    break;
+    
+    case input_type_enum::SMA:
+      Udp.begin(multicastPort);
 #ifdef ESP8266
     Udp.beginMulticast(WiFi.localIP(), multicastIP, multicastPort);
 #else
     Udp.beginMulticast(multicastIP, multicastPort);
 #endif
-  }
-
+     break;
+    
+     case input_type_enum::SHRDZM:
   // Set Up UDP for SHRDZM smart meter interface
-  if (dataSHRDZM)
-  {
     Udp.begin(multicastPort);
-  }
+    break;
 
-  // Set Up Modbus TCP for SUNSPEC register query
-  if (dataSUNSPEC)
-  {
+    case input_type_enum::SUNSPEC:
+  
     modbus1.client();
     DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
     modbus1.connect(modbus_ip, sunspec_port_int);
-  }
+    break;
 
-  // Set up UART for SML reading head
-  if (dataSMLSERIAL)
-  {
+
+    case input_type_enum::SMLSERIAL:
     setupSMLSerial();
-  }
+    break;
 
-  // Set Up HTTP query
-  if (dataHTTP)
-  {
+    case input_type_enum::HTTP:
     http.useHTTP10(true);
-  }
+    break;
 
+    case input_type_enum::NONE:
+    default:
+    DEBUG_SERIAL.println(F("No source"));
+  }
   // Set up mDNS responder
   setupMdns();
 
@@ -440,6 +551,7 @@ void worker_loop(int currentMillis)
   MDNS.update();
 #endif
   parseUdpRPC();
+  notifyStatusWebSocket();
   if (shouldupdate && (currentMillis - updateTimestamp >= 2000))
   {
     all_esp_reset(Energy2Shelly_ResetReason::RECONFIGURE);
@@ -449,58 +561,57 @@ void worker_loop(int currentMillis)
   {
      wifi_reset();
   }
-  if (dataMQTT)
-  {
-    if (!mqtt_client.connected())
-    {
+
+  switch (current_input_type) {
+    case input_type_enum::MQTT:
+      if (!mqtt_client.connected())
+      {
       mqtt_reconnect();
-    }
-    mqtt_client.loop();
-  }
-  if (dataSMA)
-  {
-    parseSMA();
-  }
-  if (dataSHRDZM)
-  {
-    parseSHRDZM();
-  }
-  if (dataSUNSPEC)
-  {
-    modbus1.task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
-    if (currentMillis - startMillis >= query_period_modbus_u32)
-    {
-      parseSUNSPEC();
-      startMillis = currentMillis;
-    }
-  }
-  if (dataHTTP)
-  {
-    if (currentMillis - startMillis >= query_period_http_u32)
-    {
-      queryHTTP();
-      startMillis = currentMillis;
-    }
-  }
-  if (dataTIBBERPULSE)
-  {
+      }
+      mqtt_client.loop();
+     break;
+    case input_type_enum::SMA:
+       parseSMA();
+     break;
+    case input_type_enum::SHRDZM:
+      parseSHRDZM();
+      break;
+    case input_type_enum::SUNSPEC:
+       modbus1.task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
+      if (currentMillis - startMillis >= query_period_modbus_u32)
+      {
+         parseSUNSPEC();
+         startMillis = currentMillis;
+      }
+      break;
+    case input_type_enum::HTTP:
+      if (currentMillis - startMillis >= query_period_http_u32)
+      {
+         queryHTTP();
+         startMillis = currentMillis;
+      }
+     break;
+    case input_type_enum::TIBBERPULSE:
     if (currentMillis - startMillis >= query_period_tibber_u32)
     {
       parseTibberPulse();
       startMillis = currentMillis;
     }
-  }
-  if (dataSMLSERIAL)
-  {
-    parseSMLSerial(); // non-blocking, consumes the bytes received since the last call
-  }
-  if (dataRCT)
-  {
-    if (currentMillis - startMillis >= query_period_rct_u32)
-    {
+    break;
+    case input_type_enum::SMLSERIAL:
+       parseSMLSerial(); // non-blocking, consumes the bytes received since the last call
+      break;
+
+    case input_type_enum::RCT:
+       if (currentMillis - startMillis >= query_period_rct_u32)
+       {
       parseRCT();
       startMillis = currentMillis;
-    }
+      }
+    break;
+    case input_type_enum::NONE:
+    default:
+    delay(10);
   }
   DEBUG_SERIAL.handleQueue();
 }
@@ -519,7 +630,7 @@ void loop()
   {
     // not connected, attempt to reconnect
     static unsigned long reconnectStart = 0;
-    if (currentMillis - reconnectStart > 10000) // Attempt to reconnect every 10 seconds, to fast reconnection can cause issues with some routers and APs
+    if ((currentMillis - reconnectStart > 10000)&&(WiFi.getMode() == WIFI_STA)) // Attempt to reconnect every 10 seconds, to fast reconnection can cause issues with some routers and APs
     {
       reconnectStart = currentMillis;
       wifi_reconnect_attempts++;
@@ -527,6 +638,13 @@ void loop()
       DEBUG_SERIAL.println(F("WiFi disconnected, attempting to reconnect..."));
     }
   }
+
+  if (shouldReboot && (currentMillis - updateTimestamp >= 2000))
+  {
+    shouldReboot = false;
+    all_esp_reset(Energy2Shelly_ResetReason::REBOOT_REQUEST);
+  }
+
 
   // check Watchdogs and print status info
   static unsigned long WDTimer = 0;
@@ -537,33 +655,34 @@ void loop()
     WDTimer = currentMillis;
   }
 
-  if (enableConsoleOutputSerial && (extendedMillis()>(config_doc["console"]["serial_console_time"].as<int>()*60000ll))) {
+  if (enableConsoleOutputSerial && (extendedMillis() > static_cast<uint64_t>(config_doc["console"]["serial_console_time"].as<int>() * 60000ll))) {
+      DEBUG_SERIAL.println(F("Disabled serial debug messages"));
       enableConsoleOutputSerial=false;
-      DEBUG_SERIAL.println(F("Disabled serial plottin"));
   }
 
-  // check if WiFi connection has been lost for more than the allowed interval
-  // saveguard against nasty router/AP behavior
-  if (millis() - WiFilastConnectionCheck > WiFicheckInterval)
-  {
-    DEBUG_SERIAL.println(F("Lost WiFi connection or SSID changed!"));
-    all_esp_reset(Energy2Shelly_ResetReason::WIFI_DISCONNECT);
+  if (WiFi.getMode() == WIFI_AP_STA) {
+     dnsServer.processNextRequest();
+     wifi_scan();
+     if ((extendedMillis()>15ull*60ull*1000ull) && (WiFi.softAPgetStationNum()==0)) { // Reset device after 15 minutes in AP mode, to avoid being stuck in AP mode forever
+        DEBUG_SERIAL.println(F("AP mode timeout, resetting device"));
+        all_esp_reset(Energy2Shelly_ResetReason::AP_TIMEOUT);
+     }
+  } else {
+    // check if WiFi connection has been lost for more than the allowed interval
+    // saveguard against nasty router/AP behavior
+    if (millis() - WiFilastConnectionCheck > WiFicheckInterval)
+    {
+      DEBUG_SERIAL.println(F("Lost WiFi connection or SSID changed!"));
+      all_esp_reset(Energy2Shelly_ResetReason::WIFI_DISCONNECT);
+    }
   }
+
   if (parametersUpdated) {
     DEBUG_SERIAL.println(F("New keys"));
-    DeserializationError error = deserializeJson(config_doc, json_prefs_string);
-    save_parameters();
-    size_t chunkSize=40; // ESP8266 low memory has some troubles to cope with larger strings in webconsole
-    for (size_t i = 0; i < json_prefs_string.length(); i += chunkSize) {
-         DEBUG_SERIAL.println(json_prefs_string.substring(i, i + chunkSize));
-         DEBUG_SERIAL.handleQueue();
-    }
-    DEBUG_SERIAL.println();
-    
-    if (error!=DeserializationError::Ok) DEBUG_SERIAL.println("Config Error");
-    DEBUG_SERIAL.handleQueue();
+    load_parameters();
+    serializeJsonPretty(config_doc, DEBUG_SERIAL);
+    DEBUG_SERIAL.println();    
     interprete_parameters();
-    update_config_doc.clear();        
     parametersUpdated = false;
   }
 
