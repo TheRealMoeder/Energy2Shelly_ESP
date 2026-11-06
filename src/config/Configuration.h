@@ -3,11 +3,6 @@
 
 #include <Arduino.h>
 
-// Fix WifiManager/WebServer conflicts
-#ifndef ESP32
-  #define WEBSERVER_H "fix WifiManager conflict"
-#endif
-
 // Platform-specific includes
 #ifdef ESP32
   #include <HTTPClient.h>
@@ -25,9 +20,21 @@
 #define WM_MDNS  
 #include <PubSubClient.h>
 #include <WiFiClient.h>
+
+// No deprecated warnings for ESPAsyncWebserver library
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <ESPAsyncWebServer.h>
+#pragma GCC diagnostic pop
+
 #include <WiFiUdp.h>
-#include <ModbusIP_ESP8266.h>
+
+// No deprecated warnings for Modbus library
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#include <ModbusIP_ESP8266.h> 
+#pragma GCC diagnostic pop
+
 #include <DNSServer.h>
 
 // File system
