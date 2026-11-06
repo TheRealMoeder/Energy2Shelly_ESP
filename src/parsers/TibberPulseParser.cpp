@@ -1,6 +1,9 @@
 #include "../config/Configuration.h"
 #include "SmlCommon.h"
 
+#define HTTP_TIMEOUT 5000
+#define INACTIVITY_READ_TIMEOUT 3000
+
 static uint8_t guess = 0;
 static uint8_t success_counter = 0;
 
@@ -23,14 +26,12 @@ bool parseTibberPulse()
 {
   bool ret = false;
   DEBUG_SERIAL.print(F("Querying TibberPulse raw SML: "));
-  String url = "http://";
-  url += String(tibber_host);
-  url += String(tibber_rpc[guess]);
-  url += String(tibber_nodeid);
-  DEBUG_SERIAL.printf("URL:%s, user:%s\r\n", url.c_str(), tibber_user);
+  char url[128];
+  snprintf(url, sizeof(url), "http://%s%s%u", tibber_host, tibber_rpc[guess], tibber_nodeid);
+  DEBUG_SERIAL.printf("URL:%s, user:%s\r\n", url, tibber_user);
   http.begin(wifi_client, url);
   http.setAuthorization(tibber_user, tibber_password);
-  http.setTimeout(5000);
+  http.setTimeout(HTTP_TIMEOUT);
   int httpResponseCode = http.GET();
   if (httpResponseCode > 0)
   {
@@ -64,7 +65,7 @@ bool parseTibberPulse()
       }
 
       // Abort in case of inactivity
-      if (millis() - timeout > 3000)
+      if (millis() - timeout > INACTIVITY_READ_TIMEOUT)
       {
         DEBUG_SERIAL.println(F("Error: Timeout during reading stream."));
         break;
