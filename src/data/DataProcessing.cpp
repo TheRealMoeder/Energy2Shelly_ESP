@@ -56,6 +56,10 @@ void setPowerData(double totalPower) {
     PhasePower[i].powerFactor = round2(defaultPowerFactor);
     PhasePower[i].frequency = defaultFrequency;
   }
+  #ifdef ONA_ACTIVE
+  ONA_validVoltage=false;
+  ONA_validfrequency=false;
+  #endif
   DEBUG_SERIAL.print(F("Current total power (with offset): "));
   DEBUG_SERIAL.println(adjustedPower);
 }
@@ -81,6 +85,11 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
     PhasePower[i].powerFactor = round2(defaultPowerFactor);
     PhasePower[i].frequency = defaultFrequency;
   }
+  #ifdef ONA_ACTIVE
+  ONA_validVoltage=false;
+  ONA_validfrequency=false;
+  #endif
+  
   DEBUG_SERIAL.print(F("Current power (with offset) L1: "));
   DEBUG_SERIAL.print(phase1Power + offsetPerPhase);
   DEBUG_SERIAL.print(F(" - L2: "));
@@ -137,6 +146,11 @@ void setJsonPathPower(JsonDocument json) {
     PhasePower[2].apparentPower = round2((double)json["c_aprt_power"].as<double>() + offsetPerPhase);
     PhasePower[2].powerFactor = round2((double)json["c_pf"].as<double>());
     PhasePower[2].frequency = json["c_freq"].as<int>();
+
+    #ifdef ONA_ACTIVE
+    ONA_validVoltage=true;
+    ONA_validfrequency=true;
+ #endif
 
     // Optionally use total fields if present
     if (json["total_act_power"].is<JsonVariant>()) {

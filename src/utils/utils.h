@@ -26,14 +26,26 @@ void update_reset_reason(Energy2Shelly_ResetReason reason);
 void stackWD(void);
 uint64_t extendedMillis();
 void status_print(void);
-Energy2Shelly_ResetReason clear_rtc_power_on(void);
 void wifi_reset();
 void checkreset_counter();
+Energy2Shelly_ResetReason clear_rtc_power_on(void);
+
+String getISO8601Time();
+
+
 // to be tuned for ESP32 and ESP8266
 #if defined(ESP32)
+#ifdef ONA_ACTIVE
+#define MIN_HEAP_SIZE 40000
+#else
 #define MIN_HEAP_SIZE 12000
+#endif
 #elif defined(ESP8266)
+#ifdef ONA_ACTIVE
+#define MIN_HEAP_SIZE 2000
+#else
 #define MIN_HEAP_SIZE 5000
+#endif
 #endif
 
 

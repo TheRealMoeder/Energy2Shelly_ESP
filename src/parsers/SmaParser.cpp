@@ -14,6 +14,7 @@ void parseSMA() {
     uint16_t grouplen;
     uint16_t grouptag;
     uint8_t *offset = buffer + 4;
+    uint8_t valid_voltage_counter=0;
     do {
       grouplen = (offset[0] << 8) + offset[1];
       grouptag = (offset[2] << 8) + offset[3];
@@ -79,6 +80,9 @@ void parseSMA() {
               case 21:
                 PhasePower[0].power = round2(data * 0.1) - offsetPerPhase;
                 PhasePower[0].frequency = defaultFrequency;
+                #ifdef ONA_ACTIVE
+                ONA_validfrequency=false;
+                #endif
                 break;
               case 22:
                 PhasePower[0].power -= round2(data * 0.1);
@@ -94,6 +98,7 @@ void parseSMA() {
                 break;
               case 32:
                 PhasePower[0].voltage = round2(data * 0.001);
+                valid_voltage_counter |= 1;
                 break;
               case 33:
                 PhasePower[0].powerFactor = round2(data * 0.001);
@@ -101,6 +106,10 @@ void parseSMA() {
               case 41:
                 PhasePower[1].power = round2(data * 0.1) - offsetPerPhase;
                 PhasePower[1].frequency = defaultFrequency;
+                #ifdef ONA_ACTIVE
+                ONA_validfrequency=false;
+                #endif
+
                 break;
               case 42:
                 PhasePower[1].power -= round2(data * 0.1);
@@ -116,6 +125,7 @@ void parseSMA() {
                 break;
               case 52:
                 PhasePower[1].voltage = round2(data * 0.001);
+                valid_voltage_counter |= 2;
                 break;
               case 53:
                 PhasePower[1].powerFactor = round2(data * 0.001);
@@ -123,6 +133,10 @@ void parseSMA() {
               case 61:
                 PhasePower[2].power = round2(data * 0.1) - offsetPerPhase;
                 PhasePower[2].frequency = defaultFrequency;
+                #ifdef ONA_ACTIVE
+                ONA_validfrequency=false;
+                #endif
+
                 break;
               case 62:
                 PhasePower[2].power -= round2(data * 0.1);
@@ -138,6 +152,7 @@ void parseSMA() {
                 break;
               case 72:
                 PhasePower[2].voltage = round2(data * 0.001);
+                valid_voltage_counter |= 4;
                 break;
               case 73:
                 PhasePower[2].powerFactor = round2(data * 0.001);
@@ -164,5 +179,10 @@ void parseSMA() {
         offset += grouplen;
       }
     } while (grouplen > 0 && offset + 4 < buffer + rSize);
+#ifdef ONA_ACTIVE
+  if (valid_voltage_counter==7) {
+    ONA_validVoltage=true;
+  }
+#endif
   }
 }

@@ -385,6 +385,10 @@ static void rctApplyValues()
     }
     PhasePower[i].frequency = frequencies[i];
   }
+  #ifdef ONA_ACTIVE
+  ONA_validfrequency=true;
+  ONA_validVoltage=true;
+  #endif
 }
 
 // ---------------------------------------------------------------------------
