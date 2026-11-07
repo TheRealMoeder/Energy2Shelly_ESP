@@ -7,7 +7,7 @@
 static uint8_t guess = 0;
 static uint8_t success_counter = 0;
 
-char tibber_rpc[2][26] = {"/data.json?node_id=", "/node_data.json?node_id="}; // fixed rpc path
+const char* tibber_rpc[] = {"/data.json?node_id=", "/node_data.json?node_id="}; // fixed rpc path
 
 void TibberPulse_URL_guesser(void)
 {

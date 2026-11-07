@@ -105,9 +105,9 @@ void setup(void)
   strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
   DEBUG_SERIAL.println(time_buffer);
 
-  if (String(led_gpio).toInt() > 0)
+  if (led_gpio > 0)
   {
-    led = String(led_gpio).toInt();
+    led = led_gpio;
   }
 
   if (led > 0)
