@@ -22,8 +22,6 @@ String shelly_name;
 uint16_t sunspec_port_int; // default port
 uint8_t modbusdev_int;     // default device id for KSEM
 
-char tibber_rpc[2][26] = {"/data.json?node_id=","/node_data.json?node_id="}; // fixed rpc path
-
 unsigned long ledOffTime = 0;
 uint8_t led = 0;
 bool led_i = false;
