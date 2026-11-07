@@ -20,6 +20,9 @@ WEB_DIR = os.path.join(ROOT, "src", "web")
 ASSETS = {
     "webplotter_html": os.path.join(WEB_DIR, "webplotter.html"),
     "webconsole_html": os.path.join(WEB_DIR, "webconsole.html"),
+    "update_error_html": os.path.join(WEB_DIR, "update_error.html"),
+    "update_index_html": os.path.join(WEB_DIR, "update_index.html"),
+    "update_success_html": os.path.join(WEB_DIR, "update_success.html"),
 }
 
 
@@ -34,7 +37,7 @@ def generate_header(name, source, output):
         header.write("// Automatically generated; do not edit.\n")
         header.write(f"#ifndef {guard}\n")
         header.write(f"#define {guard}\n\n")
-        # Generiert die benötigte Längen-Variable (z.B. webplotter_html_len)
+        # Generates needed length variable (e.g. webplotter_html_len)
         header.write(f"const uint32_t {name}_len = {compressed_len};\n")
         header.write(f"const char {name}[] PROGMEM = {{\n")
 

@@ -3,8 +3,13 @@
 
 #include <Arduino.h>
 #include "chart_js.h"
-#include "webconsole_html.h" // Generated from generate_web_assets.py
-#include "webplotter_html.h" // Generated from generate_web_assets.py
+
+// Header files generated in generate_web_assets.py
+#include "webconsole_html.h"
+#include "webplotter_html.h"
+#include "update_index_html.h"
+#include "update_error_html.h"
+#include "update_success_html.h"
 
 const char HTML_HOME[] PROGMEM = R"=====(
 <!DOCTYPE html>
@@ -215,111 +220,16 @@ const char UPDATE_HTML_END[] PROGMEM = R"rawhtml(
 )rawhtml";
 
 const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
-<!DOCTYPE html><html><head><title>Rebooting...</title>
-<meta name='viewport' content='width=device-width, initial-scale=1'>
-<meta charset='UTF-8'>
-<style>
-  body{font-family:Arial,sans-serif;text-align:center;padding:40px 20px;}
-  .countdown{font-size:24px;font-weight:bold;color:#d9534f;margin:20px 0;}
-  .loader {border: 5px solid #f3f3f3; border-top: 5px solid #d9534f; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto;}
-  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-</style>
-<script>
-  let seconds = 20;
-  function startCountdown() {
-    const timer = setInterval(() => {
-      seconds--;
-      document.getElementById('count').textContent = seconds;
-      if (seconds <= 0) {
-        clearInterval(timer);
-        window.location.href = '/'; // Forwarding to Root Page
-      }
-    }, 1000);
-  }
-  window.onload = startCountdown;
-</script>
-</head>
-<body>
-  <h2>System reboots...</h2>
-  <p>The device will be reachable again within your local network shortly.</p>
-  <div class='loader'></div>
-  <div class='countdown'>Redirecting in <span id='count'>20</span> seconds...</div>
-</body></html>
+
 )rawhtml";
 
 // Beautiful upload interface in English
 const char UPDATE_INDEX_HTML[] PROGMEM = R"rawhtml(
-<!DOCTYPE html><html><head><title>Firmware Update</title>
-<meta name='viewport' content='width=device-width, initial-scale=1'>
-<meta charset='UTF-8'>
-<style>
-  body{font-family:Arial,sans-serif;text-align:center;padding:40px 20px;background-color:#f9f9f9;}
-  .card{background:white;padding:30px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.05);max-width:400px;margin:0 auto;}
-  .icon{font-size:50px;color:#0275d8;margin-bottom:15px;}
-  h2{color:#333;margin-top:0;margin-bottom:10px;}
-  p{color:#666;font-size:14px;margin-bottom:25px;line-height:1.4;}
-  .file-input-wrapper {margin-bottom: 20px;}
-  input[type='file'] {width: 100%; box-sizing: border-box; padding: 10px; background: #f0f0f0; border: 1px dashed #ccc; border-radius: 4px; cursor: pointer;}
-  .btn{display:block;width:100%;padding:12px;background-color:#0275d8;color:white;border:none;border-radius:4px;font-weight:bold;font-size:16px;cursor:pointer;transition:background 0.2s;}
-  .btn:hover{background-color:#01549b;}
-  .btn:disabled{background-color:#cccccc;cursor:not-allowed;}
-  .loader-text {display:none; color:#0275d8; font-weight:bold; margin-top:15px;}
-  .loader {display:none; border: 4px solid #f3f3f3; border-top: 4px solid #0275d8; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 15px auto 0 auto;}
-  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-</style>
-<script>
-  function startUpload() {
-    const fileInput = document.getElementById('file-field');
-    if(fileInput.files.length === 0) {
-      alert('Please select a .bin file first!');
-      return false;
-    }
-    document.getElementById('submit-btn').disabled = true;
-    document.getElementById('loader-element').style.display = 'block';
-    document.getElementById('status-text').style.display = 'block';
-    return true;
-  }
-</script>
-</head>
-<body>
-  <div class='card'>
-    <div class='icon'>⭱</div>
-    <h2>Firmware Update</h2>
-    <p>Select your compiled <strong>firmware.bin</strong> file to perform an asynchronous over-the-air update.</p>
-    <form method='POST' action='/update' enctype='multipart/form-data' onsubmit='return startUpload();'>
-      <div class='file-input-wrapper'>
-        <input type='file' name='update' id='file-field' accept='.bin'>
-      </div>
-      <input type='submit' value='Start Update' id='submit-btn' class='btn'>
-    </form>
-    <div class='loader' id='loader-element'></div>
-    <div class='loader-text' id='status-text'>Uploading & Flashing...<br><small>Please do not close this page.</small></div>
-  </div>
-</body></html>
+
 )rawhtml";
 
 const char UPDATE_ERROR_HTML[] PROGMEM = R"rawhtml(
-<!DOCTYPE html><html><head><title>Update Failed</title>
-<meta name='viewport' content='width=device-width, initial-scale=1'>
-<meta charset='UTF-8'>
-<style>
-  body{font-family:Arial,sans-serif;text-align:center;padding:40px 20px;background-color:#f9f9f9;}
-  .card{background:white;padding:30px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.1);max-width:400px;margin:0 auto;border-top:5px solid #d9534f;}
-  .icon{font-size:50px;color:#d9534f;margin-bottom:15px;}
-  h2{color:#d9534f;margin-top:0;}
-  p{color:#666;line-height:1.5;}
-  .btn{display:inline-block;padding:12px 24px;background-color:#777;color:white;text-decoration:none;border-radius:4px;font-weight:bold;margin-top:15px;transition:background 0.2s;}
-  .btn:hover{background-color:#555;}
-</style>
-</head>
-<body>
-  <div class='card'>
-    <div class='icon'>⚠</div>
-    <h2>Update Aborted</h2>
-    <p>An error occurred while transmitting or verifying the firmware file. Please check your binary file and try again.</p>
-    <a href='/update' class='btn'>Back to Upload</a>
-  </div>
-</body></html>
+
 )rawhtml";
 
 #define STRINGIFY(x) #x

@@ -45,6 +45,23 @@ bool isNotAuthorized(AsyncWebServerRequest *request) {
     return false;
 }
 
+// Create a gzip-compressed HTML response
+static AsyncWebServerResponse *beginGzipHtmlResponse(AsyncWebServerRequest *request, const char *data, size_t compressedLength) {
+  AsyncWebServerResponse *response = request->beginResponse("text/html", compressedLength, [data, compressedLength](uint8_t *buffer, size_t maxLen, size_t index) -> size_t
+  {
+      if (index >= compressedLength) {
+          return 0;
+      }
+
+      const size_t remaining = compressedLength - index;
+      const size_t toCopy = (maxLen < remaining) ? maxLen : remaining;
+      memcpy_P(buffer, data + index, toCopy);
+      return toCopy;
+  });
+
+  response->addHeader("Content-Encoding", "gzip");
+  return response;
+}
 
 void setup(void)
 {
@@ -179,23 +196,12 @@ void setup(void)
 
     request->send(response); 
   });
-  server.on("/plot", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    AsyncWebServerResponse *response = request->beginResponse(
-        "text/html",
-        webplotter_html_len, // Generated in generate_web_assets.py
-        [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-            size_t remaining = webplotter_html_len - index;
-            if (remaining == 0) return 0;
-
-            size_t toCopy = (remaining < maxLen) ? remaining : maxLen;
-            memcpy_P(buffer, webplotter_html + index, toCopy);
-            return toCopy;
-        }
-    );
-
-    response->addHeader("Content-Encoding", "gzip");
-    request->send(response);
+  server.on("/plot", AsyncWebRequestMethod::HTTP_GET,
+    [](AsyncWebServerRequest *request) {
+        request->send(beginGzipHtmlResponse(
+            request, webplotter_html, webplotter_html_len));
   });
+
   server.on("/chart.min.js", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse("application/javascript", chart_js_len, [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
         size_t remaining = chart_js_len - index;
@@ -223,23 +229,11 @@ void setup(void)
     request->redirect("/");
    });
 
-  server.on("/console", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-      AsyncWebServerResponse *response = request->beginResponse(
-          "text/html",
-          webconsole_html_len,
-          [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-              size_t remaining =webconsole_html_len - index;
-              if (remaining == 0) return 0;
-
-              size_t toCopy = (remaining < maxLen) ? remaining : maxLen;
-              memcpy_P(buffer, webconsole_html + index, toCopy);
-              return toCopy;
-          }
-      );
-
-      response->addHeader("Content-Encoding", "gzip");
-      request->send(response);
-  });
+  server.on("/console", AsyncWebRequestMethod::HTTP_GET,
+    [](AsyncWebServerRequest *request) {
+        request->send(beginGzipHtmlResponse(
+            request, webconsole_html, webconsole_html_len));
+    });
 
   server.on("/config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {  size_t totalLen = strlen_P(CONFIG_PAGE_HTML); 
@@ -310,7 +304,7 @@ void setup(void)
        if (isNotAuthorized(request)) {
             return request->requestAuthentication(); 
         }
-        request->send(200, "text/html", FPSTR(UPDATE_INDEX_HTML));
+        request->send(beginGzipHtmlResponse(request, update_index_html, update_index_html_len));
     });
 
   server.on("/update", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request){
@@ -321,14 +315,14 @@ void setup(void)
   bool success = !Update.hasError();
   
    if(success) {
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
+    AsyncWebServerResponse *response = beginGzipHtmlResponse(request, update_success_html, update_success_html_len);
     response->addHeader("Connection", "close");
     request->send(response);
     
     updateTimestamp=millis();
     shouldReboot=true;
   } else {
-    AsyncWebServerResponse *response = request->beginResponse(500, "text/html", FPSTR(UPDATE_ERROR_HTML));
+    AsyncWebServerResponse *response = beginGzipHtmlResponse(request, update_error_html, update_error_html_len);
     response->addHeader("Connection", "close");
     request->send(response);
   }
