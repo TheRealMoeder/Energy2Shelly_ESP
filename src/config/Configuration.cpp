@@ -191,42 +191,59 @@ void wifi_scan()
 
 void interprete_parameters()
 {
+  JsonDocument filter;
   config_doc.clear();
+
+  filter["shelly"]=true; filter["basic"]=true; filter["console"]=true; filter["led"]=true;
+
   // Interpret the loaded parameters and set flags accordingly
-  load_filtered_parameters([](){ JsonDocument d;  d["shelly"]=true; d["basic"]=true; d["console"]=true; d["led"]=true; return d; }());
-  input_type_enum current_input_type = static_cast<input_type_enum>(config_doc["basic"]["input_type"].as<uint32_t>());
+  load_filtered_parameters(filter);
+  serializeJsonPretty(config_doc,Serial);
+  filter.clear();
+  current_input_type = static_cast<input_type_enum>(config_doc["basic"]["input_type"].as<uint32_t>());
 
   switch (current_input_type) {
     case input_type_enum::SMA:
-        load_filtered_parameters([](){ JsonDocument d; d["sma"]=true; return d; }());
+        filter["sma"]=true;
+        load_filtered_parameters(filter);
         DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
         break;
     case input_type_enum::SHRDZM:
         DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
         break;
     case input_type_enum::HTTP:
-        load_filtered_parameters([](){ JsonDocument d; d["http"]=true; d["json"]=true;  return d; }());
+        filter["http"]=true;
+        filter["json"]=true;
+        load_filtered_parameters(filter);
         DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
         break;
     case input_type_enum::SUNSPEC:
-        load_filtered_parameters([](){ JsonDocument d; d["sunspec"]=true; d["sunspec_registers"]=true; return d; }());
+        filter["sunspec"]=true;
+        filter["sunspec_registers"]=true;
+        load_filtered_parameters(filter);
         convert_json_to_sunspec_registers();
-        remove_filtered_parameters_ram([](){ JsonDocument d; d["sunspec_registers"]=true; return d; }());
+        filter.clear();
+        filter["sunspec_registers"]=true;
+        remove_filtered_parameters_ram(filter);
         DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
         break;
    case input_type_enum::TIBBERPULSE:
-        load_filtered_parameters([](){ JsonDocument d; d["tibber"]=true; return d; }());
+        filter["tibber"]=true;
+        load_filtered_parameters(filter);
         DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
         break;
    case input_type_enum::SMLSERIAL:
         DEBUG_SERIAL.println(F("Enabling SML serial (UART) data input"));
         break;
    case input_type_enum::RCT:
-        load_filtered_parameters([](){ JsonDocument d; d["rct"]=true; return d; }());
+        filter["rct"]=true;
+        load_filtered_parameters(filter);
         DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
         break;
    case input_type_enum::MQTT:
-        load_filtered_parameters([](){ JsonDocument d; d["mqtt"]=true; d["json"]=true;  return d; }());
+        filter["mqtt"]=true;
+        filter["json"]=true;
+        load_filtered_parameters(filter);
         DEBUG_SERIAL.println(F("Enabling MQTT data input"));
         break;
    case input_type_enum::NONE:
@@ -387,10 +404,16 @@ void load_filtered_parameters(JsonVariantConst filter) {
   }
 
   JsonDocument temp;
-
-  DeserializationError error = deserializeJson(temp, configFile, DeserializationOption::Filter(filter));
-  mergeJson(config_doc,temp);
+  DeserializationError error;
+  if (filter.isNull()|| filter.size()==0) {
+    error = deserializeJson(config_doc, configFile);  
+  }
+  else {
+    error = deserializeJson(temp, configFile, DeserializationOption::Filter(filter));  
+    mergeJson(config_doc,temp);
+  }
   configFile.close();
+  
 
   if (error) {
     DEBUG_SERIAL.print(F("Error during filtered deserialization: "));
@@ -432,6 +455,7 @@ void saveConfigCallback() {
 
 void WifiManagerSetup(bool SW_update)
 {
+  JsonDocument filter;
   WiFi.setAutoReconnect(true);
  
    if (!LITTLEFS_BEGIN()) {
@@ -441,7 +465,7 @@ void WifiManagerSetup(bool SW_update)
       LITTLEFS_BEGIN();
    }
   init_parameters();
-
+  load_filtered_parameters(filter); // load all
   if (config_doc["wifi"]["ssid"] == "") // check for valid WiFi credentials, if not present, start config portal
   {
       DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
@@ -475,10 +499,7 @@ void WifiManagerSetup(bool SW_update)
       }
   }
   
-  
-  
- 
-  load_filtered_parameters([](){ JsonDocument d; d["shelly"]=true;  return d; }());
+   
   // Set Shelly ID to ESP's MAC address by default
   String currentMac = config_doc["shelly"]["shelly_mac"].as<String>();
  
