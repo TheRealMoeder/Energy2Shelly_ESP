@@ -108,9 +108,9 @@ void setup(void)
     DEBUG_SERIAL.println(time_buffer);
   }
 
-  if (String(led_gpio).toInt() > 0)
+  if (led_gpio > 0)
   {
-    led = String(led_gpio).toInt();
+    led = led_gpio;
   }
 
   if (led > 0)

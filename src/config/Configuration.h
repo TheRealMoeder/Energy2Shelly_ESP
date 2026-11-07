@@ -289,10 +289,10 @@ extern uint8_t modbusdev_int;
 #define tibber_host config_doc["tibber"]["tibber_host"].as<const char*>()
 #define tibber_user config_doc["tibber"]["tibber_user"].as<const char*>()
 #define tibber_password config_doc["tibber"]["tibber_password"].as<const char*>()
-#define tibber_nodeid config_doc["tibber"]["tibber_nodeid"].as<const char*>()
+#define tibber_nodeid config_doc["tibber"]["tibber_nodeid"].as<uint8_t>()
 #define query_period_tibber_u32 config_doc["tibber"]["query_period"].as<uint32_t>()
 
-extern char tibber_rpc[2][26];
+extern const char* tibber_rpc[];
 
 // SML via UART (IR reading head connected directly to the ESP)
 #define sml_rx_pin config_doc["smlserial"]["rx_pin"].as<int>()
@@ -312,7 +312,7 @@ extern char tibber_rpc[2][26];
   #endif
 #endif
 // LED settings
-#define led_gpio config_doc["led"]["led_gpio"].as<const char*>()
+#define led_gpio config_doc["led"]["led_gpio"].as<uint8_t>()
 #define led_gpio_i config_doc["led"]["led_gpio_i"].as<const char*>()
 
 extern unsigned long ledOffTime;
