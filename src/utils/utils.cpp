@@ -51,7 +51,14 @@ void reset_esp_to_default_and_reboot()
     WiFi.disconnect(true);      
   #endif
 
-  LittleFS.format(); // format allways, to ensure a clean state
+  
+#ifdef ESP32  
+  LittleFS.begin(true);
+  LittleFS.format();
+  LittleFS.end();  
+#else
+  LittleFS.format(); 
+#endif
 
   #ifdef ESP32
   // Erase NVS to remove all stored WiFi credentials and other settings

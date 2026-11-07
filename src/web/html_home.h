@@ -1053,9 +1053,14 @@ document.getElementById('rebootBtn').addEventListener('click', async () => {
         }
         
         currentConfig = await res.json();
+        let showOnlyWiFi = false; 
        
         if (currentConfig.wifi && currentConfig.wifi.networks) {
             const uniqueNetworksMap = new Map();
+
+            if (currentConfig.wifi.networks.length > 0) {
+                showOnlyWiFi = true;
+            }
     
             currentConfig.wifi.networks.forEach(net => {
                 if (net.ssid && net.ssid.trim() !== "") {
@@ -1072,7 +1077,18 @@ document.getElementById('rebootBtn').addEventListener('click', async () => {
 
 
         formContainer.innerHTML = ''; 
-        generateFormFromDictionary(CONFIG_DICTIONARY, currentConfig, formContainer);
+
+
+        let targetDictionary = CONFIG_DICTIONARY;
+
+        if (showOnlyWiFi) {
+            targetDictionary = {
+                wifi: CONFIG_DICTIONARY.wifi
+            };
+        }
+
+        
+        generateFormFromDictionary(targetDictionary, currentConfig, formContainer);
           const inputTypeField = document.getElementById('input_basic_input_type');
 
         if (inputTypeField) {
