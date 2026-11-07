@@ -97,34 +97,37 @@ void setup(void)
   // ESP8266
   configTime(timezone, ntp_server);
 #endif
-  uint32_t ntp_timeout = millis() + 10000;
-  bool ntp_success = false;
-  while (millis() < ntp_timeout)
-  {
-    if (getLocalTime(&timeinfo))
+ 
+  if ((WiFi.getMode() == WIFI_STA)) { // only ask for NTP if we are save in STA mode
+    uint32_t ntp_timeout = millis() + 10000;
+    bool ntp_success = false;
+    while (millis() < ntp_timeout)
     {
-      ntp_success = true;
-      break;
+      if (getLocalTime(&timeinfo))
+      {
+        ntp_success = true;
+        break;
+      }
+      DEBUG_SERIAL.println(F("Waiting for NTP time..."));
+      delay(500);
     }
-    DEBUG_SERIAL.println(F("Waiting for NTP time..."));
-    delay(500);
+    if (!ntp_success)
+    {
+      DEBUG_SERIAL.println(F("NTP timeout - setting default time"));
+      time_t default_time = 1704067200; // 2024-01-01 00:00:00 UTC
+      struct timeval tv = {.tv_sec = default_time, .tv_usec = 0};
+      settimeofday(&tv, NULL);
+      getLocalTime(&timeinfo);
+    }
+    DEBUG_SERIAL.print(F("Current time: "));
+    char time_buffer[20];
+    strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+    DEBUG_SERIAL.println(time_buffer);
   }
-  if (!ntp_success)
-  {
-    DEBUG_SERIAL.println(F("NTP timeout - setting default time"));
-    time_t default_time = 1704067200; // 2024-01-01 00:00:00 UTC
-    struct timeval tv = {.tv_sec = default_time, .tv_usec = 0};
-    settimeofday(&tv, NULL);
-    getLocalTime(&timeinfo);
-  }
-  DEBUG_SERIAL.print(F("Current time: "));
-  char time_buffer[20];
-  strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
-  DEBUG_SERIAL.println(time_buffer);
 
-  if (String(led_gpio).toInt() > 0)
+  if (led_gpio > 0)
   {
-    led = String(led_gpio).toInt();
+    led = led_gpio;
   }
 
   if (led > 0)
@@ -139,23 +142,35 @@ void setup(void)
       digitalWrite(led, HIGH);
     }
   }
-  if (WiFi.getMode() == WIFI_AP_STA) {
-    WiFi.scanNetworks(true);
-    WiFi_scanInProgress = true;
-    WiFi_lastScanTime = millis();
-    dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-    dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
-    server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-        AsyncWebServerResponse *response = beginGzipHtmlResponse(request, home_html, home_html_len);
-        response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        response->addHeader("Pragma", "no-cache");
-        response->addHeader("Expires", "-1");
-        request->send(response);
+  if ((WiFi.getMode() == WIFI_AP_STA)||(WiFi.getMode()==WIFI_AP))  {
+#if defined(ESP32) && defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR < 3
+      WiFi.scanNetworks(false, false, false, 1000); // just on blocking scan 1s for each channel
+#endif
+
+     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+     dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+     server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {     
+      size_t totalLen = strlen_P(HTML_HOME); 
+      AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+      size_t remaining = totalLen - index;
+      if (remaining == 0) return 0;
+
+      size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
+
+      memcpy_P(buffer, HTML_HOME + index, toCopy);
+        
+        return toCopy; 
     });
 
-    // Android / Google Hotspot
-    server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-      request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
+    response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    response->addHeader("Pragma", "no-cache");
+    response->addHeader("Expires", "-1");
+
+    request->send(response);
+});
+  // Android / Google Hotspot
+     server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+     request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
     });
 
     // Windows / Microsoft 
@@ -344,7 +359,7 @@ void setup(void)
         return request->requestAuthentication(); 
     }
     
-    if (WiFi.getMode() == WIFI_AP_STA) {
+    if ((WiFi.getMode() == WIFI_AP_STA)||(WiFi.getMode()==WIFI_AP)) {
         String temp;
         serializeJson(config_doc, temp);   
         request->send(200, "application/json", temp); 
@@ -639,7 +654,7 @@ void loop()
       enableConsoleOutputSerial=false;
   }
 
-  if (WiFi.getMode() == WIFI_AP_STA) {
+  if ((WiFi.getMode() == WIFI_AP_STA)||(WiFi.getMode()==WIFI_AP))  {
      dnsServer.processNextRequest();
      wifi_scan();
      if ((extendedMillis()>15ull*60ull*1000ull) && (WiFi.softAPgetStationNum()==0)) { // Reset device after 15 minutes in AP mode, to avoid being stuck in AP mode forever

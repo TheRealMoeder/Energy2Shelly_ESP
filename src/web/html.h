@@ -478,9 +478,14 @@ document.getElementById('rebootBtn').addEventListener('click', async () => {
         }
         
         currentConfig = await res.json();
+        let showOnlyWiFi = false; 
        
         if (currentConfig.wifi && currentConfig.wifi.networks) {
             const uniqueNetworksMap = new Map();
+
+            if (currentConfig.wifi.networks.length > 0) {
+                showOnlyWiFi = true;
+            }
     
             currentConfig.wifi.networks.forEach(net => {
                 if (net.ssid && net.ssid.trim() !== "") {
@@ -497,7 +502,18 @@ document.getElementById('rebootBtn').addEventListener('click', async () => {
 
 
         formContainer.innerHTML = ''; 
-        generateFormFromDictionary(CONFIG_DICTIONARY, currentConfig, formContainer);
+
+
+        let targetDictionary = CONFIG_DICTIONARY;
+
+        if (showOnlyWiFi) {
+            targetDictionary = {
+                wifi: CONFIG_DICTIONARY.wifi
+            };
+        }
+
+        
+        generateFormFromDictionary(targetDictionary, currentConfig, formContainer);
           const inputTypeField = document.getElementById('input_basic_input_type');
 
         if (inputTypeField) {
@@ -699,7 +715,7 @@ if (entry.options) {
 }
 async function saveConfig() {
     const castValue = (val) => isNaN(val) || val.trim() === "" ? val : Number(val);
-
+   
    function buildPayload(configObj, dictionaryObj, prefix = '') {
         const result = {};
 
@@ -736,7 +752,13 @@ async function saveConfig() {
     }
     const payload = buildPayload(currentConfig, CONFIG_DICTIONARY);
 
+
+    const saveBtn = document.getElementById('saveBtn');
+    const rebootBtn = document.getElementById('rebootBtn');
     try {
+        saveBtn.disabled = true;
+        rebootBtn.disabled = true;
+
         statusText.innerText = "Saving to device...";
         statusText.style.color = "orange";
 
@@ -756,6 +778,9 @@ async function saveConfig() {
     } catch (err) {
         statusText.innerText = "Network error while saving.";
         statusText.style.color = "red";
+    } finally {
+        saveBtn.disabled = false;
+        rebootBtn.disabled = false;
     }
 }
             saveBtn.addEventListener('click', saveConfig);
