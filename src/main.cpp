@@ -18,7 +18,7 @@
 #include "rpc/RpcComm.h"
 
 // Web content
-#include "web/html_home.h"
+#include "web/html.h"
 
 #if defined(ESP32)
 #include <Update.h>
@@ -45,6 +45,23 @@ bool isNotAuthorized(AsyncWebServerRequest *request) {
     return false;
 }
 
+// Create a gzip-compressed HTML response
+static AsyncWebServerResponse *beginGzipHtmlResponse(AsyncWebServerRequest *request, const char *data, size_t compressedLength) {
+  AsyncWebServerResponse *response = request->beginResponse("text/html", compressedLength, [data, compressedLength](uint8_t *buffer, size_t maxLen, size_t index) -> size_t
+  {
+      if (index >= compressedLength) {
+          return 0;
+      }
+
+      const size_t remaining = compressedLength - index;
+      const size_t toCopy = (maxLen < remaining) ? maxLen : remaining;
+      memcpy_P(buffer, data + index, toCopy);
+      return toCopy;
+  });
+
+  response->addHeader("Content-Encoding", "gzip");
+  return response;
+}
 
 void setup(void)
 {
@@ -127,75 +144,45 @@ void setup(void)
   }
   if ((WiFi.getMode() == WIFI_AP_STA)||(WiFi.getMode()==WIFI_AP))  {
 #if defined(ESP32) && defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR < 3
-      WiFi.scanNetworks(false, false, false, 1000); // just on blocking scan 1s for each channel
+    WiFi.scanNetworks(false, false, false, 1000); // just on blocking scan 1s for each channel
 #endif
 
-     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-     dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
-     server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {     
-      size_t totalLen = strlen_P(HTML_HOME); 
-      AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-      size_t remaining = totalLen - index;
-      if (remaining == 0) return 0;
-
-      size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
-
-      memcpy_P(buffer, HTML_HOME + index, toCopy);
-        
-        return toCopy; 
+    dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+    dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+    server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+      AsyncWebServerResponse *response = beginGzipHtmlResponse(request, home_html, home_html_len);
+      response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      response->addHeader("Pragma", "no-cache");
+      response->addHeader("Expires", "-1");
+      request->send(response);
     });
 
-    response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    response->addHeader("Pragma", "no-cache");
-    response->addHeader("Expires", "-1");
-
-    request->send(response);
-});
-  // Android / Google Hotspot
-     server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-     request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
+    // Android / Google Hotspot
+    server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
     });
 
-  // Windows / Microsoft 
+    // Windows / Microsoft 
     server.on("/connecttest.txt", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
+      request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
     });
 
     server.onNotFound([](AsyncWebServerRequest *request) {
-    DEBUG_SERIAL.printf("Not Found -> Redirect to IP: %s\n", request->url().c_str());
-    request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
-  });
-}
+      DEBUG_SERIAL.printf("Not Found -> Redirect to IP: %s\n", request->url().c_str());
+      request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
+    });
+  }
 
   // Set up web server and endpoints
   server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    size_t totalLen = strlen_P(HTML_HOME);
+    request->send(beginGzipHtmlResponse(request, home_html, home_html_len));
+  });
 
-    AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-        size_t remaining = totalLen - index;
-        if (remaining == 0) return 0; 
+  server.on("/plot", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(beginGzipHtmlResponse(request, webplotter_html, webplotter_html_len));
+  });
 
-        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
-        memcpy_P(buffer, HTML_HOME + index, toCopy); 
-        
-        return toCopy; 
-    });
-
-    request->send(response); 
-});
-  server.on("/plot", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {  size_t totalLen = strlen_P(webplotter_html); 
-    AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(webplotter_html), [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-      size_t remaining = totalLen - index;
-        if (remaining == 0) return 0; 
-
-        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
-        memcpy_P(buffer, webplotter_html + index, toCopy); 
-        
-        return toCopy; 
-    });
-    request->send(response); });
- server.on("/chart.min.js", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/chart.min.js", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     AsyncWebServerResponse *response = request->beginResponse("application/javascript", chart_js_len, [](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
         size_t remaining = chart_js_len - index;
         size_t toCopy = (remaining < maxLen) ? remaining : maxLen;
@@ -206,7 +193,7 @@ void setup(void)
     
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); 
-});
+  });
   server.on("/favicon.ico", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {
               request->send(204); // 204 "No Content"
@@ -222,19 +209,11 @@ void setup(void)
     request->redirect("/");
    });
 
-  server.on("/console", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {  size_t totalLen = strlen_P(htmlPage_console); 
-      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(htmlPage_console), [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-        // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
-          size_t remaining = totalLen - index;
-        if (remaining == 0) return 0; 
-
-        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
-        memcpy_P(buffer, htmlPage_console + index, toCopy); 
-        
-        return toCopy; 
+  server.on("/console", AsyncWebRequestMethod::HTTP_GET,
+    [](AsyncWebServerRequest *request) {
+        request->send(beginGzipHtmlResponse(
+            request, webconsole_html, webconsole_html_len));
     });
-    request->send(response); });
 
   server.on("/config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
             {  size_t totalLen = strlen_P(CONFIG_PAGE_HTML); 
@@ -305,7 +284,7 @@ void setup(void)
        if (isNotAuthorized(request)) {
             return request->requestAuthentication(); 
         }
-        request->send(200, "text/html", FPSTR(UPDATE_INDEX_HTML));
+        request->send(beginGzipHtmlResponse(request, update_index_html, update_index_html_len));
     });
 
   server.on("/update", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request){
@@ -316,14 +295,14 @@ void setup(void)
   bool success = !Update.hasError();
   
    if(success) {
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/html", FPSTR(UPDATE_SUCCESS_HTML));
+    AsyncWebServerResponse *response = beginGzipHtmlResponse(request, update_success_html, update_success_html_len);
     response->addHeader("Connection", "close");
     request->send(response);
     
     updateTimestamp=millis();
     shouldReboot=true;
   } else {
-    AsyncWebServerResponse *response = request->beginResponse(500, "text/html", FPSTR(UPDATE_ERROR_HTML));
+    AsyncWebServerResponse *response = beginGzipHtmlResponse(request, update_error_html, update_error_html_len);
     response->addHeader("Connection", "close");
     request->send(response);
   }
