@@ -30,7 +30,7 @@ struct MeasurementData {
 
 const char* api_url = "https://www.ortsnetz-auslastung.de/v1/measurements";
 
-#ifdef ESP32
+
 const char ona_root_ca[] PROGMEM = R"=====(
 -----BEGIN CERTIFICATE-----
 MIICGzCCAaGgAwIBAgIQQdKd0XLq7qeAwSxs6S+HUjAKBggqhkjOPQQDAzBPMQsw
@@ -47,7 +47,7 @@ tL4ndQavEi51mI38AjEAi/V3bNTIZargCyzuFJ0nN6T5U6VR5CmD1/iQMVtCnwr1
 /q4AaOeMSQ+2b1tbFfLn
 -----END CERTIFICATE-----
 )=====";
-#endif
+
 
 String ona_lastResponse = "";
 int ona_lastResponseCode = 0;
@@ -256,6 +256,9 @@ bool ONA_sendMeasurement() {
 #endif
 }
 
+#ifdef ESP8266
+BearSSL::X509List cert(ona_root_ca);
+#endif
 
 void ONA_Setup() {
 #ifdef ESP32
@@ -265,7 +268,9 @@ void ONA_Setup() {
     xTaskCreate(ONA_sendMeasurementTask, "ONAHTTPTask", 8192, NULL, 1, NULL);
 #elif defined(ESP8266)
     ona_client.setBufferSizes(1024, 512);
-    ona_client.setInsecure();
+    ona_client.setTrustAnchors(&cert);
+    ona_client.probeMaxFragmentLength("www.ortsnetz-auslastung.de", 443, 1024); 
+    //ona_client.setInsecure();
     ona_setup_active=true;
 #endif
 }
