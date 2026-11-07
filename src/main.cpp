@@ -18,7 +18,7 @@
 #include "rpc/RpcComm.h"
 
 // Web content
-#include "web/html_home.h"
+#include "web/html.h"
 
 #if defined(ESP32)
 #include <Update.h>
@@ -140,30 +140,19 @@ void setup(void)
     }
   }
   if (WiFi.getMode() == WIFI_AP_STA) {
-     WiFi.scanNetworks(true);
-     WiFi_scanInProgress = true;
-     WiFi_lastScanTime = millis();
-     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-     dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
-     server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {     
-      size_t totalLen = strlen_P(HTML_HOME); 
-      AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-        size_t remaining = totalLen - index;
-        if (remaining == 0) return 0;
-
-        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
-
-        memcpy_P(buffer, HTML_HOME + index, toCopy);
-          
-          return toCopy; 
-      });
-
-      response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      response->addHeader("Pragma", "no-cache");
-      response->addHeader("Expires", "-1");
-
-      request->send(response);
+    WiFi.scanNetworks(true);
+    WiFi_scanInProgress = true;
+    WiFi_lastScanTime = millis();
+    dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+    dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+    server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+        AsyncWebServerResponse *response = beginGzipHtmlResponse(request, home_html, home_html_len);
+        response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response->addHeader("Pragma", "no-cache");
+        response->addHeader("Expires", "-1");
+        request->send(response);
     });
+
     // Android / Google Hotspot
     server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
       request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
@@ -182,24 +171,11 @@ void setup(void)
 
   // Set up web server and endpoints
   server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    size_t totalLen = strlen_P(HTML_HOME);
-
-    AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-        size_t remaining = totalLen - index;
-        if (remaining == 0) return 0; 
-
-        size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
-        memcpy_P(buffer, HTML_HOME + index, toCopy); 
-        
-        return toCopy; 
-    });
-
-    request->send(response); 
+    request->send(beginGzipHtmlResponse(request, home_html, home_html_len));
   });
-  server.on("/plot", AsyncWebRequestMethod::HTTP_GET,
-    [](AsyncWebServerRequest *request) {
-        request->send(beginGzipHtmlResponse(
-            request, webplotter_html, webplotter_html_len));
+
+  server.on("/plot", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(beginGzipHtmlResponse(request, webplotter_html, webplotter_html_len));
   });
 
   server.on("/chart.min.js", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
