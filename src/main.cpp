@@ -144,33 +144,22 @@ void setup(void)
   }
   if ((WiFi.getMode() == WIFI_AP_STA)||(WiFi.getMode()==WIFI_AP))  {
 #if defined(ESP32) && defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR < 3
-      WiFi.scanNetworks(false, false, false, 1000); // just on blocking scan 1s for each channel
+    WiFi.scanNetworks(false, false, false, 1000); // just on blocking scan 1s for each channel
 #endif
 
-     dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-     dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
-     server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {     
-      size_t totalLen = strlen_P(HTML_HOME); 
-      AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-      size_t remaining = totalLen - index;
-      if (remaining == 0) return 0;
-
-      size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
-
-      memcpy_P(buffer, HTML_HOME + index, toCopy);
-        
-        return toCopy; 
+    dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+    dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
+    server.on("/hotspot-detect.html", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+      AsyncWebServerResponse *response = beginGzipHtmlResponse(request, home_html, home_html_len);
+      response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      response->addHeader("Pragma", "no-cache");
+      response->addHeader("Expires", "-1");
+      request->send(response);
     });
 
-    response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    response->addHeader("Pragma", "no-cache");
-    response->addHeader("Expires", "-1");
-
-    request->send(response);
-});
-  // Android / Google Hotspot
-     server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-     request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
+    // Android / Google Hotspot
+    server.on("/generate_204", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->redirect(String("http://") + WiFi.softAPIP().toString() + "/");
     });
 
     // Windows / Microsoft 
