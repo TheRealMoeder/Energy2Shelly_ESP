@@ -227,6 +227,28 @@ bool ONA_sendMeasurement() {
     
 
 #ifdef ESP32
+    MeasurementData data;
+    
+    getISO8601Time(data.timeStr,sizeof(data.timeStr) - 1);
+    data.timeStr[sizeof(data.timeStr) - 1] = '\0'; 
+
+    data.latitude = config_doc["ona"]["latitude"].as<double>();
+    data.longitude = config_doc["ona"]["longitude"].as<double>();
+    
+    //maybe some sources are indicating with the sign, if we have import or export. Force positiv
+    data.l1_v = fabs(PhasePower[0].voltage); 
+    data.l2_v = fabs(PhasePower[1].voltage);
+    data.l3_v = fabs(PhasePower[2].voltage);
+    if (ONA_validfrequency) {
+        data.frequency = PhasePower[0].frequency;
+    }
+    else {
+        data.frequency = 0; // ONA server rejects frequencies = 0
+    }
+
+
+
+
     if (onaQueue == NULL) return false;
     
     return (xQueueSend(onaQueue, &data, 0) == pdPASS);
