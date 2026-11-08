@@ -111,7 +111,6 @@ void ONA_sendMeasurementTask(void * pvParameters) {
 
 
 #ifdef ESP8266
-static MeasurementData ona_esp8266_buffer;
 static volatile bool ona_esp8266_has_data = false;
 static BearSSL::WiFiClientSecure ona_client;
 static HTTPClient http_client;
@@ -135,16 +134,18 @@ void ONA_loop_state_machine() {
         case ONA_IDLE:
             if (ona_esp8266_has_data) {
                 doc.clear();
-                doc["observed_at"] = ona_esp8266_buffer.timeStr;
+     
+
+                doc["observed_at"] = getISO8601Time();
                
                 doc["latitude"] = config_doc["ona"]["latitude"].as<double>();
                 doc["longitude"] = config_doc["ona"]["longitude"].as<double>();
-                doc["l1_v"] = ona_esp8266_buffer.l1_v;
-                doc["l2_v"] = ona_esp8266_buffer.l2_v;
-                doc["l3_v"] = ona_esp8266_buffer.l3_v;
+                doc["l1_v"] = fabs(PhasePower[0].voltage);
+                doc["l2_v"] = fabs(PhasePower[1].voltage);
+                doc["l3_v"] = fabs(PhasePower[2].voltage);
                 doc["smartmeter_model"] = "Energy2Shelly";
                 doc["integration_version"] = VERSION_BUILD;
-                doc["grid_frequency_hz"] = ona_esp8266_buffer.frequency;
+                if (ONA_validfrequency) { doc["grid_frequency_hz"] = PhasePower[0].frequency; }
 
                 requestBody = "";
                 serializeJson(doc, requestBody);                
@@ -223,24 +224,7 @@ bool ONA_sendMeasurement() {
         DEBUG_SERIAL.println(ona_lastResponse);
     }
    
-    MeasurementData data;
     
-    strncpy(data.timeStr, getISO8601Time().c_str(), sizeof(data.timeStr) - 1);
-    data.timeStr[sizeof(data.timeStr) - 1] = '\0'; 
-
-    data.latitude = config_doc["ona"]["latitude"].as<double>();
-    data.longitude = config_doc["ona"]["longitude"].as<double>();
-    
-    //maybe some sources are indicating with the sign, if we have import or export. Force positiv
-    data.l1_v = fabs(PhasePower[0].voltage); 
-    data.l2_v = fabs(PhasePower[1].voltage);
-    data.l3_v = fabs(PhasePower[2].voltage);
-    if (ONA_validfrequency) {
-        data.frequency = PhasePower[0].frequency;
-    }
-    else {
-        data.frequency = 0; // ONA server rejects frequencies = 0
-    }
 
 #ifdef ESP32
     if (onaQueue == NULL) return false;
@@ -248,7 +232,6 @@ bool ONA_sendMeasurement() {
     return (xQueueSend(onaQueue, &data, 0) == pdPASS);
 #elif defined(ESP8266)
     if (ona_esp8266_has_data) return false; 
-    ona_esp8266_buffer = data;
     ona_esp8266_has_data = true;
     return true;
 #else
@@ -270,7 +253,6 @@ void ONA_Setup() {
     ona_client.setBufferSizes(1024, 512);
     ona_client.setTrustAnchors(&cert);
     ona_client.probeMaxFragmentLength("www.ortsnetz-auslastung.de", 443, 1024); 
-    //ona_client.setInsecure();
     ona_setup_active=true;
 #endif
 }
