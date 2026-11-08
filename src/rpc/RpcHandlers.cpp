@@ -3,6 +3,15 @@
 #include "../data/DataStructures.h"
 #include "../data/DataProcessing.h"
 
+static void setFixed2(JsonObject obj, const char* key, double value) {
+  char formatted[32];
+  int length = snprintf(formatted, sizeof(formatted), "%.2f", value);
+
+  if (length > 0 && length < static_cast<int>(sizeof(formatted))) {
+    obj[key] = serialized(static_cast<const char*>(formatted));
+  }
+}
+
 void rpcWrapper() {
   JsonDocument jsonResponse;
   JsonDocument doc;
@@ -109,28 +118,28 @@ void sysGetStatus() {
 // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EM#emgetstatus-example
 void fillEMStatus(JsonObject jsonResponse) {
   jsonResponse["id"] = 0;
-  jsonResponse["a_current"] = serialized(String(PhasePower[0].current, 2));
-  jsonResponse["a_voltage"] = serialized(String(PhasePower[0].voltage, 2));
-  jsonResponse["a_act_power"] = serialized(String(PhasePower[0].power, 2));
-  jsonResponse["a_aprt_power"] = serialized(String(PhasePower[0].apparentPower, 2));
-  jsonResponse["a_pf"] = serialized(String(PhasePower[0].powerFactor, 2));
-  jsonResponse["a_freq"] = serialized(String(PhasePower[0].frequency, 2));
-  jsonResponse["b_current"] = serialized(String(PhasePower[1].current, 2));
-  jsonResponse["b_voltage"] = serialized(String(PhasePower[1].voltage, 2));
-  jsonResponse["b_act_power"] = serialized(String(PhasePower[1].power, 2));
-  jsonResponse["b_aprt_power"] = serialized(String(PhasePower[1].apparentPower, 2));
-  jsonResponse["b_pf"] = serialized(String(PhasePower[1].powerFactor, 2));
-  jsonResponse["b_freq"] = serialized(String(PhasePower[1].frequency, 2));
-  jsonResponse["c_current"] = serialized(String(PhasePower[2].current, 2));
-  jsonResponse["c_voltage"] = serialized(String(PhasePower[2].voltage, 2));
-  jsonResponse["c_act_power"] = serialized(String(PhasePower[2].power, 2));
-  jsonResponse["c_aprt_power"] = serialized(String(PhasePower[2].apparentPower, 2));
-  jsonResponse["c_pf"] = serialized(String(PhasePower[2].powerFactor, 2));
-  jsonResponse["c_freq"] = serialized(String(PhasePower[2].frequency, 2));
+  setFixed2(jsonResponse, "a_current", PhasePower[0].current);
+  setFixed2(jsonResponse, "a_voltage", PhasePower[0].voltage);
+  setFixed2(jsonResponse, "a_act_power", PhasePower[0].power);
+  setFixed2(jsonResponse, "a_aprt_power", PhasePower[0].apparentPower);
+  setFixed2(jsonResponse, "a_pf", PhasePower[0].powerFactor);
+  setFixed2(jsonResponse, "a_freq", PhasePower[0].frequency);
+  setFixed2(jsonResponse, "b_current", PhasePower[1].current);
+  setFixed2(jsonResponse, "b_voltage", PhasePower[1].voltage);
+  setFixed2(jsonResponse, "b_act_power", PhasePower[1].power);
+  setFixed2(jsonResponse, "b_aprt_power", PhasePower[1].apparentPower);
+  setFixed2(jsonResponse, "b_pf", PhasePower[1].powerFactor);
+  setFixed2(jsonResponse, "b_freq", PhasePower[1].frequency);
+  setFixed2(jsonResponse, "c_current", PhasePower[2].current);
+  setFixed2(jsonResponse, "c_voltage", PhasePower[2].voltage);
+  setFixed2(jsonResponse, "c_act_power", PhasePower[2].power);
+  setFixed2(jsonResponse, "c_aprt_power", PhasePower[2].apparentPower);
+  setFixed2(jsonResponse, "c_pf", PhasePower[2].powerFactor);
+  setFixed2(jsonResponse, "c_freq", PhasePower[2].frequency);
   jsonResponse["n_current"] = nullptr;
-  jsonResponse["total_current"] = serialized(String((PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / defaultVoltage, 2));
-  jsonResponse["total_act_power"] = serialized(String(PhasePower[0].power + PhasePower[1].power + PhasePower[2].power, 2));
-  jsonResponse["total_aprt_power"] = serialized(String(PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower, 2));
+  setFixed2(jsonResponse, "total_current", (PhasePower[0].power + PhasePower[1].power + PhasePower[2].power) / defaultVoltage);
+  setFixed2(jsonResponse, "total_act_power", PhasePower[0].power + PhasePower[1].power + PhasePower[2].power);
+  setFixed2(jsonResponse, "total_aprt_power", PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower);
   jsonResponse["user_calibrated_phase"] = JsonArray();
 }
 
@@ -147,14 +156,14 @@ void EMGetStatus() {
 // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/EMData#emdatagetstatus-example
 void fillEMDataStatus(JsonObject jsonResponse) {
   jsonResponse["id"] = 0;
-  jsonResponse["a_total_act_energy"] = serialized(String(PhaseEnergy[0].consumption, 2));
-  jsonResponse["a_total_act_ret_energy"] = serialized(String(PhaseEnergy[0].gridfeedin, 2));
-  jsonResponse["b_total_act_energy"] = serialized(String(PhaseEnergy[1].consumption, 2));
-  jsonResponse["b_total_act_ret_energy"] = serialized(String(PhaseEnergy[1].gridfeedin, 2));
-  jsonResponse["c_total_act_energy"] = serialized(String(PhaseEnergy[2].consumption, 2));
-  jsonResponse["c_total_act_ret_energy"] = serialized(String(PhaseEnergy[2].gridfeedin, 2));
-  jsonResponse["total_act"] = serialized(String(PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption, 2));
-  jsonResponse["total_act_ret"] = serialized(String(PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin, 2));
+  setFixed2(jsonResponse, "a_total_act_energy", PhaseEnergy[0].consumption);
+  setFixed2(jsonResponse, "a_total_act_ret_energy", PhaseEnergy[0].gridfeedin);
+  setFixed2(jsonResponse, "b_total_act_energy", PhaseEnergy[1].consumption);
+  setFixed2(jsonResponse, "b_total_act_ret_energy", PhaseEnergy[1].gridfeedin);
+  setFixed2(jsonResponse, "c_total_act_energy", PhaseEnergy[2].consumption);
+  setFixed2(jsonResponse, "c_total_act_ret_energy", PhaseEnergy[2].gridfeedin);
+  setFixed2(jsonResponse, "total_act", PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption);
+  setFixed2(jsonResponse, "total_act_ret", PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin);
 }
 
 void EMDataGetStatus() {
