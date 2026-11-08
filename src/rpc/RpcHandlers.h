@@ -13,6 +13,8 @@ void fillEMStatus(JsonObject jsonResponse);
 void fillEMDataStatus(JsonObject jsonResponse);
 void EMGetStatus();
 void EMDataGetStatus();
+bool writeEMStatus(char* buffer, size_t capacity);
+bool writeEMDataStatus(char* buffer, size_t capacity);
 void EMGetConfig();
 void shellyGetConfig();
 void shellyGetComponents();

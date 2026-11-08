@@ -125,19 +125,26 @@ void notifyStatusWebSocket() {
   lastNotify = millis();
   memcpy(lastPower, PhasePower, sizeof(lastPower));
   memcpy(lastEnergy, PhaseEnergy, sizeof(lastEnergy));
-  JsonDocument notify;
-  notify["src"] = shelly_name;
-  notify["method"] = "NotifyStatus";
-  notify["params"]["ts"] = (double)time(nullptr);
-  // only changed components are sent, the client merges them into its status
+
+  char message[1024];
+  size_t len = snprintf(message, sizeof(message),
+      "{\"src\":\"%s\",\"method\":\"NotifyStatus\",\"params\":{\"ts\":%ld",
+      shelly_name.c_str(), (long)time(nullptr));
+
   if (powerChanged) {
-    fillEMStatus(notify["params"]["em:0"].to<JsonObject>());
+    char em[512];
+    if (writeEMStatus(em, sizeof(em))) {
+      len += snprintf(message + len, sizeof(message) - len, ",\"em:0\":%s", em);
+    }
   }
   if (energyChanged) {
-    fillEMDataStatus(notify["params"]["emdata:0"].to<JsonObject>());
+    char emdata[384];
+    if (writeEMDataStatus(emdata, sizeof(emdata))) {
+      len += snprintf(message + len, sizeof(message) - len, ",\"emdata:0\":%s", emdata);
+    }
   }
-  String message;
-  serializeJson(notify, message);
+  snprintf(message + len, sizeof(message) - len, "}}");
+
   DEBUG_SERIAL.print(F("NotifyStatus: "));
   DEBUG_SERIAL.println(message);
   webSocket.textAll(message);
