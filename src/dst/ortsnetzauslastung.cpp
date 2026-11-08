@@ -117,11 +117,10 @@ static HTTPClient http_client;
 static bool ona_setup_active = false;
 
 static unsigned long ona_timeoutStart = 0;
-const unsigned long ONA_TIMEOUT_MS = 5000;
+#define ONA_TIMEOUT_MS 10000
 
 enum ONA_State { 
     ONA_IDLE, 
-    ONA_START_CONNECTION, 
     ONA_WAITING_FOR_RESPONSE 
 };
 static ONA_State ona_currentState = ONA_IDLE;
@@ -135,28 +134,27 @@ void ONA_loop_state_machine() {
                 char freqPart[40] = "";
 
                 if (ONA_validfrequency) {
-                    snprintf(freqPart, sizeof(freqPart), ",\"grid_frequency_hz\":%.2f", PhasePower[0].frequency);
+                   snprintf_P(freqPart, sizeof(freqPart), PSTR(",\"grid_frequency_hz\":%.2f"), PhasePower[0].frequency);
                 }
 
-                int len = snprintf(payload, sizeof(payload),
-                    "{\"observed_at\":\"%s\","
-                    "\"latitude\":%.6f,"
-                    "\"longitude\":%.6f,"
-                    "\"l1_v\":%.2f,"
-                    "\"l2_v\":%.2f,"
-                    "\"l3_v\":%.2f,"
-                    "\"smartmeter_model\":\"Energy2Shelly\","
-                    "\"integration_version\":\"%s\"%s}",
-                    getISO8601Time().c_str(),
-                    config_doc["ona"]["latitude"].as<double>(),
-                    config_doc["ona"]["longitude"].as<double>(),
-                    fabs(PhasePower[0].voltage),
-                    fabs(PhasePower[1].voltage),
-                    fabs(PhasePower[2].voltage),
-                    VERSION_BUILD,
-                    freqPart
-                );
-
+                int len = snprintf_P(payload, sizeof(payload),
+                            PSTR("{\"observed_at\":\"%s\","
+                                "\"latitude\":%.6f,"
+                                "\"longitude\":%.6f,"
+                                "\"l1_v\":%.2f,"
+                                "\"l2_v\":%.2f,"
+                                "\"l3_v\":%.2f,"
+                                "\"smartmeter_model\":\"Energy2Shelly\","
+                                "\"integration_version\":\"%s\"%s}"),
+                                getISO8601Time().c_str(),
+                                config_doc["ona"]["latitude"].as<double>(),
+                                config_doc["ona"]["longitude"].as<double>(),
+                                fabs(PhasePower[0].voltage),
+                                fabs(PhasePower[1].voltage),
+                                fabs(PhasePower[2].voltage),
+                                VERSION_BUILD,
+                                freqPart
+                            );
                 // Sicherheits-Check: Wurde der Buffer abgeschnitten?
                 if (len < 0 || len >= (int)sizeof(payload)) {
                     ona_esp8266_has_data = false;
