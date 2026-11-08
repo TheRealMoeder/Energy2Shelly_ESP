@@ -132,7 +132,8 @@ void ONA_loop_state_machine() {
             if (ona_esp8266_has_data && WiFi.status() == WL_CONNECTED) {
                 char payload[256]; 
                 char freqPart[40] = "";
-
+                char timestr[28];
+                getISO8601Time(timestr,sizeof(timestr)-1);
                 if (ONA_validfrequency) {
                    snprintf_P(freqPart, sizeof(freqPart), PSTR(",\"grid_frequency_hz\":%.2f"), PhasePower[0].frequency);
                 }
@@ -146,7 +147,7 @@ void ONA_loop_state_machine() {
                                 "\"l3_v\":%.2f,"
                                 "\"smartmeter_model\":\"Energy2Shelly\","
                                 "\"integration_version\":\"%s\"%s}"),
-                                getISO8601Time().c_str(),
+                                timestr,
                                 config_doc["ona"]["latitude"].as<double>(),
                                 config_doc["ona"]["longitude"].as<double>(),
                                 fabs(PhasePower[0].voltage),
@@ -155,7 +156,6 @@ void ONA_loop_state_machine() {
                                 VERSION_BUILD,
                                 freqPart
                             );
-                // Sicherheits-Check: Wurde der Buffer abgeschnitten?
                 if (len < 0 || len >= (int)sizeof(payload)) {
                     ona_esp8266_has_data = false;
                     return;
