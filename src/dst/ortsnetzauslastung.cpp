@@ -133,6 +133,7 @@ void ONA_loop_state_machine() {
                 char payload[256]; 
                 char freqPart[40] = "";
                 char timestr[28];
+                memset(timestr,0,sizeof(timestr));
                 getISO8601Time(timestr,sizeof(timestr)-1);
                 if (ONA_validfrequency) {
                    snprintf_P(freqPart, sizeof(freqPart), PSTR(",\"grid_frequency_hz\":%.2f"), PhasePower[0].frequency);
@@ -230,8 +231,8 @@ bool ONA_sendMeasurement() {
 #ifdef ESP32
     MeasurementData data;
     
+    memset(data.timeStr,0,sizeof(data.timeStr));
     getISO8601Time(data.timeStr,sizeof(data.timeStr) - 1);
-    data.timeStr[sizeof(data.timeStr) - 1] = '\0'; 
 
     data.latitude = config_doc["ona"]["latitude"].as<double>();
     data.longitude = config_doc["ona"]["longitude"].as<double>();
