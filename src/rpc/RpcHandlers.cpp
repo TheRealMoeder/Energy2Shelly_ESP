@@ -75,9 +75,7 @@ void sysGetConfig() {
 
 // aligned with Shelly API docs
 // https://shelly-api-docs.shelly.cloud/gen2/ComponentsAndServices/Sys#sysgetstatus-example
-void sysGetStatus() {
-  JsonDocument jsonResponse;
-
+static void fillSysGetStatus(JsonObject jsonResponse) {
   time_t now = time(nullptr);
   struct tm timeinfo;
   localtime_r(&now, &timeinfo);
@@ -108,6 +106,11 @@ void sysGetStatus() {
   jsonResponse["webhook_rev"] = 0;
   jsonResponse["btrelay_rev"] = 0;
   jsonResponse["available_updates"]["beta"]["version"] = "1.7.5-beta1";
+}
+
+void sysGetStatus() {
+  JsonDocument jsonResponse;
+  fillSysGetStatus(jsonResponse.to<JsonObject>());
   serializeJson(jsonResponse, serJsonResponse);
   DEBUG_SERIAL.print(F("sysGetStatus: "));
   DEBUG_SERIAL.println(serJsonResponse);
@@ -259,17 +262,14 @@ void shellyGetStatus() {
   jsonResponse["ble"].to<JsonObject>();
   jsonResponse["bthome"].to<JsonObject>();
   jsonResponse["cloud"]["connected"] = false;
-  EMGetStatus();
-  jsonResponse["em:0"] = serialized(serJsonResponse);
-  EMDataGetStatus();
-  jsonResponse["emdata:0"] = serialized(serJsonResponse);
+  fillEMStatus(jsonResponse["em:0"].to<JsonObject>());
+  fillEMDataStatus(jsonResponse["emdata:0"].to<JsonObject>());
   JsonObject eth = jsonResponse["eth"].to<JsonObject>();
   eth["ip"] = nullptr;
   eth["ip6"] = nullptr;
   jsonResponse["modbus"].to<JsonObject>();
   jsonResponse["mqtt"]["connected"] = false;
-  sysGetStatus();
-  jsonResponse["sys"] = serialized(serJsonResponse);
+  fillSysGetStatus(jsonResponse["sys"].to<JsonObject>());
   JsonObject temp = jsonResponse["temperature:0"].to<JsonObject>();
   temp["id"] = 0;
   temp["tC"] = serialized(String(temperature, 2));
