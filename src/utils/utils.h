@@ -31,7 +31,7 @@ void checkreset_counter();
 Energy2Shelly_ResetReason clear_rtc_power_on(void);
 
 String getISO8601Time();
-
+void getISO8601Time(char *buf, size_t size_buffer);
 
 // to be tuned for ESP32 and ESP8266
 #if defined(ESP32)

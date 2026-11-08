@@ -381,3 +381,16 @@ String getISO8601Time() {
     strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
     return String(buf);
 }
+
+void getISO8601Time(char *buf, size_t size_buffer) {
+    time_t now;
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+       strncpy(buf,"1970-01-01T00:00:00Z",size_buffer-1); //Fallback
+    }
+    time(&now);
+    gmtime_r(&now, &timeinfo); // In UTC 
+
+    strftime(buf, size_buffer, "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+
+}
