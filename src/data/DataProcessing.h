@@ -17,7 +17,7 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power);
 void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn);
 
 // JSON path processing
-void setJsonPathPower(JsonDocument json);
+void setJsonPathPower(JsonDocument &json);
 void parseShellyString(const char *jsonStr);
 void parseShellyString(const String &s);
 
