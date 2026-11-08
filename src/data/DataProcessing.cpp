@@ -113,7 +113,7 @@ void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
 
 void setJsonPathPower(JsonDocument &json) {
   // If the incoming JSON already uses Shelly 3EM field names, parse directly
-  double offsetPerPhase = String(power_offset).toDouble() / 3.0;  // distribute offset equally across phases
+  double offsetPerPhase = power_offset / 3.0;  // distribute offset equally across phases
   
   if (json["a_current"].is<JsonVariant>() || json["a_act_power"].is<JsonVariant>()) {
     DEBUG_SERIAL.println(F("Parsing direct Shelly 3EM payload"));
