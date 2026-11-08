@@ -127,53 +127,56 @@ enum ONA_State {
 static ONA_State ona_currentState = ONA_IDLE;
 
 void ONA_loop_state_machine() {
-    static String requestBody;
-    static JsonDocument doc;
     if (ona_setup_active==false) return;
     switch (ona_currentState) {
         case ONA_IDLE:
-            if (ona_esp8266_has_data) {
-                doc.clear();
-     
+            if (ona_esp8266_has_data && WiFi.status() == WL_CONNECTED) {
+                char payload[256]; 
+                char freqPart[40] = "";
 
-                doc["observed_at"] = getISO8601Time();
-               
-                doc["latitude"] = config_doc["ona"]["latitude"].as<double>();
-                doc["longitude"] = config_doc["ona"]["longitude"].as<double>();
-                doc["l1_v"] = fabs(PhasePower[0].voltage);
-                doc["l2_v"] = fabs(PhasePower[1].voltage);
-                doc["l3_v"] = fabs(PhasePower[2].voltage);
-                doc["smartmeter_model"] = "Energy2Shelly";
-                doc["integration_version"] = VERSION_BUILD;
-                if (ONA_validfrequency) { doc["grid_frequency_hz"] = PhasePower[0].frequency; }
+                if (ONA_validfrequency) {
+                    snprintf(freqPart, sizeof(freqPart), ",\"grid_frequency_hz\":%.2f", PhasePower[0].frequency);
+                }
 
-                requestBody = "";
-                serializeJson(doc, requestBody);                
-                
-                ona_currentState = ONA_START_CONNECTION;
-            }
-            break;
+                int len = snprintf(payload, sizeof(payload),
+                    "{\"observed_at\":\"%s\","
+                    "\"latitude\":%.6f,"
+                    "\"longitude\":%.6f,"
+                    "\"l1_v\":%.2f,"
+                    "\"l2_v\":%.2f,"
+                    "\"l3_v\":%.2f,"
+                    "\"smartmeter_model\":\"Energy2Shelly\","
+                    "\"integration_version\":\"%s\"%s}",
+                    getISO8601Time().c_str(),
+                    config_doc["ona"]["latitude"].as<double>(),
+                    config_doc["ona"]["longitude"].as<double>(),
+                    fabs(PhasePower[0].voltage),
+                    fabs(PhasePower[1].voltage),
+                    fabs(PhasePower[2].voltage),
+                    VERSION_BUILD,
+                    freqPart
+                );
 
-        case ONA_START_CONNECTION:
-            if (WiFi.status() == WL_CONNECTED) {
+                // Sicherheits-Check: Wurde der Buffer abgeschnitten?
+                if (len < 0 || len >= (int)sizeof(payload)) {
+                    ona_esp8266_has_data = false;
+                    return;
+                }
+
                 if (http_client.begin(ona_client, api_url)) {
                     http_client.setTimeout(8000);
                     ona_client.setTimeout(8000);
                     http_client.addHeader("Content-Type", "application/json");
                     
-                   
                     ona_timeoutStart = millis();
+                    ona_lastResponseCode = http_client.POST((uint8_t*)payload, len);
                     
-                 
-                    ona_lastResponseCode = http_client.POST(requestBody);
                     ona_currentState = ONA_WAITING_FOR_RESPONSE;
                 } else {
                     ona_esp8266_has_data = false;
-                    ona_currentState = ONA_IDLE;
                 }
             }
             break;
-
         case ONA_WAITING_FOR_RESPONSE:
             if (millis() - ona_timeoutStart > ONA_TIMEOUT_MS) {
                 ona_lastResponseCode = -11;
