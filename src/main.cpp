@@ -241,19 +241,6 @@ void setup(void)
     request->send(response);
   });
 
-  server.on("/status", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 2048;
-    String responseBuffer;
-    responseBuffer.reserve(BUFFER_SIZE);
-    char* ptr = const_cast<char*>(responseBuffer.c_str());
-    shellyGetStatus(ptr, BUFFER_SIZE);
-    responseBuffer = String(ptr);
-
-    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", responseBuffer);
-    response->addHeader("Connection", "close");
-    request->send(response);
-  });
-
   server.on("/reset", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     bool hasPassword = (reset_password != nullptr && strlen(reset_password) > 0);  
     size_t maxNeededLength = (sizeof(RESET_HTML) - 1) + (sizeof(RESET_HTML_END) - 1);
