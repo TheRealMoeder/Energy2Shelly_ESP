@@ -63,8 +63,8 @@ void buildRpcResponse(const char* method, long rpcId, const char* src, String& o
     output = String(wrapPtr);
 }
 
-void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
-  JsonDocument json;
+void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
   switch (type) {
     case WS_EVT_DISCONNECT:
       DEBUG_SERIAL.printf("[%u] Websocket: disconnected!\n", (unsigned int)client->id());
@@ -72,28 +72,30 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
     case WS_EVT_CONNECT:
       DEBUG_SERIAL.printf("[%u] Websocket: connected from %s\n", (unsigned int)client->id(), client->remoteIP().toString().c_str());
       break;
-    case WS_EVT_DATA:
-      {
-        AwsFrameInfo *info = (AwsFrameInfo *)arg;
-        if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-          data[len] = 0;
-          deserializeJson(json, data);
-          
-          long localRpcId = json["id"] | 0;
-          const char* method = json["method"] | "";
-          const char* src = json["src"] | "EMPTY";
+    case WS_EVT_DATA: {
+      AwsFrameInfo *info = (AwsFrameInfo *)arg;
 
-          String wsAnswer;
-          buildRpcResponse(method, localRpcId, src, wsAnswer);
-
-          if (wsAnswer.length() > 0) {
-              webSocket.textAll(wsAnswer);
-          } else {
-              DEBUG_SERIAL.printf("Websocket: unknown request: %s\n", data);
-          }
+      if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+        JsonDocument json;
+        DeserializationError error = deserializeJson(json, (const char *)data, len);
+        if (error) {
+          DEBUG_SERIAL.print(F("Websocket: deserializeJson() error: "));
+          DEBUG_SERIAL.println(error.f_str());
+          return;
         }
-        break;
+        long localRpcId = json["id"] | 0;
+        const char* method = json["method"] | "";
+        const char* src = json["src"] | "EMPTY";
+
+        String wsAnswer;
+        buildRpcResponse(method, localRpcId, src, wsAnswer);
+
+        if (wsAnswer.length() > 0 && client->status() == WS_CONNECTED) {
+          client->text(wsAnswer);
+        }
       }
+      break;
+    }
     case WS_EVT_PING:
     case WS_EVT_PONG:
     case WS_EVT_ERROR:
