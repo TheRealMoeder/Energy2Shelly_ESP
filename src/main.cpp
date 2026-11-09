@@ -391,7 +391,7 @@ void setup(void)
   
   // Shelly RPC routes mapping directly to local buffer string parsers
   server.on("/rpc/EM.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 512;
+    const size_t BUFFER_SIZE = 192;
     String buf;
     buf.reserve(BUFFER_SIZE); 
     char* p = const_cast<char*>(buf.c_str());
@@ -400,7 +400,7 @@ void setup(void)
   });
   
   server.on("/rpc/EM.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 1024;
+    const size_t BUFFER_SIZE = 768;
     String buf;
     buf.reserve(BUFFER_SIZE); 
     char* p = const_cast<char*>(buf.c_str());
@@ -409,7 +409,7 @@ void setup(void)
   });
 
   server.on("/rpc/EMData.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 512;
+    const size_t BUFFER_SIZE = 384;
     String buf;
     buf.reserve(BUFFER_SIZE); 
     char* p = const_cast<char*>(buf.c_str());
@@ -418,7 +418,7 @@ void setup(void)
   });
 
   server.on("/rpc/Shelly.GetComponents", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 2048;
+    const size_t BUFFER_SIZE = 1280;
     String buf;
     buf.reserve(BUFFER_SIZE); 
     char* p = const_cast<char*>(buf.c_str());
@@ -427,7 +427,7 @@ void setup(void)
   });
   
   server.on("/rpc/Shelly.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 2048;
+    const size_t BUFFER_SIZE = 1024;
     String buf;
     buf.reserve(BUFFER_SIZE); 
     char* p = const_cast<char*>(buf.c_str());
@@ -436,7 +436,7 @@ void setup(void)
   });
   
   server.on("/rpc/Shelly.GetDeviceInfo", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 512;
+    const size_t BUFFER_SIZE = 256;
     String buf;
     buf.reserve(BUFFER_SIZE); 
     char* p = const_cast<char*>(buf.c_str());
@@ -445,7 +445,7 @@ void setup(void)
   });
   
   server.on("/rpc/Shelly.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 2048;
+    const size_t BUFFER_SIZE = 1792;
     String buf;
     buf.reserve(BUFFER_SIZE); 
     char* p = const_cast<char*>(buf.c_str());
@@ -454,7 +454,7 @@ void setup(void)
   });
 
   server.on("/rpc/Sys.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 1024;
+    const size_t BUFFER_SIZE = 512;
     String buf;
     buf.reserve(BUFFER_SIZE); 
     char* p = const_cast<char*>(buf.c_str());
@@ -463,7 +463,7 @@ void setup(void)
   });
   
   server.on("/rpc/Sys.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 1024;
+    const size_t BUFFER_SIZE = 512;
     String buf;
     buf.reserve(BUFFER_SIZE); 
     char* p = const_cast<char*>(buf.c_str());
@@ -472,7 +472,7 @@ void setup(void)
   });
 
   server.on("/rpc/WiFi.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 512;
+    const size_t BUFFER_SIZE = 256;
     String buf;
     buf.reserve(BUFFER_SIZE); 
     char* p = const_cast<char*>(buf.c_str());
