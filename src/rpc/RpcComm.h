@@ -14,6 +14,6 @@ void buildRpcResponse(const char* method, long rpcId, const char* src, String& o
 void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void notifyStatusWebSocket();
 void parseUdpRPC();
-void parseHttpRPC(String requestBody, AsyncWebServerRequest *request);
+void parseHttpRPC(const String& requestBody, String& responseBody);
 
 #endif // RPC_COMM_H

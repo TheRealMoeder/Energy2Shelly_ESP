@@ -207,26 +207,17 @@ void parseUdpRPC() {
   }
 }
 
-void parseHttpRPC(String requestBody, AsyncWebServerRequest *request) {
-  if (request && requestBody.length() > 0) {
-    JsonDocument json;
-    DEBUG_SERIAL.print(F("Received HTTP RPC request: "));
-    DEBUG_SERIAL.println(requestBody);
-    deserializeJson(json, requestBody);
-    
-    if (json["method"].is<JsonVariant>()) {
-      long localRpcId = json["id"] | 0;
-      const char* method = json["method"] | "";
+void parseHttpRPC(const String& requestBody, String& responseBody) {
+  JsonDocument json;
+  DEBUG_SERIAL.print(F("Received HTTP RPC request: "));
+  DEBUG_SERIAL.println(requestBody);
 
-      String httpAnswer;
-      buildRpcResponse(method, localRpcId, "EMPTY", httpAnswer);
-
-      if (httpAnswer.length() > 0) {
-        request->send(200, "application/json", httpAnswer);
-      } else {
-        DEBUG_SERIAL.printf("RPC over HTTP: unknown request: %s\n", requestBody.c_str());
-        request->send(404, "text/plain", "Method not found");
-      }
-    }
+  if (deserializeJson(json, requestBody) || !json["method"].is<const char*>()) {
+    responseBody = "{\"error\":{\"code\":-32600,\"message\":\"Invalid request\"}}";
+    return;
   }
+  
+  long localRpcId = json["id"] | 0;
+  const char* method = json["method"] | "";
+  buildRpcResponse(method, localRpcId, "EMPTY", responseBody);
 }

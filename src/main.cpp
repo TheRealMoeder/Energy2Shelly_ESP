@@ -504,11 +504,13 @@ void setup(void)
         } else {
             pBuffer = static_cast<String*>(request->_tempObject);
         }
-        if (pBuffer != nullptr) { pBuffer->concat((char*)data, len); }
+        if (pBuffer != nullptr) {
+          pBuffer->concat((char*)data, len);
+        }
         if (index + len >= total && pBuffer != nullptr) {
-            parseHttpRPC(*pBuffer, request);
-            delete pBuffer;
-            request->_tempObject = nullptr;
+          String responseBody;
+          parseHttpRPC(*pBuffer, responseBody);
+          *pBuffer = responseBody;
         }
     }
   );
