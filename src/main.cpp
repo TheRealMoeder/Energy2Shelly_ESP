@@ -486,12 +486,11 @@ void setup(void)
         if (request->_tempObject != nullptr) {
             String* pAnswer = static_cast<String*>(request->_tempObject);
             AsyncWebServerResponse *response = request->beginResponse(200, "application/json", *pAnswer);
-            response->addHeader("Connection", "close");
             request->send(response);
             delete pAnswer;
             request->_tempObject = nullptr;
         } else {
-            request->send(500, "text/plain", "Internal Server Error");
+            request->send(500, "text/plain", "Internal Server Error: Missing payload.");
         }
     }, nullptr, 
     [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
