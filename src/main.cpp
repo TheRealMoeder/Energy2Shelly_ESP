@@ -512,19 +512,20 @@ void setup(void)
   // Set up MQTT
   switch (current_input_type) { 
     case input_type_enum::MQTT:
-
+    {
+      IPAddress ip;
       mqtt_client.setBufferSize(2048);
-      if (isValidIPAddress(mqtt_server))
+      if (ip.fromString(mqtt_server))
       {
-        mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
+        mqtt_client.setServer(ip, mqtt_port);
       }
       else
       {
-        mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
+        mqtt_client.setServer(mqtt_server, mqtt_port);
       }
       mqtt_client.setCallback(mqtt_callback);
       break;
-
+    }
     case input_type_enum::SMA:
       Udp.begin(multicastPort);
 #ifdef ESP8266
