@@ -5,7 +5,6 @@
 // Global data structures
 PowerData PhasePower[3];
 EnergyData PhaseEnergy[3];
-String serJsonResponse;
 
 double round2(double value) {
   return round(value * 100.0) / 100.0;
