@@ -29,7 +29,7 @@
 // Utils function for monitoring and reset
 #include "utils/utils.h"
 
-#define WiFicheckInterval 60000 // Check every 60 seconds
+#define WIFI_CHECK_INTERVAL 60000 // Check every 60 seconds
 
 unsigned long updateTimestamp = 0; 
 bool parametersUpdated = false; 
@@ -173,7 +173,7 @@ void setup(void)
     });
   }
 
-  // Set up web server and endpoints
+  // Set up web server endpoints using the thread-safe local buffer paradigm
   server.on("/", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(beginGzipHtmlResponse(request, home_html, home_html_len));
   });
@@ -190,7 +190,7 @@ void setup(void)
         memcpy_P(buffer, chart_js + index, toCopy); 
         return toCopy;
     });
-    
+
     response->addHeader("Content-Encoding", "gzip");
     request->send(response); 
   });
@@ -199,27 +199,25 @@ void setup(void)
               request->send(204); // 204 "No Content"
             });
   //Reloads of wifi manager page, redirect to main page 
-   server.on("/exit", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-   {
+  server.on("/exit", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+  {
     request->redirect("/");
-   });
+  });
 
-   server.on("/close", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-   {
+  server.on("/close", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
+  {
     request->redirect("/");
-   });
+  });
 
-  server.on("/console", AsyncWebRequestMethod::HTTP_GET,
-    [](AsyncWebServerRequest *request) {
-        request->send(beginGzipHtmlResponse(
-            request, webconsole_html, webconsole_html_len));
-    });
+  server.on("/console", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(beginGzipHtmlResponse(request, webconsole_html, webconsole_html_len));
+  });
 
-  server.on("/config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {  size_t totalLen = strlen_P(CONFIG_PAGE_HTML); 
-      AsyncWebServerResponse *response = request->beginResponse("text/html", strlen_P(CONFIG_PAGE_HTML), [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
-        // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
-          size_t remaining = totalLen - index;
+  server.on("/config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {  
+    size_t totalLen = strlen_P(CONFIG_PAGE_HTML); 
+    AsyncWebServerResponse *response = request->beginResponse("text/html", totalLen, [totalLen](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+      // copy fragment bytes from PROGMEM to buffer, use less resources by copying only the requested fragment
+      size_t remaining = totalLen - index;
         if (remaining == 0) return 0; 
 
         size_t toCopy = (maxLen > remaining) ? remaining : maxLen;
@@ -227,45 +225,56 @@ void setup(void)
         
         return toCopy; 
     });
-    request->send(response); });
+    request->send(response); 
+  });
 
+  server.on("/shelly", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 2048;
+    String responseBuffer;
+    responseBuffer.reserve(BUFFER_SIZE);
+    char* ptr = const_cast<char*>(responseBuffer.c_str());
+    shellyGetDeviceInfo(ptr, BUFFER_SIZE);
+    responseBuffer = String(ptr);
     
-  server.on("/shelly", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    shellyGetDeviceInfo();
-    request->send(200, "application/json", serJsonResponse); });
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", responseBuffer);
+    response->addHeader("Connection", "close");
+    request->send(response);
+  });
 
-  server.on("/status", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    shellyGetStatus();
-    request->send(200, "application/json", serJsonResponse); });
+  server.on("/status", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 2048;
+    String responseBuffer;
+    responseBuffer.reserve(BUFFER_SIZE);
+    char* ptr = const_cast<char*>(responseBuffer.c_str());
+    shellyGetStatus(ptr, BUFFER_SIZE);
+    responseBuffer = String(ptr);
 
-  server.on("/reset", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", responseBuffer);
+    response->addHeader("Connection", "close");
+    request->send(response);
+  });
+
+  server.on("/reset", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
     bool hasPassword = (reset_password != nullptr && strlen(reset_password) > 0);  
-    
     size_t maxNeededLength = (sizeof(RESET_HTML) - 1) + (sizeof(RESET_HTML_END) - 1);
     
     if (hasPassword) {
         maxNeededLength += (sizeof(PASSWORD_INPUT_HTML) - 1);
-    }   
+    }
     String html;
     html.reserve(maxNeededLength); 
-    
     html += FPSTR(RESET_HTML);
     if (hasPassword) {
         html += FPSTR(PASSWORD_INPUT_HTML);
     }
     html += FPSTR(RESET_HTML_END);
-    
-    request->send(200, "text/html", html); });
+    request->send(200, "text/html", html); 
+  });
 
-  server.on("/reset", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request)
-            {
+  server.on("/reset", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {
     if (reset_password != nullptr && strlen(reset_password) > 0) {
         if (request->hasParam("reset_password", true)) {            
             const char* submitted_pw = request->getParam("reset_password", true)->value().c_str();
-            
             if (strcmp(reset_password, submitted_pw) == 0) {
                 shouldResetConfig = true;
                 request->send(200, "text/plain", PSTR("Resetting WiFi configuration, please log back into the hotspot to reconfigure...\r\n"));
@@ -278,190 +287,231 @@ void setup(void)
     } else {        
         shouldResetConfig = true;
         request->send(200, "text/plain", PSTR("Resetting WiFi configuration...\r\n"));
-    } });
+    } 
+  });
   
-    server.on("/update", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request){
-       if (isNotAuthorized(request)) {
-            return request->requestAuthentication(); 
-        }
-        request->send(beginGzipHtmlResponse(request, update_index_html, update_index_html_len));
-    });
+  server.on("/update", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request){
+       if (isNotAuthorized(request)) { return request->requestAuthentication(); }
+       request->send(beginGzipHtmlResponse(request, update_index_html, update_index_html_len));
+  });
 
   server.on("/update", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request){
+    if (isNotAuthorized(request)) { return request->requestAuthentication(); }
+      bool success = !Update.hasError();
+    if (success) {
+      AsyncWebServerResponse *response = beginGzipHtmlResponse(request, update_success_html, update_success_html_len);
+      response->addHeader("Connection", "close");
+      request->send(response);
+      updateTimestamp=millis();
+      shouldReboot=true;
+    } else {
+      AsyncWebServerResponse *response = beginGzipHtmlResponse(request, update_error_html, update_error_html_len);
+      response->addHeader("Connection", "close");
+      request->send(response);
+    }
+  }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
     if (isNotAuthorized(request)) {
-            return request->requestAuthentication(); 
-  }
-  
-  bool success = !Update.hasError();
-  
-   if(success) {
-    AsyncWebServerResponse *response = beginGzipHtmlResponse(request, update_success_html, update_success_html_len);
-    response->addHeader("Connection", "close");
-    request->send(response);
-    
-    updateTimestamp=millis();
-    shouldReboot=true;
-  } else {
-    AsyncWebServerResponse *response = beginGzipHtmlResponse(request, update_error_html, update_error_html_len);
-    response->addHeader("Connection", "close");
-    request->send(response);
-  }
-
-}, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
-  if (isNotAuthorized(request)) {
-            return request->requestAuthentication(); 
-  }
-
-  if(!index){
-    DEBUG_SERIAL.print(F("Update Started: "));
-    DEBUG_SERIAL.println(filename.c_str());
-    
-    #ifdef ESP32
+      return request->requestAuthentication();
+    }
+    if (!index) {
+      DEBUG_SERIAL.print(F("Update Started: "));
+      DEBUG_SERIAL.println(filename.c_str());
+#ifdef ESP32
       size_t updateSize = UPDATE_SIZE_UNKNOWN;
-    #elif defined(ESP8266)
+#elif defined(ESP8266)
       size_t updateSize = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-       Update.runAsync(true); 
-    #endif
-
-    if(!Update.begin(updateSize, U_FLASH)) { 
+      Update.runAsync(true);
+#endif
+      if (!Update.begin(updateSize, U_FLASH)) {
+        DEBUG_SERIAL.println(F("Error flash"));
+      }
+    }
+#ifdef ESP8266
+    ESP.wdtFeed();
+#endif
+    if (Update.write(data, len) != len) {
       DEBUG_SERIAL.println(F("Error flash"));
     }
-  }
-  #ifdef ESP8266
-    ESP.wdtFeed(); 
-  #endif
-  if(Update.write(data, len) != len){
-    DEBUG_SERIAL.println(F("Error flash"));
-  }
-  
-  if(final){
-    if(Update.end(true)){
-      DEBUG_SERIAL.print(F("Update done: "));
-      DEBUG_SERIAL.print(index + len);
-      DEBUG_SERIAL.println(F(" bytes written"));
-    } 
-  }
- });
+    if (final) {
+      if(Update.end(true)){
+        DEBUG_SERIAL.print(F("Update done: "));
+        DEBUG_SERIAL.print(index + len);
+        DEBUG_SERIAL.println(F(" bytes written"));
+      }
+    }
+  });
+
   server.on("/json_config", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-   
     if (isNotAuthorized(request)) {
-        return request->requestAuthentication(); 
-    }
-    
+      return request->requestAuthentication();
+     }
     if ((WiFi.getMode() == WIFI_AP_STA)||(WiFi.getMode()==WIFI_AP)) {
-        String temp;
-        serializeJson(config_doc, temp);   
-        request->send(200, "application/json", temp); 
+      String temp;
+      serializeJson(config_doc, temp);
+      request->send(200, "application/json", temp);
+    } else {
+      if (LittleFS.exists(configPath)) {
+        request->send(LittleFS, configPath, "application/json");
+      } else {
+        request->send(404, "application/json", "{\"error\":\"File not found\"}");
+      }
     }
-    else {
-         if (LittleFS.exists(configPath)) {
-            request->send(LittleFS, configPath, "application/json");
-         } else {
-            request->send(404, "application/json", "{\"error\":\"File not found\"}");
-         }
-    }
-   });
+  });
 
-
-  server.on("/reboot", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {  
+  server.on("/reboot", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {
     if (isNotAuthorized(request)) {
-            return request->requestAuthentication(); 
-        }
+      return request->requestAuthentication();
+    }
     request->send(200, "text/plain", FPSTR(UPDATE_SUCCESS_HTML));
     updateTimestamp=millis();
     shouldReboot=true;
-    
+  });
+  server.on("/json_config", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (isNotAuthorized(request)) {
+      request->send(401, "text/plain", "Unauthorized");
+      return;
+    }
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\":\"OK\"}");
+    response->addHeader("Connection", "close");
+    request->send(response);
+
+    parametersUpdated = true;
+    },
+    NULL,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+      if (isNotAuthorized(request)) return;
+
+      File file = LittleFS.open(configPath, index == 0 ? "w" : "a");
+      if (file) {
+        file.write(data, len);
+        file.close();
+      }
+    }
+  );
+  
+  // Shelly RPC routes mapping directly to local buffer string parsers
+  server.on("/rpc/EM.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 512;
+    String buf;
+    buf.reserve(BUFFER_SIZE); 
+    char* p = const_cast<char*>(buf.c_str());
+    EMGetConfig(p, BUFFER_SIZE); buf = String(p);
+    request->send(200, "application/json", buf); 
+  });
+  
+  server.on("/rpc/EM.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 1024;
+    String buf;
+    buf.reserve(BUFFER_SIZE); 
+    char* p = const_cast<char*>(buf.c_str());
+    EMGetStatus(p, BUFFER_SIZE); buf = String(p);
+    request->send(200, "application/json", buf); 
   });
 
+  server.on("/rpc/EMData.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 512;
+    String buf;
+    buf.reserve(BUFFER_SIZE); 
+    char* p = const_cast<char*>(buf.c_str());
+    EMDataGetStatus(p, BUFFER_SIZE); buf = String(p);
+    request->send(200, "application/json", buf); 
+  });
 
-  server.on("/json_config", AsyncWebRequestMethod::HTTP_POST, 
+  server.on("/rpc/Shelly.GetComponents", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 2048;
+    String buf;
+    buf.reserve(BUFFER_SIZE); 
+    char* p = const_cast<char*>(buf.c_str());
+    shellyComponents(p, BUFFER_SIZE); buf = String(p);
+    request->send(200, "application/json", buf); 
+  });
+  
+  server.on("/rpc/Shelly.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 2048;
+    String buf;
+    buf.reserve(BUFFER_SIZE); 
+    char* p = const_cast<char*>(buf.c_str());
+    shellyGetConfig(p, BUFFER_SIZE); buf = String(p);
+    request->send(200, "application/json", buf); 
+  });
+  
+  server.on("/rpc/Shelly.GetDeviceInfo", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 512;
+    String buf;
+    buf.reserve(BUFFER_SIZE); 
+    char* p = const_cast<char*>(buf.c_str());
+    shellyGetDeviceInfo(p, BUFFER_SIZE); buf = String(p);
+    request->send(200, "application/json", buf); 
+  });
+  
+  server.on("/rpc/Shelly.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 2048;
+    String buf;
+    buf.reserve(BUFFER_SIZE); 
+    char* p = const_cast<char*>(buf.c_str());
+    shellyGetStatus(p, BUFFER_SIZE); buf = String(p);
+    request->send(200, "application/json", buf); 
+  });
+
+  server.on("/rpc/Sys.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 1024;
+    String buf;
+    buf.reserve(BUFFER_SIZE); 
+    char* p = const_cast<char*>(buf.c_str());
+    sysGetConfig(p, BUFFER_SIZE); buf = String(p);
+    request->send(200, "application/json", buf); 
+  });
+  
+  server.on("/rpc/Sys.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 1024;
+    String buf;
+    buf.reserve(BUFFER_SIZE); 
+    char* p = const_cast<char*>(buf.c_str());
+    sysGetStatus(p, BUFFER_SIZE); buf = String(p);
+    request->send(200, "application/json", buf); 
+  });
+
+  server.on("/rpc/WiFi.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
+    const size_t BUFFER_SIZE = 512;
+    String buf;
+    buf.reserve(BUFFER_SIZE); 
+    char* p = const_cast<char*>(buf.c_str());
+    wifiGetStatus(p, BUFFER_SIZE); buf = String(p);
+    request->send(200, "application/json", buf); 
+  });
+
+  // Thread-safe JSON-RPC POST payload assembler
+  server.on("/rpc", AsyncWebRequestMethod::HTTP_POST, 
     [](AsyncWebServerRequest *request) {
-        if (isNotAuthorized(request)) {
-            request->send(401, "text/plain", "Unauthorized");
-            return;
+        if (request->_tempObject != nullptr) {
+            String* pAnswer = static_cast<String*>(request->_tempObject);
+            AsyncWebServerResponse *response = request->beginResponse(200, "application/json", *pAnswer);
+            response->addHeader("Connection", "close");
+            request->send(response);
+            delete pAnswer;
+            request->_tempObject = nullptr;
+        } else {
+            request->send(500, "text/plain", "Internal Server Error");
         }
-                
-        AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"status\":\"OK\"}");
-        response->addHeader("Connection", "close");
-        request->send(response);
-        
-        parametersUpdated = true; 
-    },
-    NULL, 
+    }, nullptr, 
     [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-        if (isNotAuthorized(request)) return;
-    
-        File file = LittleFS.open(configPath, index == 0 ? "w" : "a");
-        if (file) {
-            file.write(data, len);
-            file.close();
+        if (total > 2048) { request->send(413, "text/plain", "Payload Too Large"); return; }
+        String* pBuffer = nullptr;
+        if (index == 0) {
+            pBuffer = new String();
+            pBuffer->reserve(total + 1);
+            request->_tempObject = pBuffer;
+        } else {
+            pBuffer = static_cast<String*>(request->_tempObject);
+        }
+        if (pBuffer != nullptr) { pBuffer->concat((char*)data, len); }
+        if (index + len >= total && pBuffer != nullptr) {
+            parseHttpRPC(*pBuffer, request);
+            delete pBuffer;
+            request->_tempObject = nullptr;
         }
     }
-);
-
-
-
-// Shelly RPC endpoints called via HTTP GET method
-  server.on("/rpc/EM.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    EMGetConfig();
-    request->send(200, "application/json", serJsonResponse); });
-  server.on("/rpc/EM.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    EMGetStatus();
-    request->send(200, "application/json", serJsonResponse); });
-
-  server.on("/rpc/EMData.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    EMDataGetStatus();
-    request->send(200, "application/json", serJsonResponse); });
-
-  server.on("/rpc/Shelly.GetComponents", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    shellyGetComponents();
-    request->send(200, "application/json", serJsonResponse); });
-  server.on("/rpc/Shelly.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    shellyGetConfig();
-    request->send(200, "application/json", serJsonResponse); });
-  server.on("/rpc/Shelly.GetDeviceInfo", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    shellyGetDeviceInfo();
-    request->send(200, "application/json", serJsonResponse); });
-  server.on("/rpc/Shelly.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    shellyGetStatus();
-    request->send(200, "application/json", serJsonResponse); });
-
-  server.on("/rpc/Sys.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    sysGetConfig();
-    request->send(200, "application/json", serJsonResponse); });
-  server.on("/rpc/Sys.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    sysGetStatus();
-    request->send(200, "application/json", serJsonResponse); });
-
-  server.on("/rpc/WiFi.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-    wifiGetStatus();
-    request->send(200, "application/json", serJsonResponse); });
-
-  // Shelly RPC endpoint called via HTTP POST method with JSON-RPC body
-  server.on("/rpc", AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {}, nullptr, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
-            {
-      String rpcRequestBuffer;
-      if (index == 0) {
-        // New request, clear buffer
-        rpcRequestBuffer = "";
-      }
-      // Append incoming data chunk to buffer
-      rpcRequestBuffer += String((char *)data).substring(0, len);
-      if (index + len >= total) {
-        // All data received, process RPC request
-        parseHttpRPC(rpcRequestBuffer, request);
-      } });
-
+  );
   webSocket.onEvent(webSocketEvent);
   wsConsole.onEvent(onWsEvent);
   server.addHandler(&webSocket);
@@ -474,52 +524,50 @@ void setup(void)
   // Set up MQTT
   switch (current_input_type) { 
     case input_type_enum::MQTT:
-  
-    mqtt_client.setBufferSize(2048);
-    if (isValidIPAddress(mqtt_server))
-    {
-      mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
-    }
-    else
-    {
-      mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
-    }
-    mqtt_client.setCallback(mqtt_callback);
-    break;
-    
+
+      mqtt_client.setBufferSize(2048);
+      if (isValidIPAddress(mqtt_server))
+      {
+        mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
+      }
+      else
+      {
+        mqtt_client.setServer(mqtt_server, String(mqtt_port).toInt());
+      }
+      mqtt_client.setCallback(mqtt_callback);
+      break;
+
     case input_type_enum::SMA:
       Udp.begin(multicastPort);
 #ifdef ESP8266
-    Udp.beginMulticast(WiFi.localIP(), multicastIP, multicastPort);
+      Udp.beginMulticast(WiFi.localIP(), multicastIP, multicastPort);
 #else
-    Udp.beginMulticast(multicastIP, multicastPort);
+      Udp.beginMulticast(multicastIP, multicastPort);
 #endif
      break;
     
      case input_type_enum::SHRDZM:
-  // Set Up UDP for SHRDZM smart meter interface
-    Udp.begin(multicastPort);
-    break;
+      // Set Up UDP for SHRDZM smart meter interface
+      Udp.begin(multicastPort);
+      break;
 
     case input_type_enum::SUNSPEC:
-  
-    modbus1.client();
-    DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
-    modbus1.connect(modbus_ip, sunspec_port_int);
-    break;
+      modbus1.client();
+      DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
+      modbus1.connect(modbus_ip, sunspec_port_int);
+      break;
 
+      case input_type_enum::SMLSERIAL:
+      setupSMLSerial();
+      break;
 
-    case input_type_enum::SMLSERIAL:
-    setupSMLSerial();
-    break;
+      case input_type_enum::HTTP:
+      http.useHTTP10(true);
+      break;
 
-    case input_type_enum::HTTP:
-    http.useHTTP10(true);
-    break;
-
-    case input_type_enum::NONE:
-    default:
-    DEBUG_SERIAL.println(F("No source"));
+      case input_type_enum::NONE:
+      default:
+      DEBUG_SERIAL.println(F("No source"));
   }
   // Set up mDNS responder
   setupMdns();
@@ -549,52 +597,51 @@ void worker_loop(int currentMillis)
     case input_type_enum::MQTT:
       if (!mqtt_client.connected())
       {
-      mqtt_reconnect();
+        mqtt_reconnect();
       }
       mqtt_client.loop();
-     break;
+      break;
     case input_type_enum::SMA:
-       parseSMA();
-     break;
+      parseSMA();
+      break;
     case input_type_enum::SHRDZM:
       parseSHRDZM();
       break;
     case input_type_enum::SUNSPEC:
-       modbus1.task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
+      modbus1.task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
       if (currentMillis - startMillis >= query_period_modbus_u32)
       {
-         parseSUNSPEC();
-         startMillis = currentMillis;
+        parseSUNSPEC();
+        startMillis = currentMillis;
       }
       break;
     case input_type_enum::HTTP:
       if (currentMillis - startMillis >= query_period_http_u32)
       {
-         queryHTTP();
-         startMillis = currentMillis;
+        queryHTTP();
+        startMillis = currentMillis;
       }
-     break;
-    case input_type_enum::TIBBERPULSE:
-    if (currentMillis - startMillis >= query_period_tibber_u32)
-    {
-      parseTibberPulse();
-      startMillis = currentMillis;
-    }
-    break;
-    case input_type_enum::SMLSERIAL:
-       parseSMLSerial(); // non-blocking, consumes the bytes received since the last call
       break;
-
-    case input_type_enum::RCT:
-       if (currentMillis - startMillis >= query_period_rct_u32)
-       {
-      parseRCT();
-      startMillis = currentMillis;
+    case input_type_enum::TIBBERPULSE:
+      if (currentMillis - startMillis >= query_period_tibber_u32)
+      {
+        parseTibberPulse();
+        startMillis = currentMillis;
       }
-    break;
+      break;
+    case input_type_enum::SMLSERIAL:
+      parseSMLSerial(); // non-blocking, consumes the bytes received since the last call
+      break;
+    case input_type_enum::RCT:
+      if (currentMillis - startMillis >= query_period_rct_u32)
+      {
+        parseRCT();
+        startMillis = currentMillis;
+      }
+      break;
     case input_type_enum::NONE:
-    default:
-    delay(10);
+      default:
+      delay(10);
   }
   DEBUG_SERIAL.handleQueue();
 }
@@ -638,22 +685,23 @@ void loop()
     WDTimer = currentMillis;
   }
 
+  // Check if serial console debug messages should be disabled after timeout
   if (enableConsoleOutputSerial && (extendedMillis() > static_cast<uint64_t>(config_doc["console"]["serial_console_time"].as<int>() * 60000ll))) {
       DEBUG_SERIAL.println(F("Disabled serial debug messages"));
-      enableConsoleOutputSerial=false;
+      enableConsoleOutputSerial = false;
   }
 
-  if ((WiFi.getMode() == WIFI_AP_STA)||(WiFi.getMode()==WIFI_AP))  {
-     dnsServer.processNextRequest();
-     wifi_scan();
-     if ((extendedMillis()>15ull*60ull*1000ull) && (WiFi.softAPgetStationNum()==0)) { // Reset device after 15 minutes in AP mode, to avoid being stuck in AP mode forever
-        DEBUG_SERIAL.println(F("AP mode timeout, resetting device"));
-        all_esp_reset(Energy2Shelly_ResetReason::AP_TIMEOUT);
-     }
+  if ((WiFi.getMode() == WIFI_AP_STA) || (WiFi.getMode() == WIFI_AP)) {
+      dnsServer.processNextRequest();
+      wifi_scan();
+      if ((extendedMillis() > 15ull * 60ull * 1000ull) && (WiFi.softAPgetStationNum() == 0)) { // Reset device after 15 minutes in AP mode, to avoid being stuck in AP mode forever
+          DEBUG_SERIAL.println(F("AP mode timeout, resetting device"));
+          all_esp_reset(Energy2Shelly_ResetReason::AP_TIMEOUT);
+      }
   } else {
     // check if WiFi connection has been lost for more than the allowed interval
     // saveguard against nasty router/AP behavior
-    if (millis() - WiFilastConnectionCheck > WiFicheckInterval)
+    if (millis() - WiFilastConnectionCheck > WIFI_CHECK_INTERVAL)
     {
       DEBUG_SERIAL.println(F("Lost WiFi connection or SSID changed!"));
       all_esp_reset(Energy2Shelly_ResetReason::WIFI_DISCONNECT);
@@ -664,7 +712,7 @@ void loop()
     DEBUG_SERIAL.println(F("New keys"));
     load_parameters();
     serializeJsonPretty(config_doc, DEBUG_SERIAL);
-    DEBUG_SERIAL.println();    
+    DEBUG_SERIAL.println();
     interprete_parameters();
     parametersUpdated = false;
   }
