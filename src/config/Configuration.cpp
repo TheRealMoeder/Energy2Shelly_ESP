@@ -1,5 +1,6 @@
 #include "Configuration.h"
 #include "../utils/utils.h"
+const char* configPath = "/config.json";
 unsigned long startMillis = 0;
 unsigned long currentMillis;
 // for time synchronization
@@ -8,7 +9,7 @@ tm timeinfo;
 JsonDocument config_doc;
 
 // ============================================================================
-// CONFIGURATION VARIABLES (stored in Preferences)
+// CONFIGURATION VARIABLES (stored in LittleFS)
 // ============================================================================
 
 // Data source and server settings
@@ -17,8 +18,6 @@ String shelly_name;
 
 uint16_t sunspec_port_int; // default port
 uint8_t modbusdev_int;     // default device id for KSEM
-
-char tibber_rpc[2][26] = {"/data.json?node_id=","/node_data.json?node_id="}; // fixed rpc path
 
 unsigned long ledOffTime = 0;
 uint8_t led = 0;
@@ -48,18 +47,10 @@ char rpcUser[20] = "user_1";
 bool shouldSaveConfig = false;
 bool shouldResetConfig = false;
 bool shouldupdate = false;
+bool shouldReboot = false;
 
 // flags for data sources
-bool dataMQTT = false;
-bool dataSMA = false;
-bool dataSHRDZM = false;
-bool dataHTTP = false;
-bool dataSUNSPEC = false;
-bool dataTIBBERPULSE = false;
-bool dataRCT = false;
-bool dataSMLSERIAL = false;
-
-Preferences preferences;
+input_type_enum current_input_type  = input_type_enum::NONE;
 
 // ============================================================================
 // NETWORK OBJECTS
@@ -74,7 +65,10 @@ WiFiUDP Udp;
 HTTPClient http;
 WiFiUDP UdpRPC;
 uint16_t wifi_reconnect_attempts = 0;
-
+DNSServer dnsServer;
+const byte DNS_PORT = 53;
+unsigned long WiFi_lastScanTime = 0;
+bool WiFi_scanInProgress = false;
 // ============================================================================
 // MDNS RESPONDER HANDLES (ESP8266 only)
 // ============================================================================
@@ -83,6 +77,16 @@ uint16_t wifi_reconnect_attempts = 0;
 MDNSResponder::hMDNSService hMDNSService = 0;  // handle of the http service in the MDNS responder
 MDNSResponder::hMDNSService hMDNSService2 = 0; // handle of the shelly service in the MDNS responder
 #endif
+
+
+
+#ifdef ESP32
+#define LITTLEFS_BEGIN() LittleFS.begin(false)
+#else
+#define LITTLEFS_BEGIN() LittleFS.begin()
+#endif
+
+
 
 // Blink LED handlers
 void blinkled(int duration)
@@ -120,53 +124,98 @@ void handleblinkled()
   }
 }
 
+void WiFi_processScanResult(int n) {
+  if (!config_doc["wifi"]["networks"].isNull()) {
+    config_doc["wifi"].remove("networks"); 
+  }
+  
+  JsonArray networks = config_doc["wifi"]["networks"].to<JsonArray>();
+  
+  for (int i = 0; i < n; ++i) {
+    JsonObject net = networks.add<JsonObject>();
+    
+    net["ssid"] = WiFi.SSID(i);
+    net["rssi"] = WiFi.RSSI(i);
+    net["channel"] = WiFi.channel(i);
+    
+#if defined(ESP32)
+    net["encryption"] = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? "Open" : "Secured";
+#elif defined(ESP8266)
+    net["encryption"] = (WiFi.encryptionType(i) == ENC_TYPE_NONE) ? "Open" : "Secured";
+#endif
+  }
+}
+
+void wifi_scan()
+{
+  if (WiFi_scanInProgress) {
+    int16_t scanResult = WiFi.scanComplete();
+
+    if (scanResult >= 0) {
+        WiFi_processScanResult(scanResult);
+        WiFi.scanDelete();
+        WiFi_scanInProgress = false;
+        WiFi_lastScanTime = millis();
+    } 
+    else if (scanResult == WIFI_SCAN_FAILED) {
+      DEBUG_SERIAL.println(F("ESP8266 WiFi-Scan Error."));
+      WiFi.scanDelete();
+      WiFi_scanInProgress = false;
+      WiFi_lastScanTime = millis();
+    }
+  }
+  if (!WiFi_scanInProgress && (millis() - WiFi_lastScanTime >= WIFI_SCAN_INTERVAL)) {
+      DEBUG_SERIAL.println(F("\nStart asynchron ESP8266 WiFi-Scan..."));
+#ifdef ESP8266
+      WiFi.scanNetworks(true); // async=true
+#else      
+
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+      WiFi.scanNetworks(true, false, false); 
+#endif
+#endif
+      WiFi_scanInProgress = true;
+  }
+
+}
 
 void interprete_parameters()
 {
   // Interpret the loaded parameters and set flags accordingly
-  input_type_enum current_input_type = static_cast<input_type_enum>(config_doc["basic"]["input_type"].as<uint32_t>());
-
+  current_input_type = static_cast<input_type_enum>(config_doc["basic"]["input_type"].as<uint32_t>());
   switch (current_input_type) {
     case input_type_enum::SMA:
-        dataSMA = true;
         DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
         break;
     case input_type_enum::SHRDZM:
-        dataSHRDZM = true;
         DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
         break;
     case input_type_enum::HTTP:
-        dataHTTP = true;
         DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
         break;
     case input_type_enum::SUNSPEC:
-        dataSUNSPEC = true;
         modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
         sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
         modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
         DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
         break;
    case input_type_enum::TIBBERPULSE:
-        dataTIBBERPULSE = true;
         DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
         break;
    case input_type_enum::SMLSERIAL:
-        dataSMLSERIAL = true;
         DEBUG_SERIAL.println(F("Enabling SML serial (UART) data input"));
         break;
    case input_type_enum::RCT:
-        dataRCT = true;
         DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
         break;
    case input_type_enum::MQTT:
-        dataMQTT = true;
         DEBUG_SERIAL.println(F("Enabling MQTT data input"));
         break;
    case input_type_enum::NONE:
    default:
         DEBUG_SERIAL.println(F("None"));
   }
- 
+
   if (led_gpio_i!=NULL && strlen(led_gpio_i)>=4 && strcmp(led_gpio_i, "true") == 0)
   {
     led_i = true;
@@ -181,12 +230,12 @@ void interprete_parameters()
     enableConsoleOutputWeb=true;
   }
   else {
-     enableConsoleOutputWeb=false;
+    enableConsoleOutputWeb=false;
   }
- 
-  config_doc["console"]["serial_console_time"]  =    config_doc["console"]["serial_console_time"].as<int>() ? config_doc["console"]["serial_console_time"].as<int>() : (int)1;
+
+  config_doc["console"]["serial_console_time"] = config_doc["console"]["serial_console_time"].as<int>() ? config_doc["console"]["serial_console_time"].as<int>() : (int)1;
   if (config_doc["console"]["serial_console_time"].as<int>()>0) {
-     enableConsoleOutputSerial=true;
+    enableConsoleOutputSerial=true;
   }
   else {
     enableConsoleOutputSerial=false;
@@ -199,139 +248,108 @@ void interprete_parameters()
   String mac_str  = config_doc["shelly"]["shelly_mac"] | "";
   shelly_name = name_str + mac_str;
 
- if (shelly_name.length() > 128) {
+  if (shelly_name.length() > 128) {
     shelly_name = shelly_name.substring(0, 128);
- }
+  }
 
 
 
 }
 
-void erase_preferences()
-{
-  preferences.begin("e2s_config", false);
-  preferences.clear();
-  preferences.end();
-}
-
-
-
-
-String json_prefs_string;
-JsonDocument update_config_doc;
-
-
-void mergeJson(JsonObject target, JsonObjectConst source) {
-    for (JsonPairConst p : source) {
-        JsonVariantConst value = p.value();
-        
-        if (value.is<JsonObjectConst>()) {
-            JsonObject targetChild = target[p.key()].to<JsonObject>();
-            mergeJson(targetChild, value.as<JsonObjectConst>());
-        } else {
-            target[p.key()] = value;
+void mergeJson(JsonVariant dst, JsonVariantConst src) {
+  if (src.is<JsonObjectConst>()) {
+    if (!dst.is<JsonObject>()) {
+      dst.to<JsonObject>();
+    } 
+    JsonObject dstObj = dst.as<JsonObject>();
+    
+    for (JsonPairConst kv : src.as<JsonObjectConst>()) {
+      if (kv.value().is<JsonObjectConst>()) {
+        if (!dstObj[kv.key()].is<JsonObject>()) {
+          dstObj[kv.key()].to<JsonObject>();
         }
+        mergeJson(dstObj[kv.key()], kv.value());
+      } else {
+        dstObj[kv.key()] = kv.value();
+      }
     }
+  } else {
+    dst.set(src);
+  }
 }
 
+bool save_parameters() {
+   if (!config_doc["wifi"]["networks"].isNull()) {
+    config_doc["wifi"].remove("networks"); 
+  }
+  File configFile = LittleFS.open(configPath, "w");
+  if (!configFile) {
+    DEBUG_SERIAL.println(F("Error: Could not open file"));
+    return false;
+  }
 
+  if (serializeJson(config_doc, configFile) == 0) {
+    DEBUG_SERIAL.println(F("Error: not possible to serialize"));
+    configFile.close();
+    return false;
+  }
 
-void save_parameters() {
-    preferences.begin("e2s_config", false);
-    serializeJson(config_doc, json_prefs_string);
-    preferences.putString("config_doc", json_prefs_string);
-    preferences.end();
-
+  configFile.close();
+  return true;
 }
+
+const char DEFAULT_CONFIG_JSON[] PROGMEM = R"=====(
+{
+  "wifi": {
+    "ssid": "",
+    "password": ""
+  },
+  "basic": {
+    "ntp_server": "de.pool.ntp.org",
+    "timezone": "CET-1CEST,M3.5.0/2,M10.5.0/3",
+    "phase_number": 3,
+    "input_type": 0
+  },
+  "shelly": {
+    "shelly_port": 2220,
+    "shelly_gen": 2,
+    "shelly_fw_id": "20241011-114455/1.4.4-g6d2a586",
+    "shelly_name": "shellypro3em-"
+  },
+  "sunspec": { "query_period": 5000 },
+  "tibber": { "query_period": 5000 },
+  "rct": { "query_period": 5000 },
+  "http": { "query_period": 5000 },
+  "smlserial": {
+    "rx_pin": 3,
+    "baud": 9600,
+    "invert": "false"
+  },
+  "console": {
+    "web_console": "true",
+    "serial_console_time": 10
+  }
+}
+)=====";
 
 void load_parameters() {
-  preferences.begin("e2s_config", false);
   config_doc.clear();
-  if (preferences.isKey("config_doc")) {
-    json_prefs_string = preferences.getString("config_doc", "");
-    DEBUG_SERIAL.println(json_prefs_string);
-    deserializeJson(config_doc, json_prefs_string);
-  } else {
-    // Load individual parameters if the combined config_doc is not present
-    config_doc["basic"]["reset_password"] = preferences.getString("reset_password", "");
-    config_doc["basic"]["input_type"] = preferences.getString("input_type", "");
-    config_doc["basic"]["ntp_server"] = preferences.getString("ntp_server", "");
-    config_doc["basic"]["timezone"] = preferences.getString("timezone", "");
-    config_doc["basic"]["phase_number"] = preferences.getString("phase_number", "");
-    config_doc["basic"]["power_offset"] = preferences.getString("power_offset", "");
-
-    config_doc["mqtt"]["mqtt_server"] = preferences.getString("mqtt_server", "");
-    config_doc["mqtt"]["mqtt_port"] = preferences.getString("mqtt_port", "");
-    config_doc["mqtt"]["mqtt_topic"] = preferences.getString("mqtt_topic", "");
-    config_doc["mqtt"]["mqtt_user"] = preferences.getString("mqtt_user", "");
-    config_doc["mqtt"]["mqtt_password"] = preferences.getString("mqtt_passwd", "");
-
-    config_doc["sunspec"]["modbus_dev"] = preferences.getString("modbus_dev", "");
-    config_doc["sunspec"]["modbus_ip"] = preferences.getString("mqtt_server", "");
-    config_doc["sunspec"]["modbus_port"] = preferences.getString("mqtt_port", "");
-    config_doc["sunspec"]["query_period"] = preferences.getString("query_period", "");
-   
-
-    config_doc["led"]["led_gpio"] = preferences.getString("led_gpio", "");
-    config_doc["led"]["led_gpio_i"] = preferences.getString("led_gpio_i", "");
-
-    config_doc["shelly"]["shelly_port"] = preferences.getString("shelly_port", "2220");
-   
-    config_doc["json"]["power_path"] = preferences.getString("power_path", "");
-    config_doc["json"]["pwr_export_path"] = preferences.getString("pwr_export_path", "");
-    config_doc["json"]["power_l1_path"] = preferences.getString("power_l1_path", "");
-    config_doc["json"]["power_l2_path"] = preferences.getString("power_l2_path", "");
-    config_doc["json"]["power_l3_path"] = preferences.getString("power_l3_path", "");
-    config_doc["json"]["energy_in_path"] = preferences.getString("energy_in_path", "");
-    config_doc["json"]["energy_out_path"] = preferences.getString("energy_out_path", "");
-    
-    
-    config_doc["http"]["server_ip"] = preferences.getString("mqtt_server", ""); 
-    config_doc["http"]["query_period"] = preferences.getString("query_period", "");
-
-    config_doc["sma"]["sma_id"] = preferences.getString("sma_id", "");
-    
-    
-    config_doc["tibber"]["tibber_host"] = preferences.getString("tibber_host", "");
-    config_doc["tibber"]["tibber_nodeid"] = preferences.getString("tibber_nodeid", "");
-    config_doc["tibber"]["tibber_user"] = preferences.getString("tibber_user", "");
-    config_doc["tibber"]["tibber_password"] = preferences.getString("tibber_password", "");
-    config_doc["tibber"]["query_period"] = preferences.getString("query_period", "");
-
-    config_doc["rct"]["rct_host"] = preferences.getString("rct_host", "");
-    config_doc["rct"]["rct_port"] = preferences.getString("rct_port", "");
-    config_doc["rct"]["query_period"] = preferences.getString("query_period", "");
+  DeserializationError defaultError = deserializeJson(config_doc, FPSTR(DEFAULT_CONFIG_JSON));
+  if (defaultError) {
+    DEBUG_SERIAL.println(F("Error during default config initialization!"));
   }
-    preferences.end();
 
-
-   /* make sure default values are available */
-   config_doc["shelly"]["shelly_port"] = config_doc["shelly"]["shelly_port"].as<int>() ? config_doc["shelly"]["shelly_port"].as<int>() : 2220;
-   config_doc["shelly"]["shelly_gen"] = config_doc["shelly"]["shelly_gen"].as<int>() ? config_doc["shelly"]["shelly_gen"].as<int>() : 2;
-   config_doc["shelly"]["shelly_fw_id"] = config_doc["shelly"]["shelly_fw_id"] | "20241011-114455/1.4.4-g6d2a586";
-   config_doc["shelly"]["shelly_name"] = config_doc["shelly"]["shelly_name"] | "shellypro3em-";
-
-   config_doc["basic"]["phase_number"] = config_doc["basic"]["phase_number"].as<int>() ? config_doc["basic"]["phase_number"].as<int>(): 3;
-   config_doc["basic"]["ntp_server"] = config_doc["basic"]["ntp_server"]| "de.pool.ntp.org";
-   config_doc["basic"]["input_type"] = config_doc["basic"]["input_type"].as<int>() ? config_doc["basic"]["input_type"].as<int>() : static_cast<int>(input_type_enum::NONE);
-   if (config_doc["basic"]["ntp_server"] == "") config_doc["basic"]["ntp_server"] = "de.pool.ntp.org";
-   if (config_doc["basic"]["timezone"] == "") config_doc["basic"]["timezone"] = "CET-1CEST,M3.5.0/2,M10.5.0/3";
-   
-   config_doc["sunspec"]["query_period"] = config_doc["sunspec"]["query_period"].as<int>() ? config_doc["sunspec"]["query_period"].as<int>() : 5000;
-   config_doc["tibber"]["query_period"] = config_doc["tibber"]["query_period"].as<int>() ? config_doc["tibber"]["query_period"].as<int>() : 5000;
-   config_doc["rct"]["query_period"]    = config_doc["rct"]["query_period"].as<int>() ? config_doc["rct"]["query_period"].as<int>() : 5000;
-   config_doc["http"]["query_period"]   = config_doc["http"]["query_period"].as<int>() ? config_doc["http"]["query_period"].as<int>() : 5000;
-
-   config_doc["smlserial"]["rx_pin"] = config_doc["smlserial"]["rx_pin"].is<int>() ? config_doc["smlserial"]["rx_pin"].as<int>() : SML_DEFAULT_RX_PIN;
-   config_doc["smlserial"]["baud"]   = config_doc["smlserial"]["baud"].as<uint32_t>() ? config_doc["smlserial"]["baud"].as<uint32_t>() : 9600;
-   config_doc["smlserial"]["invert"] = config_doc["smlserial"]["invert"] | "false";
-   
- 
-   config_doc["console"]["web_console"]  =    config_doc["console"]["web_console"] | "true";
-   config_doc["console"]["serial_console_time"] = config_doc["console"]["serial_console_time"]|"";
-   config_doc["console"]["serial_console_time"]  = config_doc["console"]["serial_console_time"].as<int>() ? config_doc["console"]["serial_console_time"].as<int>() : (int)1;
-
- 
+  if (LittleFS.exists(configPath)) {
+    File configFile = LittleFS.open(configPath, "r");
+    if (configFile) {
+      JsonDocument fs_doc;
+      DeserializationError fsError = deserializeJson(fs_doc, configFile);
+      configFile.close();
+      if (fsError == DeserializationError::Ok) {
+        mergeJson(config_doc.to<JsonVariant>(), fs_doc.as<JsonVariantConst>());
+      }
+    }
+  } 
 
  
 }
@@ -367,59 +385,56 @@ void saveConfigCallback() {
     delay(5000);
 }
 
-void WifiManagerSetup(bool stationmode)
+
+void WifiManagerSetup(bool SW_update)
 {
   WiFi.setAutoReconnect(true);
  
-  load_parameters(); // Load parameters from Preferences
+   if (!LITTLEFS_BEGIN()) {
+      DEBUG_SERIAL.println(F("LittleFS Mounting Error. Try formating..."));
+      LittleFS.end();
+      LittleFS.format();
+      LITTLEFS_BEGIN(); 
+  }
+
+  load_parameters(); // Load parameters from LittleFS
  
 
-  static WiFiManager wifiManager;
-  wifiManager.setDebugOutput(false);
-  wifiManager.setShowStaticFields(true);
+  if (config_doc["wifi"]["ssid"] == "") // check for valid WiFi credentials, if not present, start config portal
+  {
+      DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
+      WiFi.mode(WIFI_AP_STA);
+      WiFi.softAP("Energy2Shelly", "");
 
-  wifiManager.setTitle(String("Energy2Shelly for ESP ") + VERSION_BUILD);
-  wifiManager.setSaveConfigCallback(saveConfigCallback);
-  wifiManager.setConfigPortalTimeout(180);
-  std::vector<const char *> usermenu = {"wifi","info","exit","sep","update"};
-  wifiManager.setMenu(usermenu);
-  if (stationmode)
-  {
-    WiFi.mode(WIFI_STA);
-    WiFi.begin();
-    unsigned long startAttemptTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000)
-    {
-      delay(500);
-      Serial.print(".");
-    }
-    update_reset_reason(Energy2Shelly_ResetReason::OTA_UPDATE);
-    if (WiFi.status() == WL_CONNECTED)
-    {
-      shouldSaveConfig=true;      
-      wifiManager.startWebPortal();
-      startAttemptTime = millis();
-      while (wifiManager.getWebPortalActive())
-      {
-        wifiManager.process();
-        delay(10);
-      }
-     
-    }
+#if defined(ESP32)
+      WiFi.disconnect(false); 
+      WiFi.setSleep(false);       
+#endif
   }
-  else
-  {
-    if (!wifiManager.autoConnect("Energy2Shelly"))
-    {
-      DEBUG_SERIAL.println(F("failed to connect and hit timeout"));
-     
-      delay(3000);
-      ESP.restart();
-      delay(5000);
-    }
+  else { //try to connect to WiFi with stored credentials
+      WiFi.mode(WIFI_STA);
+      WiFi.begin(config_doc["wifi"]["ssid"].as<const char*>(), config_doc["wifi"]["password"].as<const char*>());
+      unsigned long startAttemptTime = millis();
+      while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000)
+      {
+        delay(500);
+        DEBUG_SERIAL.print(".");
+      }
+      if (WiFi.status() != WL_CONNECTED) // if connection failed, start config portal
+      {
+        WiFi.mode(WIFI_AP_STA);
+        WiFi.softAP("Energy2Shelly", "");
+        DEBUG_SERIAL.println(F("Failed to connect to WiFi, starting config portal..."));
+#if defined(ESP32)
+        WiFi.disconnect(false);
+        WiFi.setSleep(false);       
+#endif
+
+      }
   }
   
-  DEBUG_SERIAL.println(F("connected"));
+  
+  
  
   // Set Shelly ID to ESP's MAC address by default
   String currentMac = config_doc["shelly"]["shelly_mac"].as<String>();
@@ -430,7 +445,7 @@ void WifiManagerSetup(bool stationmode)
     
     config_doc["shelly"]["shelly_mac"] = macStr;  
   }
-  
+
   interprete_parameters();
 
   DEBUG_SERIAL.println(F("local ip"));

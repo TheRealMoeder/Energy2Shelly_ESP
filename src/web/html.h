@@ -1,268 +1,18 @@
-#ifndef HTML_HOME_H
-#define HTML_HOME_H
+#ifndef HTML_H
+#define HTML_H
 
 #include <Arduino.h>
 #include "chart_js.h"
 
-const char HTML_HOME[] PROGMEM = R"=====(
-<!DOCTYPE html>
-<html>
-<head>
-<title>Energy2Shelly ESP</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-  body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; color: #333; }
-  h1 { color: #0056b3; margin-bottom: 10px; }
-  p { font-size: 1.1em; margin-top: 5px; }
-  .nav { margin: 30px 0; }
-  .nav a { display: inline-block; padding: 12px 24px; margin: 8px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; transition: background-color 0.3s; }
-  .nav a:hover { background-color: #0056b3; }
-  .nav a.reset { background-color: #d9534f; }
-  .nav a.reset:hover { background-color: #c9302c; }
-  .data-container { max-width: 1300px; margin: 0 auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-  .data-section { margin: 20px 0; }
-  .data-section h2 { color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 15px; font-size: 1.3em; }
-  .phase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
-  .phase-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
-  .phase-card.phase-a { border-left-color: #dc3545; }
-  .phase-card.phase-b { border-left-color: #ffc107; }
-  .phase-card.phase-c { border-left-color: #28a745; }
-  .phase-card.total { background: #e7f3ff; }
-  .phase-card h3 { margin: 0 0 10px 0; font-size: 1.1em; }
-  .data-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #dee2e6; }
-  .data-row:last-child { border-bottom: none; }
-  .data-label { font-weight: 600; color: #555; }
-  .data-value { color: #007bff; font-weight: bold; }
-  .timestamp { text-align: center; color: #6c757d; font-size: 0.9em; margin-top: 15px; font-style: italic; }
-  .loading { color: #6c757d; }
-  .error { color: #dc3545; padding: 10px; background: #f8d7da; border-radius: 5px; }
-</style>
-</head>
-<body>
-  <h1>Energy2Shelly ESP</h1>
-  <p>This device emulates a Shelly Pro 3EM to integrate various energy meters.</p>
-  <div class="nav">
-    <a href="/status">View Status</a>
-    <a href="/console">Console</a>
-    <a href="/plot">Plot Data</a>
-    <a href="/update" class="reset">Update SW</a>
-    <a href="/config" class="reset">Configure Parameters</a>
-  </div>
-
-  <div class="data-container">
-    <div class="data-section">
-      <h2>Current Power Data</h2>
-      <div id="power-data" class="loading">Loading power data...</div>
-    </div>
-
-    <div class="data-section">
-      <h2>Energy Data</h2>
-      <div id="energy-data" class="loading">Loading energy data...</div>
-    </div>
-
-    <div class="timestamp" id="timestamp"></div>
-    <div class="timestamp" id="version">Build: 
-)====="
-VERSION_BUILD
-R"=====(</div>
-  </div>
-
-<script>
-function formatValue(value, unit = '', decimals = 1, scale = 1) {
-  if (value === null || value === undefined || isNaN(value)) return 'N/A';
-
-  const num = Number(value) * scale;
-  const formatted = num.toFixed(decimals);
-
-  return unit ? `${formatted} ${unit}` : formatted;
-}
-
-function updatePowerData() {
-  fetch('/rpc/EM.GetStatus')
-    .then(response => response.json())
-    .then(data => {
-      const phases = [
-        { name: 'Phase A', prefix: 'a', class: 'phase-a' },
-        { name: 'Phase B', prefix: 'b', class: 'phase-b' },
-        { name: 'Phase C', prefix: 'c', class: 'phase-c' }
-      ];
-
-      let html = '<div class="phase-grid">';
-      phases.forEach(phase => {
-        html += `<div class="phase-card ${phase.class}">
-          <h3>${phase.name}</h3>
-          <div class="data-row"><span class="data-label">Voltage:</span><span class="data-value">${formatValue(data[phase.prefix + '_voltage'], 'V')}</span></div>
-          <div class="data-row"><span class="data-label">Current:</span><span class="data-value">${formatValue(data[phase.prefix + '_current'], 'A')}</span></div>
-          <div class="data-row"><span class="data-label">Power:</span><span class="data-value">${formatValue(data[phase.prefix + '_act_power'], 'W')}</span></div>
-          <div class="data-row"><span class="data-label">Apparent:</span><span class="data-value">${formatValue(data[phase.prefix + '_aprt_power'], 'VA')}</span></div>
-          <div class="data-row"><span class="data-label">Power Factor:</span><span class="data-value">${formatValue(data[phase.prefix + '_pf'], '', 3)}</span></div>
-          <div class="data-row"><span class="data-label">Frequency:</span><span class="data-value">${formatValue(data[phase.prefix + '_freq'], 'Hz')}</span></div>
-        </div>`;
-      });
-
-      html += '<div class="phase-card total"><h3 style="margin-top:0;">Totals</h3>';
-      html += `<div class="data-row"><span class="data-label">Total Current:</span><span class="data-value">${formatValue(data.total_current, 'A')}</span></div>`;
-      html += `<div class="data-row"><span class="data-label">Total Power:</span><span class="data-value">${formatValue(data.total_act_power, 'W')}</span></div>`;
-      html += `<div class="data-row"><span class="data-label">Total Apparent:</span><span class="data-value">${formatValue(data.total_aprt_power, 'VA')}</span></div>`;
-      html += '</div>';
-      html += '</div>';
-
-      document.getElementById('power-data').innerHTML = html;
-    })
-    .catch(error => {
-      document.getElementById('power-data').innerHTML = '<div class="error">Error loading power data: ' + error.message + '</div>';
-    });
-}
-
-function updateEnergyData() {
-  fetch('/rpc/EMData.GetStatus')
-    .then(response => response.json())
-    .then(data => {
-      const phases = [
-        { name: 'Phase A', prefix: 'a', class: 'phase-a' },
-        { name: 'Phase B', prefix: 'b', class: 'phase-b' },
-        { name: 'Phase C', prefix: 'c', class: 'phase-c' }
-      ];
-
-      let html = '<div class="phase-grid">';
-      phases.forEach(phase => {
-        html += `<div class="phase-card ${phase.class}">
-          <h3>${phase.name}</h3>
-          <div class="data-row"><span class="data-label">Consumption:</span><span class="data-value">${formatValue(data[phase.prefix + '_total_act_energy'], 'kWh', 2, 0.001)}</span></div>
-          <div class="data-row"><span class="data-label">Grid Feed-in:</span><span class="data-value">${formatValue(data[phase.prefix + '_total_act_ret_energy'], 'kWh', 2, 0.001)}</span></div>
-        </div>`;
-      });
-
-      html += '<div class="phase-card total"><h3 style="margin-top:0;">Totals</h3>';
-      html += `<div class="data-row"><span class="data-label">Total Consumption:</span><span class="data-value">${formatValue(data.total_act, 'kWh', 2, 0.001)}</span></div>`;
-      html += `<div class="data-row"><span class="data-label">Total Grid Feed-in:</span><span class="data-value">${formatValue(data.total_act_ret, 'kWh', 2, 0.001)}</span></div>`;
-      html += '</div>';
-      html += '</div>';
-
-      document.getElementById('energy-data').innerHTML = html;
-    })
-    .catch(error => {
-      document.getElementById('energy-data').innerHTML = '<div class="error">Error loading energy data: ' + error.message + '</div>';
-    });
-}
-
-function updateTimestamp() {
-  const now = new Date();
-  document.getElementById('timestamp').textContent = 'Last updated: ' + now.toLocaleString();
-}
-
-function refreshData() {
-  updatePowerData();
-  updateEnergyData();
-  updateTimestamp();
-}
-
-// Initial load
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    refreshData();
-    
-    
-    setInterval(refreshData, 5000);
-  }, 400); // 400ms delay to allow the page to render before fetching data
-});
-</script>
-</body>
-</html>
-)=====";
-
-
-
-// Single-file HTML & JavaScript source for the browser console
-const char* htmlPage_console PROGMEM  = R"rawliteral(
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Energy2Shelly_ESP HTTP Console</title>
-    <style>
-        body { background-color: #1e1e1e; color: #00ff00; font-family: monospace; padding: 20px; margin: 0; }
-        h2 { color: #ffffff; font-family: sans-serif; margin-bottom: 10px; }
-        #console { width: calc(100% - 20px); height: 500px; border: 1px solid #444; overflow-y: scroll; padding: 10px; background: #000; box-shadow: inset 0 0 10px #000; }
-        .status { color: #888; font-style: italic; }
-        .timestamp { color: #00aaaa; margin-right: 8px; }
-        .controls-container { margin-top: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; width: calc(100% - 0px); }
-        .btn-container { display: flex; gap: 10px; }
-        .btn { background-color: #000; color: #00ff00; border: 1px solid #00ff00; padding: 8px 15px; font-family: monospace; cursor: pointer; transition: all 0.2s; }
-        .btn:hover { background-color: #00ff00; color: #000; }
-        .scroll-lock-label { color: #ffffff; font-family: sans-serif; font-size: 14px; display: flex; align-items: center; cursor: pointer; }
-        .scroll-lock-label input { margin-right: 8px; cursor: pointer; }
-    </style>
-</head>
-<body>
-    <h2>Energy2Shelly_ESP Live Web Console</h2>
-    <div id="console"><span class="status">[Connecting to console stream...]</span><br></div>
-    <div class="controls-container">
-        <div class="btn-container">
-            <button class="btn" onclick="clearConsole()">Clear Console</button>
-            <button class="btn" onclick="saveConsole()">Save Log</button>
-        </div>
-        <label class="scroll-lock-label">
-            <input type="checkbox" id="autoscroll" checked> Enable Autoscroll
-        </label>
-    </div>
-    <script>
-        var wsPort = 8080; 
-        var ws = new WebSocket('ws://' + window.location.hostname +  '/consolews');
-        var consoleDiv = document.getElementById('console');
-        var autoscrollCheck = document.getElementById('autoscroll');
-        var messageBuffer = "";
-        function getTimestamp() {
-            var now = new Date();
-            return '[' + now.toTimeString().split(' ')[0] + '] ';
-        }
-        ws.onopen = function() {
-            consoleDiv.innerHTML += '<span class="timestamp">' + getTimestamp() + '</span><span style="color:#00ff00;">[Connected to WebSocket on Port ' + wsPort + ']</span><br>';
-        };
-        ws.onmessage = function(event) {
-            messageBuffer += event.data;
-            if (messageBuffer.indexOf('\n') !== -1) {
-                var lines = messageBuffer.split('\n');
-                messageBuffer = lines.pop();
-                var timeTag = '<span class="timestamp">' + getTimestamp() + '</span>';
-                lines.forEach(function(line) {
-                    if (line.length > 0 || line === "") {
-                        consoleDiv.innerHTML += timeTag + line + '<br>';
-                    }
-                });
-                if (autoscrollCheck.checked) {
-                    consoleDiv.scrollTop = consoleDiv.scrollHeight;
-                }
-            }
-        };
-        ws.onclose = function() {
-            consoleDiv.innerHTML += '<span class="timestamp">' + getTimestamp() + '</span><span style="color:#ff0000; font-weight:bold;">[Disconnected from Server]</span><br>';
-        };
-        function clearConsole() {
-            consoleDiv.innerHTML = '<span class="timestamp">' + getTimestamp() + '</span><span class="status">[Console cleared]</span><br>';
-            messageBuffer = ""; 
-        }
-        function saveConsole() {
-            var text = consoleDiv.innerText;
-            var blob = new Blob([text], { type: 'text/plain' });
-            var anchor = document.createElement('a');
-            var now = new Date();
-            var dateStr = now.toISOString().slice(0,10);
-            var timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
-            anchor.download = 'console_log_' + dateStr + '_' + timeStr + '.txt';
-            anchor.href = window.URL.createObjectURL(blob);
-            anchor.target = '_blank';
-            anchor.style.display = 'none';
-            document.body.appendChild(anchor);
-            anchor.click();
-            document.body.removeChild(anchor);
-        }
-    </script>
-</body>
-</html>
-)rawliteral";
+// Header files generated in generate_web_assets.py
+#include "home_html.h"
+#include "webconsole_html.h"
+#include "webplotter_html.h"
+#include "update_index_html.h"
+#include "update_error_html.h"
+#include "update_success_html.h"
 
 const char PASSWORD_INPUT_HTML[] PROGMEM = "<input type='password' name='reset_password' placeholder='Enter reset password' required><br/>";
-
 
 const char RESET_HTML[] PROGMEM = R"rawhtml(
 <!DOCTYPE html><html><head><title>Reset Confirmation</title>
@@ -303,245 +53,17 @@ const char UPDATE_HTML_END[] PROGMEM = R"rawhtml(
 </body></html>
 )rawhtml";
 
-
-  
-const char webplotter_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Energy2Shelly_ESP EM Live Power Dashboard</title>
-    <!-- Chart.js via CDN -->
-    <script src="/chart.min.js"></script>
-    <style>
-        .footer {
-            margin-top: 30px;
-            padding: 15px 0;
-            text-align: center;
-            font-size: 0.8rem;
-            color: #9ca3af;
-            border-top: 1px solid #e5e7eb;
-        }
-        .footer a {
-            color: #6b7280;
-            text-decoration: underline;
-        }
-        .footer a:hover {
-            color: #374151;
-        }
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; color: #333; }
-        h1 { color: #0056b3; margin-bottom: 10px; }
-        p { font-size: 1.1em; margin-top: 5px; }
-        .nav { margin: 30px 0; }
-        .nav a { display: inline-block; padding: 12px 24px; margin: 8px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; transition: background-color 0.3s; }
-        .nav a:hover { background-color: #0056b3; }
-        .nav a.reset { background-color: #d9534f; }
-        .nav a.reset:hover { background-color: #c9302c; }
-        .data-container { max-width: 1300px; margin: 0 auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .data-section { margin: 20px 0; }
-        .data-section h2 { color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 15px; font-size: 1.3em; }
-        .phase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .phase-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; }
-        .phase-card.phase-a { border-left-color: #dc3545; }
-        .phase-card.phase-b { border-left-color: #ffc107; }
-        .phase-card.phase-c { border-left-color: #28a745; }
-        .phase-card.total { background: #e7f3ff; }
-        .phase-card h3 { margin: 0 0 10px 0; font-size: 1.1em; }
-        .data-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #dee2e6; }
-        .data-row:last-child { border-bottom: none; }
-        .data-label { font-weight: 600; color: #555; }
-        .data-value { color: #007bff; font-weight: bold; }
-        .timestamp { text-align: center; color: #6c757d; font-size: 0.9em; margin-top: 15px; font-style: italic; }
-        .loading { color: #6c757d; }
-        .error { color: #dc3545; padding: 10px; background: #f8d7da; border-radius: 5px; }
-         .back-btn {
-        display: inline-flex;
-        align-items: center;
-        padding: 10px 16px;
-        background-color: #ffffff;
-        color: #333333;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        margin-bottom: 20px;
-         }
-        .back-btn:hover {
-            background-color: #e2e8f0;
-        }     
-    </style>
-</head>
-<body>
-    <button onclick="goBack()" class="back-btn">
-        ← Back
-    </button>
-
-    <script>
-    function goBack() {
-        if (document.referrer) {
-            window.history.back();
-        } else {
-            window.location.href = 'index.html'; 
-        }
-    }
-    </script>
-    <div class="container">
-    <h2>⚡ Power Consumption Trend</h2>
-
-    <div class="chart-container">
-        <canvas id="powerChart"></canvas>
-    </div>
-
-    <div id="power-data"></div>
-    <footer class="footer">
-        <p>Energy2Shelly_ESP EM Live Power Dashboard</p>
-        <p>This software uses <a href="https://chartjs.org" target="_blank" rel="noopener">Chart.js</a> (Released under the MIT License, Copyright © 2025 Chart.js Contributors).</p>
-    </footer>
-</div>
-
-<script>
-    // Helperfunction for formating
-    function formatValue(value, unit, decimals = 2) {
-        if (value === undefined || value === null) return '-- ' + unit;
-        return Number(value).toFixed(decimals) + ' ' + unit;
-    }
-
-    // init CHART.JS
-    const ctx = document.getElementById('powerChart').getContext('2d');
-    const maxDataPoints = 120; // Number of points to display on the chart at once
-
-    const powerChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [], // filled dynamically with timestamps
-            datasets: [
-                { label: 'Phase A', data: [], borderColor: '#dc354599', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 2 },
-                { label: 'Phase B', data: [], borderColor: '#ffc10799', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 3 },
-                { label: 'Phase C', data: [], borderColor: '#28a74599', backgroundColor: 'transparent', borderWidth: 2, tension: 0.2, pointRadius: 5 },
-                { label: 'Sum Power', data: [], borderColor: '#007bff99', backgroundColor: '#007bff10', borderWidth: 3, tension: 0.2, fill: true, pointRadius: 2 }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false, // allow CSS control of height
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: { display: true, text: 'Power (Watt)' }
-                },
-                x: {
-                    title: { display: true, text: 'Time' }
-                }
-            },
-            plugins: {
-                legend: { position: 'top' }
-            }
-        }
-    });
-
-    // Exchange Standard-Canvas-Control with fixed height
-    ctx.canvas.parentNode.style.height = '350px';
-
-    function updatePowerData() {
-        fetch('/rpc/EM.GetStatus')
-            .then(response => response.json())
-            .then(data => {
-                
-                // Inject live data in graph
-                const now_time = new Date();
-                const timeString = now_time.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-
-
-                powerChart.data.labels.push(timeString);
-                powerChart.data.datasets[0].data.push(Number(data.a_act_power || 0));
-                powerChart.data.datasets[1].data.push(Number(data.b_act_power || 0));
-                powerChart.data.datasets[2].data.push(Number(data.c_act_power || 0));
-                powerChart.data.datasets[3].data.push(Number(data.total_act_power || 0));
-
-                // Shift effect: Remove oldest values on the left if limit is exceeded
-                if (powerChart.data.labels.length > maxDataPoints) {
-                    powerChart.data.labels.shift();
-                    powerChart.data.datasets.forEach(dataset => dataset.data.shift());
-                }
-
-                // display chart
-                powerChart.update('none'); // 'none' deactivate internal standard animation for better performance at fast updates
-
-
-                const phases = [
-                    { name: 'Phase A', prefix: 'a', class: 'phase-a' },
-                    { name: 'Phase B', prefix: 'b', class: 'phase-b' },
-                    { name: 'Phase C', prefix: 'c', class: 'phase-c' }
-                ];
-
-                let html = '<div class="phase-grid">';
-                phases.forEach(phase => {
-                    html += `<div class="phase-card ${phase.class}">
-                        <h3>${phase.name}</h3>
-                        <div class="data-row"><span class="data-label">Voltage:</span><span class="data-value">${formatValue(data[phase.prefix + '_voltage'], 'V')}</span></div>
-                        <div class="data-row"><span class="data-label">Current:</span><span class="data-value">${formatValue(data[phase.prefix + '_current'], 'A')}</span></div>
-                        <div class="data-row"><span class="data-label">Power:</span><span class="data-value">${formatValue(data[phase.prefix + '_act_power'], 'W')}</span></div>
-                        <div class="data-row"><span class="data-label">Apparent:</span><span class="data-value">${formatValue(data[phase.prefix + '_aprt_power'], 'VA')}</span></div>
-                        <div class="data-row"><span class="data-label">Power Factor:</span><span class="data-value">${formatValue(data[phase.prefix + '_pf'], '', 3)}</span></div>
-                        <div class="data-row"><span class="data-label">Frequency:</span><span class="data-value">${formatValue(data[phase.prefix + '_freq'], 'Hz')}</span></div>
-                    </div>`;
-                });
-
-                html += '<div class="phase-card total"><h3>Totals</h3>';
-                html += `<div class="data-row"><span class="data-label">Total Current:</span><span class="data-value">${formatValue(data.total_current, 'A')}</span></div>`;
-                html += `<div class="data-row"><span class="data-label">Total Power:</span><span class="data-value">${formatValue(data.total_act_power, 'W')}</span></div>`;
-                html += `<div class="data-row"><span class="data-label">Total Apparent:</span><span class="data-value">${formatValue(data.total_aprt_power, 'VA')}</span></div>`;
-                html += '</div>';
-                html += '</div>';
-
-                document.getElementById('power-data').innerHTML = html;
-            })
-            .catch(err => console.error("Error fetching Shelly data:", err));
-    }
-
-    // --- TIMING / INTERVALL ---
-    // force update by first entry
-    updatePowerData();
-    // and every 500 ms after
-    setInterval(updatePowerData, 500);
-</script>
-
-</body>
-</html>
-)rawliteral";
-
 const char UPDATE_SUCCESS_HTML[] PROGMEM = R"rawhtml(
-<!DOCTYPE html><html><head><title>Rebooting...</title>
-<meta name='viewport' content='width=device-width, initial-scale=1'>
-<meta charset='UTF-8'>
-<style>
-  body{font-family:Arial,sans-serif;text-align:center;padding:40px 20px;}
-  .countdown{font-size:24px;font-weight:bold;color:#d9534f;margin:20px 0;}
-  .loader {border: 5px solid #f3f3f3; border-top: 5px solid #d9534f; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto;}
-  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-</style>
-<script>
-  let seconds = 20;
-  function startCountdown() {
-    const timer = setInterval(() => {
-      seconds--;
-      document.getElementById('count').textContent = seconds;
-      if (seconds <= 0) {
-        clearInterval(timer);
-        window.location.href = '/'; // Forwarding to Root Page
-      }
-    }, 1000);
-  }
-  window.onload = startCountdown;
-</script>
-</head>
-<body>
-  <h2>System reboots...</h2>
-  <p>The device will be reachable again in WiFiManager-Mode within your local network shortly.</p>
-  <div class='loader'></div>
-  <div class='countdown'>Redirecting in <span id='count'>20</span> seconds...</div>
-</body></html>
+
+)rawhtml";
+
+// Beautiful upload interface in English
+const char UPDATE_INDEX_HTML[] PROGMEM = R"rawhtml(
+
+)rawhtml";
+
+const char UPDATE_ERROR_HTML[] PROGMEM = R"rawhtml(
+
 )rawhtml";
 
 #define STRINGIFY(x) #x
@@ -581,6 +103,7 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         <div id="configForm">Loading configuration...</div>
         
         <button id="saveBtn" style="margin-top: 15px;">Save Changes</button>
+        <button id="rebootBtn" style="margin-top: 15px; background-color: #dc3545; color: white;">Restart Device</button>
         <p id="status"></p>
     </div>
 
@@ -591,15 +114,68 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
         if (document.referrer) {
             window.history.back();
         } else {
-            window.location.href = 'index.html'; 
+            window.location.href = '/'; 
         }
     }
     
+document.getElementById('rebootBtn').addEventListener('click', async () => {
+
+    const statusText = document.getElementById('status');
+    statusText.innerText = "Sending reboot command...";
+    statusText.style.color = "orange";
+
+    const redirectToHome = () => {
+        setTimeout(() => {
+            window.location.href = '/'; 
+        }, 20000); 
+    };
+    try {
+        const res = await fetch('/reboot', { method: 'POST' }); 
+        
+        if (res.ok) {
+            statusText.innerText = "Device is restarting... Redirecting to homepage in 20 seconds.";
+            statusText.style.color = "green";
+            
+            document.getElementById('saveBtn').disabled = true;
+            document.getElementById('rebootBtn').disabled = true;
+
+            redirectToHome();
+        } else {
+            statusText.innerText = `Reboot failed (Status: ${res.status}).`;
+            statusText.style.color = "red";
+        }
+    } catch (err) {
+        statusText.innerText = "Device disconnected. Restarting... Redirecting to homepage in 20 seconds.";
+        statusText.style.color = "green";
+        
+        document.getElementById('saveBtn').disabled = true;
+        document.getElementById('rebootBtn').disabled = true;
+        
+        redirectToHome();
+    }
+});
+
+
+
         const formContainer = document.getElementById('configForm');
         const saveBtn = document.getElementById('saveBtn');
         const statusText = document.getElementById('status');
         let currentConfig = {};
         const CONFIG_DICTIONARY = {
+            wifi: {
+                _label: "WiFi Settings",
+                _description: "Settings for connecting to WiFi networks.",
+                ssid: {
+                    label: "SSID",
+                    max_length : 32,
+                    description: "The name of the WiFi network."
+                },
+                password: {
+                    label: "Password",
+                    max_length : 64,
+                    description: "The password for the WiFi network."
+                }
+            },
             basic: {
                 _label: "Basic Settings",
                 _description: "General settings for the device.",
@@ -895,16 +471,49 @@ const char CONFIG_PAGE_HTML[] PROGMEM = R"=====(
 
    async function loadConfig() {
     try {
-        const res = await fetch('/json_preferences');
+        const res = await fetch('/json_config');
         if (res.status === 401) {
             setTimeout(loadConfig, 500); 
             return; 
         }
         
         currentConfig = await res.json();
+        let showOnlyWiFi = false; 
        
+        if (currentConfig.wifi && currentConfig.wifi.networks) {
+            const uniqueNetworksMap = new Map();
+
+            if (currentConfig.wifi.networks.length > 0) {
+                showOnlyWiFi = true;
+            }
+    
+            currentConfig.wifi.networks.forEach(net => {
+                if (net.ssid && net.ssid.trim() !== "") {
+                    const existing = uniqueNetworksMap.get(net.ssid);
+                    if (!existing || net.rssi > existing.rssi) {
+                        uniqueNetworksMap.set(net.ssid, net);
+                    }
+                }
+            });
+
+            CONFIG_DICTIONARY.wifi.ssid.options = Array.from(uniqueNetworksMap.values());
+            delete currentConfig.wifi.networks;   
+        }
+
+
         formContainer.innerHTML = ''; 
-        generateFormFromDictionary(CONFIG_DICTIONARY, currentConfig, formContainer);
+
+
+        let targetDictionary = CONFIG_DICTIONARY;
+
+        if (showOnlyWiFi) {
+            targetDictionary = {
+                wifi: CONFIG_DICTIONARY.wifi
+            };
+        }
+
+        
+        generateFormFromDictionary(targetDictionary, currentConfig, formContainer);
           const inputTypeField = document.getElementById('input_basic_input_type');
 
         if (inputTypeField) {
@@ -1031,25 +640,36 @@ function generateFormFromDictionary(dictionary, currentConfig, container, curren
         let input;
         const configValue = (currentConfigNode && currentConfigNode[key] !== undefined) ? currentConfigNode[key] : '';
         
-        if (entry.options) {
-            input = document.createElement('select');
-            input.id = 'input_' + currentPath; 
+if (entry.options) {
+    input = document.createElement('select');
+    input.id = 'input_' + currentPath; 
 
-            entry.options.forEach(optValue => {
-                const option = document.createElement('option');
-                option.text = optValue; 
-                
-                const mappedValue = INPUT_TYPE_ENUM[optValue] !== undefined ? INPUT_TYPE_ENUM[optValue] : optValue;
-                option.value = mappedValue;
+    entry.options.forEach(opt => {
+        const option = document.createElement('option');
+        
+        const isNetworkObj = typeof opt === 'object' && opt !== null;
+        const ssidValue = isNetworkObj ? opt.ssid : opt;
+        const rssiValue = isNetworkObj ? opt.rssi : null;
 
-                if (configValue === mappedValue || String(configValue) === String(mappedValue) || configValue === optValue) {
-                    option.selected = true;
-                }
-                input.appendChild(option);
-            });
+        let signalText = "";
+        if (rssiValue !== null) {
+            const percentage = Math.min(Math.max(2 * (rssiValue + 100), 0), 100);            
+            signalText = ` (${percentage}%)`;
+        }
 
-            inputWrapper.appendChild(input);
-        } 
+        option.text = ssidValue + signalText; 
+        
+        const mappedValue = INPUT_TYPE_ENUM[ssidValue] !== undefined ? INPUT_TYPE_ENUM[ssidValue] : ssidValue;
+        option.value = mappedValue;
+
+        if (configValue === mappedValue || String(configValue) === String(mappedValue) || configValue === ssidValue) {
+            option.selected = true;
+        }
+        input.appendChild(option);
+    });
+
+    inputWrapper.appendChild(input);
+       }  
         else {
             input = document.createElement('input');
             input.id = 'input_' + currentPath; 
@@ -1095,7 +715,7 @@ function generateFormFromDictionary(dictionary, currentConfig, container, curren
 }
 async function saveConfig() {
     const castValue = (val) => isNaN(val) || val.trim() === "" ? val : Number(val);
-
+   
    function buildPayload(configObj, dictionaryObj, prefix = '') {
         const result = {};
 
@@ -1106,7 +726,12 @@ async function saveConfig() {
             const inputField = document.getElementById('input_' + currentPath);
 
             if (inputField) {
-                result[key] = castValue(inputField.value);
+                const lowerKey = key.toLowerCase();
+                if (lowerKey.includes('password') || lowerKey.includes('ssid')) {
+                    result[key] = String(inputField.value); // Niemals in Number konvertieren
+                } else {
+                    result[key] = castValue(inputField.value); // Normale Konvertierung für den Rest
+                }
             } else if (typeof dictionaryObj[key] === 'object' && dictionaryObj[key] !== null && !dictionaryObj[key].hasOwnProperty('label')) {
                 const subConfig = (configObj && configObj[key]) ? configObj[key] : {};
                 result[key] = buildPayload(subConfig, dictionaryObj[key], currentPath);
@@ -1127,18 +752,24 @@ async function saveConfig() {
     }
     const payload = buildPayload(currentConfig, CONFIG_DICTIONARY);
 
+
+    const saveBtn = document.getElementById('saveBtn');
+    const rebootBtn = document.getElementById('rebootBtn');
     try {
+        saveBtn.disabled = true;
+        rebootBtn.disabled = true;
+
         statusText.innerText = "Saving to device...";
         statusText.style.color = "orange";
 
-        const res = await fetch('/json_preferences', {
+        const res = await fetch('/json_config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload) 
         });
 
         if (res.ok) {
-            statusText.innerText = "Successfully saved to flash storage!";
+            statusText.innerText = "Successfully saved to flash storage! Please restart the device to make sure all changes are in effect.";
             statusText.style.color = "green";
         } else {
             statusText.innerText = "Device rejected the save request.";
@@ -1147,6 +778,9 @@ async function saveConfig() {
     } catch (err) {
         statusText.innerText = "Network error while saving.";
         statusText.style.color = "red";
+    } finally {
+        saveBtn.disabled = false;
+        rebootBtn.disabled = false;
     }
 }
             saveBtn.addEventListener('click', saveConfig);

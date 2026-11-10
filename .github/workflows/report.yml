@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Size Logs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: size-logs
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -129,7 +129,7 @@ jobs:
           "
 
       - name: Post Comment to PR
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           number: ${{ steps.pr_metadata.outputs.num }}
