@@ -45,6 +45,8 @@ void buildRpcResponse(const char* method, long rpcId, const char* src, String& o
     else if (strcmp(method, "Script.GetCode") == 0) scriptGetCode(innerPtr, INNER_SIZE);
     else if (strcmp(method, "Script.List") == 0) scriptList(innerPtr, INNER_SIZE);
     else if (strcmp(method, "WiFi.GetStatus") == 0) wifiGetStatus(innerPtr, INNER_SIZE);
+    else if (strcmp(method, "Sys.GetStatus") == 0) sysGetStatus(innerPtr, INNER_SIZE);
+    else if (strcmp(method, "Sys.GetConfig") == 0) sysGetConfig(innerPtr, INNER_SIZE);
     else {
         output = "{\"id\":" + String(rpcId) + ",\"src\":\"" + String(shelly_name.c_str()) + "\",\"error\":{\"code\":-32601,\"message\":\"Method not found\"}}";
         return;
@@ -184,10 +186,10 @@ void notifyStatusWebSocket() {
 void parseUdpRPC() {
   uint8_t buffer[1024];
   int packetSize = UdpRPC.parsePacket();
-  if (packetSize) {
+  if (packetSize > 0) {
     JsonDocument json;
-    int rSize = UdpRPC.read(buffer, 1024);
-    buffer[rSize] = 0;
+    int rSize = UdpRPC.read(buffer, sizeof(buffer) - 1);
+    buffer[rSize] = '\0';
     DEBUG_SERIAL.print(F("Received UDP packet on port 1010: "));
     DEBUG_SERIAL.println((char *)buffer);
     deserializeJson(json, buffer);
