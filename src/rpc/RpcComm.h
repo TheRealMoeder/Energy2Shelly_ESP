@@ -7,10 +7,13 @@
 // minimum time between two NotifyStatus messages to websocket clients (ms)
 #define NOTIFY_STATUS_MIN_INTERVAL 500
 
-void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
-                    AwsEventType type, void *arg, uint8_t *data, size_t len);
+size_t scriptGetCode(char* buffer, size_t maxLen);
+size_t scriptList(char* buffer, size_t maxLen);
+size_t shellyListMethods(char* buffer, size_t maxLen);
+void buildRpcResponse(const char* method, long rpcId, const char* src, String& output);
+void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 void notifyStatusWebSocket();
 void parseUdpRPC();
-void parseHttpRPC(String requestBody, AsyncWebServerRequest *request);
+void parseHttpRPC(const String& requestBody, String& responseBody);
 
 #endif // RPC_COMM_H

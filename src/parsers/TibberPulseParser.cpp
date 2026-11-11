@@ -27,7 +27,7 @@ bool parseTibberPulse()
   bool ret = false;
   DEBUG_SERIAL.print(F("Querying TibberPulse raw SML: "));
   char url[128];
-  snprintf(url, sizeof(url), "http://%s%s%u", tibber_host, tibber_rpc[guess], tibber_nodeid);
+  snprintf_P(url, sizeof(url), PSTR("http://%s%s%u"), tibber_host, tibber_rpc[guess], tibber_nodeid);
   DEBUG_SERIAL.printf("URL:%s, user:%s\r\n", url, tibber_user);
   http.begin(wifi_client, url);
   http.setAuthorization(tibber_user, tibber_password);

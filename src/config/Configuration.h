@@ -247,7 +247,7 @@ extern const char* configPath;
 #define power_offset (config_doc["basic"]["power_offset"].as<double_t>())
 
 #define mqtt_server (config_doc["mqtt"]["mqtt_server"]|"")
-#define mqtt_port (config_doc["mqtt"]["mqtt_port"]|"")
+#define mqtt_port (config_doc["mqtt"]["mqtt_port"].as<uint16_t>() | (uint16_t)1883)
 #define mqtt_topic (config_doc["mqtt"]["mqtt_topic"]|"")
 #define mqtt_user (config_doc["mqtt"]["mqtt_user"]|"")
 #define mqtt_passwd (config_doc["mqtt"]["mqtt_password"]|"")
