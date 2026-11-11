@@ -26,14 +26,33 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length) {
 }
 
 void mqtt_reconnect() {
+  static unsigned long lastReconnectAttempt = 0;
+  static bool hasAttempted = false;
+  const unsigned long now = millis();
+  if (hasAttempted && now - lastReconnectAttempt < 5000) {
+    return;
+  }
+  hasAttempted = true;
+  lastReconnectAttempt = now;
+
   DEBUG_SERIAL.print(F("Attempting MQTT connection..."));
-  if (mqtt_client.connect(shelly_name.c_str(), String(mqtt_user).c_str(), String(mqtt_passwd).c_str())) {
+
+  const char* user = mqtt_user;
+  const char* pass = mqtt_passwd;
+  if (user == nullptr || user[0] == '\0') {
+    user = nullptr;
+    pass = nullptr;
+  }
+
+  if (mqtt_client.connect(shelly_name.c_str(), user, pass)) {
     DEBUG_SERIAL.println(F("connected"));
-    mqtt_client.subscribe(mqtt_topic);
+    const char* topic = mqtt_topic;
+    if (topic != nullptr && topic[0] != '\0') {
+      mqtt_client.subscribe(topic);
+    }
   } else {
     DEBUG_SERIAL.print(F("failed, rc="));
     DEBUG_SERIAL.print(mqtt_client.state());
     DEBUG_SERIAL.println(F(" try again in 5 seconds"));
-    delay(5000);
   }
 }
