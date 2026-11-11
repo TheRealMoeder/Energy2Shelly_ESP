@@ -22,12 +22,13 @@ size_t shellyGetDeviceInfo(char* buffer, size_t maxLen) {
 
 // aligned with Shelly API docs
 size_t sysGetConfig(char* buffer, size_t maxLen) {
+  IPAddress ip = WiFi.localIP();
   int written = snprintf(buffer, maxLen,
       "{\"device\":{\"name\":\"%s\",\"mac\":\"%s\",\"fw_id\":\"%s\",\"eco_mode\":false,\"profile\":\"triphase\",\"discoverable\":false},"
       "\"location\":{\"tz\":\"Europe/Berlin\",\"lat\":54.306,\"lon\":9.663},\"debug\":{\"mqtt\":{\"enable\":false},\"websocket\":{\"enable\":false},\"udp\":{\"addr\":null}},"
-      "\"ui_data\":{},\"rpc_udp\":{\"dst_addr\":\"%s\",\"listen_port\":\"%d\"},\"sntp\":{\"server\":null},\"cfg_rev\":10}",
+      "\"ui_data\":{},\"rpc_udp\":{\"dst_addr\":\"%u.%u.%u.%u\",\"listen_port\":%d},\"sntp\":{\"server\":null},\"cfg_rev\":10}",
       shelly_name.c_str(), shelly_mac.as<const char*>(), shelly_fw_id.as<const char*>(),
-      WiFi.localIP().toString().c_str(), config_doc["shelly"]["shelly_port"].as<int>()
+      (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3], config_doc["shelly"]["shelly_port"].as<int>()
   );
   return finalize_buffer(written, maxLen);
 }
@@ -111,12 +112,21 @@ size_t shellyGetConfig(char* buffer, size_t maxLen) {
   EMGetConfig(emConfig, sizeof(emConfig));
   sysGetConfig(sysConfig, sizeof(sysConfig));
 
+  IPAddress ip = WiFi.localIP();
+  IPAddress mask = WiFi.subnetMask();
+  IPAddress gw = WiFi.gatewayIP();
+  IPAddress dns = WiFi.dnsIP();
+
   int written = snprintf(buffer, maxLen,
       "{\"ble\":{\"enable\":false},\"cloud\":{\"enable\":false,\"server\":null},\"em:0\":%s,\"sys\":%s,"
-      "\"wifi\":{\"sta\":{\"ssid\":\"%s\",\"is_open\":false,\"enable\":true,\"ipv4mode\":\"dhcp\",\"ip\":\"%s\","
-      "\"netmask\":\"%s\",\"gw\":\"%s\",\"nameserver\":\"%s\"},\"ws\":{\"enable\":false,\"server\":null,\"ssl_ca\":\"ca.pem\"}}}",
-      emConfig, sysConfig, WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(),
-      WiFi.subnetMask().toString().c_str(), WiFi.gatewayIP().toString().c_str(), WiFi.dnsIP().toString().c_str()
+      "\"wifi\":{\"sta\":{\"ssid\":\"%s\",\"is_open\":false,\"enable\":true,\"ipv4mode\":\"dhcp\","
+      "\"ip\":\"%u.%u.%u.%u\",\"netmask\":\"%u.%u.%u.%u\",\"gw\":\"%u.%u.%u.%u\",\"nameserver\":\"%u.%u.%u.%u\"},"
+      "\"ws\":{\"enable\":false,\"server\":null,\"ssl_ca\":\"ca.pem\"}}}",
+      emConfig, sysConfig, WiFi.SSID().c_str(),
+      (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
+      (unsigned int)mask[0], (unsigned int)mask[1], (unsigned int)mask[2], (unsigned int)mask[3],
+      (unsigned int)gw[0], (unsigned int)gw[1], (unsigned int)gw[2], (unsigned int)gw[3],
+      (unsigned int)dns[0], (unsigned int)dns[1], (unsigned int)dns[2], (unsigned int)dns[3]
   );
   blinkled(ledblinkduration);
   return finalize_buffer(written, maxLen);
@@ -145,8 +155,6 @@ size_t shellyGetStatus(char* buffer, size_t maxLen) {
   double temperature = 26.55;
 #ifdef ESP32
   temperature = temperatureRead();
-#else
-  temperature = 26.55;
 #endif
 
   char emStatus[768] = "";
@@ -158,17 +166,35 @@ size_t shellyGetStatus(char* buffer, size_t maxLen) {
   sysGetStatus(sysStatus, sizeof(sysStatus));
 
   bool connected = (WiFi.status() == WL_CONNECTED);
+  char wifiBlock[256];
+
+  if (connected) {
+    IPAddress ip = WiFi.localIP();
+    const uint8_t* bssid = WiFi.BSSID();
+    uint8_t zeroBssid[6] = {0, 0, 0, 0, 0, 0};
+    if (bssid == nullptr) {
+      bssid = zeroBssid;
+    }
+
+    snprintf(wifiBlock, sizeof(wifiBlock),
+        "{\"sta_ip\":\"%u.%u.%u.%u\",\"status\":\"got ip\",\"ssid\":\"%s\","
+        "\"bssid\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"rssi\":%d,\"sta_ip6\":[]}",
+        (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
+        WiFi.SSID().c_str(),
+        (unsigned int)bssid[0], (unsigned int)bssid[1], (unsigned int)bssid[2], (unsigned int)bssid[3], (unsigned int)bssid[4], (unsigned int)bssid[5],
+        WiFi.RSSI()
+    );
+  } else {
+    snprintf(wifiBlock, sizeof(wifiBlock),
+        "{\"sta_ip\":null,\"status\":\"connecting\",\"ssid\":null,\"bssid\":null,\"rssi\":0,\"sta_ip6\":[]}"
+    );
+  }
 
   int written = snprintf(buffer, maxLen,
       "{\"ble\":{},\"bthome\":{},\"cloud\":{\"connected\":false},\"em:0\":%s,\"emdata:0\":%s,\"eth\":{\"ip\":null,\"ip6\":null},"
       "\"modbus\":{},\"mqtt\":{\"connected\":false},\"sys\":%s,\"temperature:0\":{\"id\":0,\"tC\":%.2f,\"tF\":%.2f},"
-      "\"wifi\":{\"sta_ip\":\"%s\",\"status\":\"%s\",\"ssid\":\"%s\",\"bssid\":\"%s\",\"rssi\":%d,\"sta_ip6\":[]},\"ws\":{\"connected\":false}}",
-      emStatus, emDataStatus, sysStatus, temperature, (temperature * 9.0 / 5.0) + 32.0,
-      connected ? WiFi.localIP().toString().c_str() : "null",
-      connected ? "got ip" : "connecting",
-      connected ? WiFi.SSID().c_str() : "null",
-      connected ? WiFi.BSSIDstr().c_str() : "null",
-      connected ? WiFi.RSSI() : 0
+      "\"wifi\":%s,\"ws\":{\"connected\":false}}",
+      emStatus, emDataStatus, sysStatus, temperature, (temperature * 9.0 / 5.0) + 32.0, wifiBlock
   );
   blinkled(ledblinkduration);
   return finalize_buffer(written, maxLen);
@@ -176,15 +202,28 @@ size_t shellyGetStatus(char* buffer, size_t maxLen) {
 
 // aligned with Shelly API docs
 size_t wifiGetStatus(char* buffer, size_t maxLen) {
-  bool connected = (WiFi.status() == WL_CONNECTED);
-  int written = snprintf(buffer, maxLen,
-      "{\"sta_ip\":\"%s\",\"status\":\"%s\",\"ssid\":\"%s\",\"bssid\":\"%s\",\"rssi\":%d,\"ap_client_count\":0}",
-      connected ? WiFi.localIP().toString().c_str() : "null",
-      connected ? "got ip" : "connecting",
-      connected ? WiFi.SSID().c_str() : "null",
-      connected ? WiFi.BSSIDstr().c_str() : "null",
-      connected ? WiFi.RSSI() : 0
-  );
+  int written = 0;
+  if (WiFi.status() == WL_CONNECTED) {
+    IPAddress ip = WiFi.localIP();
+    const uint8_t* bssid = WiFi.BSSID();
+    uint8_t zeroBssid[6] = {0, 0, 0, 0, 0, 0};
+    if (bssid == nullptr) {
+      bssid = zeroBssid;
+    }
+
+    written = snprintf(buffer, maxLen,
+        "{\"sta_ip\":\"%u.%u.%u.%u\",\"status\":\"got ip\",\"ssid\":\"%s\","
+        "\"bssid\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"rssi\":%d,\"ap_client_count\":0}",
+        (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
+        WiFi.SSID().c_str(),
+        (unsigned int)bssid[0], (unsigned int)bssid[1], (unsigned int)bssid[2], (unsigned int)bssid[3], (unsigned int)bssid[4], (unsigned int)bssid[5],
+        WiFi.RSSI()
+    );
+  } else {
+    written = snprintf(buffer, maxLen,
+        "{\"sta_ip\":null,\"status\":\"connecting\",\"ssid\":null,\"bssid\":null,\"rssi\":0,\"ap_client_count\":0}"
+    );
+  }
   blinkled(ledblinkduration);
   return finalize_buffer(written, maxLen);
 }

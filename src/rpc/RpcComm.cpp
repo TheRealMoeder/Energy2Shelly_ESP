@@ -29,7 +29,7 @@ size_t shellyListMethods(char* buffer, size_t maxLen) {
 
 // Router function allocating a local payload per request channel to prevent race conditions
 void buildRpcResponse(const char* method, long rpcId, const char* src, String& output) {
-    const size_t INNER_SIZE = 1536; 
+    const size_t INNER_SIZE = 1792; 
     String innerJson;
     innerJson.reserve(INNER_SIZE);
     char* innerPtr = const_cast<char*>(innerJson.c_str());
