@@ -5,24 +5,23 @@
 
 // Aligned with Shelly API docs: Script.GetCode
 size_t scriptGetCode(char* buffer, size_t maxLen) {
-    int written = snprintf(buffer, maxLen, "{\"data\":\"\",\"left\":\"0\"}");
+    int written = snprintf_P(buffer, maxLen, PSTR("{\"data\":\"\",\"left\":\"0\"}"));
     blinkled(ledblinkduration);
     return finalize_buffer(written, maxLen);
 }
 
 // Aligned with Shelly API docs: Script.List
 size_t scriptList(char* buffer, size_t maxLen) {
-    int written = snprintf(buffer, maxLen, "{\"scripts\":[]}");
+    int written = snprintf_P(buffer, maxLen, PSTR("{\"scripts\":[]}")]
     blinkled(ledblinkduration);
     return finalize_buffer(written, maxLen);
 }
 
 // Aligned with Shelly API docs: Shelly.ListMethods
 size_t shellyListMethods(char* buffer, size_t maxLen) {
-    int written = snprintf(buffer, maxLen, 
-        "{\"methods\":[\"EM.GetStatus\",\"EM.GetConfig\",\"EMData.GetStatus\",\"Shelly.GetComponents\","
+    int written = snprintf_P(buffer, maxLen, PSTR("{\"methods\":[\"EM.GetStatus\",\"EM.GetConfig\",\"EMData.GetStatus\",\"Shelly.GetComponents\","
         "\"Shelly.GetConfig\",\"Shelly.GetDeviceInfo\",\"Shelly.GetStatus\",\"Sys.GetConfig\",\"Sys.GetStatus\",\"WiFi.GetStatus\"]}"
-    );
+    ));
     blinkled(ledblinkduration);
     return finalize_buffer(written, maxLen);
 }
@@ -34,19 +33,19 @@ void buildRpcResponse(const char* method, long rpcId, const char* src, String& o
     innerJson.reserve(INNER_SIZE);
     char* innerPtr = const_cast<char*>(innerJson.c_str());
 
-    if (strcmp(method, "Shelly.GetDeviceInfo") == 0) shellyGetDeviceInfo(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "Shelly.GetComponents") == 0) shellyComponents(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "Shelly.GetConfig") == 0) shellyGetConfig(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "Shelly.GetStatus") == 0) shellyGetStatus(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "Shelly.ListMethods") == 0) shellyListMethods(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "EM.GetStatus") == 0) EMGetStatus(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "EMData.GetStatus") == 0) EMDataGetStatus(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "EM.GetConfig") == 0) EMGetConfig(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "Script.GetCode") == 0) scriptGetCode(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "Script.List") == 0) scriptList(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "WiFi.GetStatus") == 0) wifiGetStatus(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "Sys.GetStatus") == 0) sysGetStatus(innerPtr, INNER_SIZE);
-    else if (strcmp(method, "Sys.GetConfig") == 0) sysGetConfig(innerPtr, INNER_SIZE);
+    if (strcmp_P(method, PSTR("Shelly.GetDeviceInfo")) == 0) shellyGetDeviceInfo(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("Shelly.GetComponents")) == 0) shellyComponents(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("Shelly.GetConfig")) == 0) shellyGetConfig(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("Shelly.GetStatus")) == 0) shellyGetStatus(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("Shelly.ListMethods")) == 0) shellyListMethods(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("EM.GetStatus")) == 0) EMGetStatus(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("EMData.GetStatus")) == 0) EMDataGetStatus(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("EM.GetConfig")) == 0) EMGetConfig(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("Script.GetCode")) == 0) scriptGetCode(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("Script.List")) == 0) scriptList(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("WiFi.GetStatus")) == 0) wifiGetStatus(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("Sys.GetStatus")) == 0) sysGetStatus(innerPtr, INNER_SIZE);
+    else if (strcmp_P(method, PSTR("Sys.GetConfig")) == 0) sysGetConfig(innerPtr, INNER_SIZE);
     else {
         output = "{\"id\":" + String(rpcId) + ",\"src\":\"" + String(shelly_name.c_str()) + "\",\"error\":{\"code\":-32601,\"message\":\"Method not found\"}}";
         return;
@@ -58,9 +57,9 @@ void buildRpcResponse(const char* method, long rpcId, const char* src, String& o
     char* wrapPtr = const_cast<char*>(output.c_str());
 
     if (src != nullptr && strcmp(src, "EMPTY") != 0 && strlen(src) > 0) {
-        snprintf(wrapPtr, WRAPPER_SIZE, "{\"id\":%ld,\"src\":\"%s\",\"dst\":\"%s\",\"result\":%s}", rpcId, shelly_name.c_str(), src, innerJson.c_str());
+        snprintf_P(wrapPtr, WRAPPER_SIZE, PSTR("{\"id\":%ld,\"src\":\"%s\",\"dst\":\"%s\",\"result\":%s}"), rpcId, shelly_name.c_str(), src, innerJson.c_str());
     } else {
-        snprintf(wrapPtr, WRAPPER_SIZE, "{\"id\":%ld,\"src\":\"%s\",\"result\":%s}", rpcId, shelly_name.c_str(), innerJson.c_str());
+        snprintf_P(wrapPtr, WRAPPER_SIZE, PSTR("{\"id\":%ld,\"src\":\"%s\",\"result\":%s}"), rpcId, shelly_name.c_str(), innerJson.c_str());
     }
     output = String(wrapPtr);
 }
@@ -135,11 +134,12 @@ void notifyStatusWebSocket() {
     float total_power = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
     float total_apparent = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
     
-    snprintf(emStatusBuffer, sizeof(emStatusBuffer),
-      "\"em:0\":{\"id\":0,\"a_current\":%.2f,\"a_voltage\":%.2f,\"a_act_power\":%.2f,\"a_aprt_power\":%.2f,\"a_pf\":%.2f,\"a_freq\":%.2f,"
+    snprintf_P(emStatusBuffer, sizeof(emStatusBuffer),
+      PSTR("\"em:0\":{\"id\":0,\"a_current\":%.2f,\"a_voltage\":%.2f,\"a_act_power\":%.2f,\"a_aprt_power\":%.2f,\"a_pf\":%.2f,\"a_freq\":%.2f,"
       "\"b_current\":%.2f,\"b_voltage\":%.2f,\"b_act_power\":%.2f,\"b_aprt_power\":%.2f,\"b_pf\":%.2f,\"b_freq\":%.2f,"
       "\"c_current\":%.2f,\"c_voltage\":%.2f,\"c_act_power\":%.2f,\"c_aprt_power\":%.2f,\"c_pf\":%.2f,\"c_freq\":%.2f,"
-      "\"n_current\":null,\"total_current\":%.2f,\"total_act_power\":%.2f,\"total_aprt_power\":%.2f,\"user_calibrated_phase\":[]}",
+      "\"n_current\":null,\"total_current\":%.2f,\"total_act_power\":%.2f,\"total_aprt_power\":%.2f,\"user_calibrated_phase\":[]}")
+      ,
       PhasePower[0].current, PhasePower[0].voltage, PhasePower[0].power, PhasePower[0].apparentPower, PhasePower[0].powerFactor, PhasePower[0].frequency,
       PhasePower[1].current, PhasePower[1].voltage, PhasePower[1].power, PhasePower[1].apparentPower, PhasePower[1].powerFactor, PhasePower[1].frequency,
       PhasePower[2].current, PhasePower[2].voltage, PhasePower[2].power, PhasePower[2].apparentPower, PhasePower[2].powerFactor, PhasePower[2].frequency,
@@ -148,11 +148,11 @@ void notifyStatusWebSocket() {
   }
 
   if (energyChanged) {
-    snprintf(emDataStatusBuffer, sizeof(emDataStatusBuffer),
-      "\"emdata:0\":{\"id\":0,\"a_total_act_energy\":%.2f,\"a_total_act_ret_energy\":%.2f,"
+    snprintf_P(emDataStatusBuffer, sizeof(emDataStatusBuffer),
+      PSTR("\"emdata:0\":{\"id\":0,\"a_total_act_energy\":%.2f,\"a_total_act_ret_energy\":%.2f,",
       "\"b_total_act_energy\":%.2f,\"b_total_act_ret_energy\":%.2f,"
       "\"c_total_act_energy\":%.2f,\"c_total_act_ret_energy\":%.2f,"
-      "\"total_act\":%.2f,\"total_act_ret\":%.2f}",
+      "\"total_act\":%.2f,\"total_act_ret\":%.2f}"),
       PhaseEnergy[0].consumption, PhaseEnergy[0].gridfeedin,
       PhaseEnergy[1].consumption, PhaseEnergy[1].gridfeedin,
       PhaseEnergy[2].consumption, PhaseEnergy[2].gridfeedin,
@@ -168,8 +168,8 @@ void notifyStatusWebSocket() {
 
   const char* comma = (powerChanged && energyChanged) ? "," : "";
 
-  snprintf(finalPtr, FINAL_BUFFER_SIZE,
-    "{\"src\":\"%s\",\"method\":\"NotifyStatus\",\"params\":{\"ts\":%.0f,%s%s%s}}",
+  snprintf_P(finalPtr, FINAL_BUFFER_SIZE,
+    PSTR("{\"src\":\"%s\",\"method\":\"NotifyStatus\",\"params\":{\"ts\":%.0f,%s%s%s}}"),
     shelly_name.c_str(),
     (double)time(nullptr),
     powerChanged ? emStatusBuffer : "",
@@ -217,7 +217,7 @@ void parseHttpRPC(const String& requestBody, String& responseBody) {
   DEBUG_SERIAL.println(requestBody);
 
   if (deserializeJson(json, requestBody) || !json["method"].is<const char*>()) {
-    responseBody = "{\"error\":{\"code\":-32600,\"message\":\"Invalid request\"}}";
+    responseBody = F("{\"error\":{\"code\":-32600,\"message\":\"Invalid request\"}}");
     return;
   }
   
