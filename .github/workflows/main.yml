@@ -69,7 +69,7 @@ jobs:
 
       - name: Upload Size Artifacts (PR only)
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: size-logs
           path: |
@@ -111,7 +111,7 @@ jobs:
           cp .pio/build/esp32-c3/firmware.bin ./.github/pages/esp32-c3-ota.bin
           
       - name: Upload firmware artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: firmware
           path: |
