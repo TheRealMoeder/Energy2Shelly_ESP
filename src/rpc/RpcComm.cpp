@@ -12,7 +12,7 @@ size_t scriptGetCode(char* buffer, size_t maxLen) {
 
 // Aligned with Shelly API docs: Script.List
 size_t scriptList(char* buffer, size_t maxLen) {
-    int written = snprintf_P(buffer, maxLen, PSTR("{\"scripts\":[]}")]
+    int written = snprintf_P(buffer, maxLen, PSTR("{\"scripts\":[]}"));
     blinkled(ledblinkduration);
     return finalize_buffer(written, maxLen);
 }
@@ -149,15 +149,12 @@ void notifyStatusWebSocket() {
 
   if (energyChanged) {
     snprintf_P(emDataStatusBuffer, sizeof(emDataStatusBuffer),
-      PSTR("\"emdata:0\":{\"id\":0,\"a_total_act_energy\":%.2f,\"a_total_act_ret_energy\":%.2f,",
-      "\"b_total_act_energy\":%.2f,\"b_total_act_ret_energy\":%.2f,"
-      "\"c_total_act_energy\":%.2f,\"c_total_act_ret_energy\":%.2f,"
-      "\"total_act\":%.2f,\"total_act_ret\":%.2f}"),
-      PhaseEnergy[0].consumption, PhaseEnergy[0].gridfeedin,
-      PhaseEnergy[1].consumption, PhaseEnergy[1].gridfeedin,
-      PhaseEnergy[2].consumption, PhaseEnergy[2].gridfeedin,
-      PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption,
-      PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin
+      PSTR("\"emdata:0\":{\"id\":0,\"a_total_act_energy\":%.2f,\"a_total_act_ret_energy\":%.2f,"
+           "\"b_total_act_energy\":%.2f,\"b_total_act_ret_energy\":%.2f,"
+           "\"c_total_act_energy\":%.2f,\"c_total_act_ret_energy\":%.2f,"
+           "\"total_act\":%.2f,\"total_act_ret\":%.2f}"),
+      PhaseEnergy[0].consumption, PhaseEnergy[0].gridfeedin, PhaseEnergy[1].consumption, PhaseEnergy[1].gridfeedin, PhaseEnergy[2].consumption, PhaseEnergy[2].gridfeedin,
+      PhaseEnergy[0].consumption + PhaseEnergy[1].consumption + PhaseEnergy[2].consumption, PhaseEnergy[0].gridfeedin + PhaseEnergy[1].gridfeedin + PhaseEnergy[2].gridfeedin
     );
   }
 
