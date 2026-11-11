@@ -180,19 +180,3 @@ void setJsonPathPower(JsonDocument &json) {
     setEnergyData(energyIn, energyOut);
   }
 }
-
-// Helper: parse a raw Shelly JSON string and forward to setJsonPathPower
-void parseShellyString(const char *jsonStr) {
-  JsonDocument doc;
-  DeserializationError err = deserializeJson(doc, jsonStr);
-  if (err) {
-    DEBUG_SERIAL.print(F("deserializeJson failed: "));
-    DEBUG_SERIAL.println(err.c_str());
-    return;
-  }
-  setJsonPathPower(doc);
-}
-
-void parseShellyString(const String &s) {
-  parseShellyString(s.c_str());
-}
