@@ -1,6 +1,7 @@
 #include "SmlCommon.h"
 #include "../data/DataProcessing.h"
 #include <limits.h>
+#include <math.h>
 
 // bits for the OBIS values found in the current telegram
 #define SML_SEEN_CONSUMPTION 0x01
@@ -14,6 +15,8 @@
 
 static double sml_consumption = 0, sml_production = 0, sml_power = 0;
 static double sml_power_l1 = 0, sml_power_l2 = 0, sml_power_l3 = 0;
+// optional grid values, NAN if the meter did not send them
+static double sml_voltage[3], sml_current[3], sml_apparent_power[3], sml_frequency;
 static uint8_t sml_seen = 0;
 static bool sml_had_power = false;
 
@@ -42,12 +45,27 @@ static void smlReadValue(double &target, sml_units_t unit, uint8_t seen_bit)
 // - power L1    (OBIS 1-0:36.7.0)
 // - power L2    (OBIS 1-0:56.7.0)
 // - power L3    (OBIS 1-0:76.7.0)
+// optional, used if the meter sends them (often only with PIN entered / extended data enabled):
+// - voltage L1-L3        (OBIS 1-0:32.7.0, 52.7.0, 72.7.0)
+// - current L1-L3        (OBIS 1-0:31.7.0, 51.7.0, 71.7.0)
+// - apparent power L1-L3 (OBIS 1-0:29.7.0, 49.7.0, 69.7.0)
+// - frequency            (OBIS 1-0:14.7.0)
 static void Consumption() { smlReadValue(sml_consumption, SML_WATT_HOUR, SML_SEEN_CONSUMPTION); }
 static void Production() { smlReadValue(sml_production, SML_WATT_HOUR, SML_SEEN_PRODUCTION); }
 static void Power() { smlReadValue(sml_power, SML_WATT, SML_SEEN_POWER); }
 static void PowerL1() { smlReadValue(sml_power_l1, SML_WATT, SML_SEEN_POWER_L1); }
 static void PowerL2() { smlReadValue(sml_power_l2, SML_WATT, SML_SEEN_POWER_L2); }
 static void PowerL3() { smlReadValue(sml_power_l3, SML_WATT, SML_SEEN_POWER_L3); }
+static void VoltageL1() { smlReadValue(sml_voltage[0], SML_VOLT, 0); }
+static void VoltageL2() { smlReadValue(sml_voltage[1], SML_VOLT, 0); }
+static void VoltageL3() { smlReadValue(sml_voltage[2], SML_VOLT, 0); }
+static void CurrentL1() { smlReadValue(sml_current[0], SML_AMPERE, 0); }
+static void CurrentL2() { smlReadValue(sml_current[1], SML_AMPERE, 0); }
+static void CurrentL3() { smlReadValue(sml_current[2], SML_AMPERE, 0); }
+static void ApparentPowerL1() { smlReadValue(sml_apparent_power[0], SML_VOLT_AMPERE, 0); }
+static void ApparentPowerL2() { smlReadValue(sml_apparent_power[1], SML_VOLT_AMPERE, 0); }
+static void ApparentPowerL3() { smlReadValue(sml_apparent_power[2], SML_VOLT_AMPERE, 0); }
+static void Frequency() { smlReadValue(sml_frequency, SML_HERTZ, 0); }
 
 static OBISHandler OBISHandlers[] = {
     {{0x01, 0x00, 0x01, 0x08, 0x00, 0xff}, &Consumption}, /* 1-0: 1. 8.0*255 (Consumption Total) */
@@ -56,6 +74,16 @@ static OBISHandler OBISHandlers[] = {
     {{0x01, 0x00, 0x24, 0x07, 0x00, 0xff}, &PowerL1},     /* 1-0:36. 7.0*255 (power L1) */
     {{0x01, 0x00, 0x38, 0x07, 0x00, 0xff}, &PowerL2},     /* 1-0:56. 7.0*255 (power L2) */
     {{0x01, 0x00, 0x4c, 0x07, 0x00, 0xff}, &PowerL3},     /* 1-0:76. 7.0*255 (power L3) */
+    {{0x01, 0x00, 0x20, 0x07, 0x00, 0xff}, &VoltageL1},   /* 1-0:32. 7.0*255 (voltage L1) */
+    {{0x01, 0x00, 0x34, 0x07, 0x00, 0xff}, &VoltageL2},   /* 1-0:52. 7.0*255 (voltage L2) */
+    {{0x01, 0x00, 0x48, 0x07, 0x00, 0xff}, &VoltageL3},   /* 1-0:72. 7.0*255 (voltage L3) */
+    {{0x01, 0x00, 0x1f, 0x07, 0x00, 0xff}, &CurrentL1},   /* 1-0:31. 7.0*255 (current L1) */
+    {{0x01, 0x00, 0x33, 0x07, 0x00, 0xff}, &CurrentL2},   /* 1-0:51. 7.0*255 (current L2) */
+    {{0x01, 0x00, 0x47, 0x07, 0x00, 0xff}, &CurrentL3},   /* 1-0:71. 7.0*255 (current L3) */
+    {{0x01, 0x00, 0x1d, 0x07, 0x00, 0xff}, &ApparentPowerL1}, /* 1-0:29. 7.0*255 (apparent power L1) */
+    {{0x01, 0x00, 0x31, 0x07, 0x00, 0xff}, &ApparentPowerL2}, /* 1-0:49. 7.0*255 (apparent power L2) */
+    {{0x01, 0x00, 0x45, 0x07, 0x00, 0xff}, &ApparentPowerL3}, /* 1-0:69. 7.0*255 (apparent power L3) */
+    {{0x01, 0x00, 0x0e, 0x07, 0x00, 0xff}, &Frequency},   /* 1-0:14. 7.0*255 (frequency) */
     {{0, 0}}};
 
 sml_states_t smlParseByte(unsigned char val)
@@ -72,6 +100,9 @@ sml_states_t smlParseByte(unsigned char val)
     sml_power_l1 = 0;
     sml_power_l2 = 0;
     sml_power_l3 = 0;
+    for (int i = 0; i < 3; i++)
+      sml_voltage[i] = sml_current[i] = sml_apparent_power[i] = NAN;
+    sml_frequency = NAN;
     sml_seen = 0;
     break;
   case SML_LISTEND:
@@ -106,6 +137,7 @@ sml_states_t smlParseByte(unsigned char val)
       setPowerData(0.0);
       sml_had_power = false;
     }
+    setGridData(sml_voltage, sml_current, sml_apparent_power, sml_frequency);
     break;
   default:
     break;

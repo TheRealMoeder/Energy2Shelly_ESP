@@ -89,6 +89,50 @@ void setPowerData(double phase1Power, double phase2Power, double phase3Power) {
   DEBUG_SERIAL.println(phase3Power + offsetPerPhase);
 }
 
+static double sumIfAny(const double values[3]) {
+  double sum = NAN;
+  for (int i = 0; i <= 2; i++) {
+    if (!isnan(values[i]))
+      sum = isnan(sum) ? values[i] : sum + values[i];
+  }
+  return sum;
+}
+
+void setGridData(const double voltage[3], const double current[3], const double apparentPower[3], double frequency) {
+  double v[3], c[3], s[3];
+  for (int i = 0; i <= 2; i++) {
+    v[i] = voltage[i];
+    c[i] = current[i];
+    s[i] = apparentPower[i];
+    if (isnan(s[i]) && !isnan(v[i]) && !isnan(c[i]))
+      s[i] = v[i] * c[i];
+  }
+  if (phase_number == 1) {
+    // monophase: setPowerData() puts the sum of all phases on L1, do the same with current and apparent power
+    c[0] = sumIfAny(c);
+    s[0] = sumIfAny(s);
+    for (int i = 1; i <= 2; i++)
+      v[i] = c[i] = s[i] = NAN;
+  }
+  for (int i = 0; i <= 2; i++) {
+    if (!isnan(v[i]))
+      PhasePower[i].voltage = round2(v[i]);
+    if (!isnan(c[i]))
+      PhasePower[i].current = round2(c[i]);
+    else if (!isnan(v[i]) && v[i] > 0.0)
+      PhasePower[i].current = round2(isnan(s[i]) ? PhasePower[i].power / v[i] : fabs(s[i]) / v[i]);
+    if (!isnan(s[i])) {
+      // Shelly reports pf as an unsigned 0..1 factor, the direction is carried by the sign of act_power
+      double apparent = fabs(s[i]);
+      double pf = (apparent > 0.0) ? fabs(PhasePower[i].power) / apparent : 1.0;
+      PhasePower[i].apparentPower = round2(apparent);
+      PhasePower[i].powerFactor = round2(pf > 1.0 ? 1.0 : pf);
+    }
+    if (!isnan(frequency))
+      PhasePower[i].frequency = round2(frequency);
+  }
+}
+
 void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
   switch (phase_number) {
   case 1: // monophase
