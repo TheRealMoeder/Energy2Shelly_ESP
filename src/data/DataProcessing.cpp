@@ -16,20 +16,35 @@ bool isValidIPAddress(const char* ipString) {
 }
 
 JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
-  for (size_t n = 0; path[n]; n++) {
-    // Not a full array support, but works for Shelly 3EM emeters array!
-    if (path[n] == '[') {
-      variant = variant[JsonString(path, n)][atoi(&path[n+1])];
-      path += n + 4;
-      n = 0;
+  if (path == nullptr || *path == '\0') {
+    return variant;
+  }
+
+  while (*path != '\0' && !variant.isNull()) {
+    // Nächstes Trennzeichen ('.' oder '[') suchen
+    size_t n = 0;
+    while (path[n] != '\0' && path[n] != '.' && path[n] != '[') {
+      n++;
     }
-    if (path[n] == '.') {
+    if (n > 0) {
       variant = variant[JsonString(path, n)];
-      path += n + 1;
-      n = 0;
+      path += n;
+    }
+    if (*path == '[') {
+      char *endBracket = nullptr;
+      long idx = strtol(path + 1, &endBracket, 10);
+      if (endBracket == path + 1 || *endBracket != ']' || idx < 0) {
+        return JsonVariant();
+      }
+
+      variant = variant[static_cast<size_t>(idx)];
+      path = endBracket + 1;
+    }
+    if (*path == '.') {
+      path++;
     }
   }
-  return variant[path];
+  return variant;
 }
 
 void setPowerData(double totalPower) {
