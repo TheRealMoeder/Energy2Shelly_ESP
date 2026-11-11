@@ -8,14 +8,13 @@ void parseSHRDZM() {
   }
 
   char buffer[1024];
-  int rSize = Udp.read(buffer, sizeof(buffer) - 1);
+  int rSize = Udp.read(buffer, sizeof(buffer));
   if (rSize <= 0) {
     return;
   }
-  buffer[rSize] = '\0';
 
   JsonDocument json;
-  DeserializationError error = deserializeJson(json, buffer);
+  DeserializationError error = deserializeJson(json, buffer, rSize);
   if (error) {
     DEBUG_SERIAL.print(F("SHRDZM deserializeJson() error: "));
     DEBUG_SERIAL.println(error.f_str());
