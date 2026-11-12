@@ -203,7 +203,7 @@ void interprete_parameters()
 {
   // Interpret the loaded parameters and set flags accordingly
   current_input_type = static_cast<input_type_enum>(config_doc["basic"]["input_type"].as<uint32_t>());
-  destroyClientObjects(); // Destroy unused client objects
+  destroyClientObjects(); // Destroy unused client objects; Todo: Input change without reboot will lead to crash!
   switch (current_input_type) {
     case input_type_enum::SMA:
         DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
