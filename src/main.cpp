@@ -513,31 +513,34 @@ void setup(void)
   switch (current_input_type) { 
     case input_type_enum::MQTT:
     {
+      mqtt_client = new PubSubClient(wifi_client);
       IPAddress ip;
-      mqtt_client.setBufferSize(2048);
+      mqtt_client->setBufferSize(2048);
       if (ip.fromString(mqtt_server))
       {
-        mqtt_client.setServer(ip, mqtt_port);
+        mqtt_client->setServer(ip, mqtt_port);
       }
       else
       {
-        mqtt_client.setServer(mqtt_server, mqtt_port);
+        mqtt_client->setServer(mqtt_server, mqtt_port);
       }
-      mqtt_client.setCallback(mqtt_callback);
+      mqtt_client->setCallback(mqtt_callback);
       break;
     }
     case input_type_enum::SMA:
-      Udp.begin(multicastPort);
+      Udp = new WiFiUDP();
+      Udp->begin(multicastPort);
 #ifdef ESP8266
-      Udp.beginMulticast(WiFi.localIP(), multicastIP, multicastPort);
+      Udp->beginMulticast(WiFi.localIP(), multicastIP, multicastPort);
 #else
-      Udp.beginMulticast(multicastIP, multicastPort);
+      Udp->beginMulticast(multicastIP, multicastPort);
 #endif
      break;
     
      case input_type_enum::SHRDZM:
       // Set Up UDP for SHRDZM smart meter interface
-      Udp.begin(multicastPort);
+      Udp = new WiFiUDP();
+      Udp->begin(multicastPort);
       break;
 
     case input_type_enum::SUNSPEC:
@@ -551,7 +554,8 @@ void setup(void)
       break;
 
       case input_type_enum::HTTP:
-      http.useHTTP10(true);
+      http = new HTTPClient();
+      http->useHTTP10(true);
       break;
 
       case input_type_enum::NONE:
@@ -584,11 +588,11 @@ void worker_loop(int currentMillis)
 
   switch (current_input_type) {
     case input_type_enum::MQTT:
-      if (!mqtt_client.connected())
+      if (!mqtt_client->connected())
       {
         mqtt_reconnect();
       }
-      mqtt_client.loop();
+      mqtt_client->loop();
       break;
     case input_type_enum::SMA:
       parseSMA();
