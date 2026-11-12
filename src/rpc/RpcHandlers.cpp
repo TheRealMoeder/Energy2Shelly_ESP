@@ -107,30 +107,79 @@ size_t EMGetConfig(char* buffer, size_t maxLen) {
 
 // aligned with Shelly API docs
 size_t shellyGetConfig(char* buffer, size_t maxLen) {
-  char emConfig[256] = "";
-  char sysConfig[512] = "";
-  EMGetConfig(emConfig, sizeof(emConfig));
-  sysGetConfig(sysConfig, sizeof(sysConfig));
+  if (buffer == nullptr || maxLen == 0) {
+    return 0;
+  }
 
-  const char* ssid = config_doc["wifi"]["ssid"] | "";
+  size_t pos = 0;
+  int written = snprintf_P(buffer + pos, maxLen - pos,
+      PSTR("{\"ble\":{\"enable\":false},\"cloud\":{\"enable\":false,\"server\":null},\"em:0\":"));
+  if (written < 0 || (size_t)written >= maxLen - pos) {
+    buffer[maxLen - 1] = '\0';
+    return maxLen - 1;
+  }
+  pos += (size_t)written;
+
+  // em:0-Konfiguration direkt in den Ausgabepuffer schreiben
+  size_t remaining = maxLen - pos;
+  if (remaining <= 1) {
+    buffer[maxLen - 1] = '\0';
+    return maxLen - 1;
+  }
+
+  size_t appended = EMGetConfig(buffer + pos, remaining);
+  if (appended >= remaining - 1) {
+    buffer[maxLen - 1] = '\0';
+    return maxLen - 1;
+  }
+  pos += appended;
+
+  written = snprintf_P(buffer + pos, maxLen - pos, PSTR(",\"sys\":"));
+  if (written < 0 || (size_t)written >= maxLen - pos) {
+    buffer[maxLen - 1] = '\0';
+    return maxLen - 1;
+  }
+  pos += (size_t)written;
+
+  // sys-Konfiguration direkt in den Ausgabepuffer schreiben
+  remaining = maxLen - pos;
+  if (remaining <= 1) {
+    buffer[maxLen - 1] = '\0';
+    return maxLen - 1;
+  }
+
+  appended = sysGetConfig(buffer + pos, remaining);
+  if (appended >= remaining - 1) {
+    buffer[maxLen - 1] = '\0';
+    return maxLen - 1;
+  }
+  pos += appended;
+
   IPAddress ip = WiFi.localIP();
   IPAddress mask = WiFi.subnetMask();
   IPAddress gw = WiFi.gatewayIP();
   IPAddress dns = WiFi.dnsIP();
+  const char* ssid = config_doc["wifi"]["ssid"] | "";
 
-  int written = snprintf_P(buffer, maxLen,
-      PSTR("{\"ble\":{\"enable\":false},\"cloud\":{\"enable\":false,\"server\":null},\"em:0\":%s,\"sys\":%s,"
-      "\"wifi\":{\"sta\":{\"ssid\":\"%s\",\"is_open\":false,\"enable\":true,\"ipv4mode\":\"dhcp\","
-      "\"ip\":\"%u.%u.%u.%u\",\"netmask\":\"%u.%u.%u.%u\",\"gw\":\"%u.%u.%u.%u\",\"nameserver\":\"%u.%u.%u.%u\"},"
-      "\"ws\":{\"enable\":false,\"server\":null,\"ssl_ca\":\"ca.pem\"}}}"),
-      emConfig, sysConfig, ssid,
+  written = snprintf_P(buffer + pos, maxLen - pos,
+      PSTR(",\"wifi\":{\"sta\":{\"ssid\":\"%s\",\"is_open\":false,\"enable\":true,\"ipv4mode\":\"dhcp\","
+           "\"ip\":\"%u.%u.%u.%u\",\"netmask\":\"%u.%u.%u.%u\","
+           "\"gw\":\"%u.%u.%u.%u\",\"nameserver\":\"%u.%u.%u.%u\"},"
+           "\"ws\":{\"enable\":false,\"server\":null,\"ssl_ca\":\"ca.pem\"}}}"),
+      ssid,
       (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
       (unsigned int)mask[0], (unsigned int)mask[1], (unsigned int)mask[2], (unsigned int)mask[3],
       (unsigned int)gw[0], (unsigned int)gw[1], (unsigned int)gw[2], (unsigned int)gw[3],
-      (unsigned int)dns[0], (unsigned int)dns[1], (unsigned int)dns[2], (unsigned int)dns[3]
-  );
+      (unsigned int)dns[0], (unsigned int)dns[1], (unsigned int)dns[2], (unsigned int)dns[3]);
+
+  if (written < 0 || (size_t)written >= maxLen - pos) {
+    buffer[maxLen - 1] = '\0';
+    return maxLen - 1;
+  }
+
+  pos += (size_t)written;
   blinkled(ledblinkduration);
-  return finalize_buffer(written, maxLen);
+  return pos;
 }
 
 // aligned with Shelly API docs
