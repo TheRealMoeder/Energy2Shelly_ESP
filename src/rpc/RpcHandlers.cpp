@@ -112,6 +112,7 @@ size_t shellyGetConfig(char* buffer, size_t maxLen) {
   EMGetConfig(emConfig, sizeof(emConfig));
   sysGetConfig(sysConfig, sizeof(sysConfig));
 
+  const char* ssid = config_doc["wifi"]["ssid"] | "";
   IPAddress ip = WiFi.localIP();
   IPAddress mask = WiFi.subnetMask();
   IPAddress gw = WiFi.gatewayIP();
@@ -122,7 +123,7 @@ size_t shellyGetConfig(char* buffer, size_t maxLen) {
       "\"wifi\":{\"sta\":{\"ssid\":\"%s\",\"is_open\":false,\"enable\":true,\"ipv4mode\":\"dhcp\","
       "\"ip\":\"%u.%u.%u.%u\",\"netmask\":\"%u.%u.%u.%u\",\"gw\":\"%u.%u.%u.%u\",\"nameserver\":\"%u.%u.%u.%u\"},"
       "\"ws\":{\"enable\":false,\"server\":null,\"ssl_ca\":\"ca.pem\"}}}"),
-      emConfig, sysConfig, WiFi.SSID().c_str(),
+      emConfig, sysConfig, ssid,
       (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
       (unsigned int)mask[0], (unsigned int)mask[1], (unsigned int)mask[2], (unsigned int)mask[3],
       (unsigned int)gw[0], (unsigned int)gw[1], (unsigned int)gw[2], (unsigned int)gw[3],
@@ -169,6 +170,7 @@ size_t shellyGetStatus(char* buffer, size_t maxLen) {
   char wifiBlock[256];
 
   if (connected) {
+    const char* ssid = config_doc["wifi"]["ssid"] | "";
     IPAddress ip = WiFi.localIP();
     const uint8_t* bssid = WiFi.BSSID();
     uint8_t zeroBssid[6] = {0, 0, 0, 0, 0, 0};
@@ -180,7 +182,7 @@ size_t shellyGetStatus(char* buffer, size_t maxLen) {
         PSTR("{\"sta_ip\":\"%u.%u.%u.%u\",\"status\":\"got ip\",\"ssid\":\"%s\","
         "\"bssid\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"rssi\":%d,\"sta_ip6\":[]}"),
         (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
-        WiFi.SSID().c_str(),
+        ssid,
         (unsigned int)bssid[0], (unsigned int)bssid[1], (unsigned int)bssid[2], (unsigned int)bssid[3], (unsigned int)bssid[4], (unsigned int)bssid[5],
         WiFi.RSSI()
     );
@@ -204,6 +206,7 @@ size_t shellyGetStatus(char* buffer, size_t maxLen) {
 size_t wifiGetStatus(char* buffer, size_t maxLen) {
   int written = 0;
   if (WiFi.status() == WL_CONNECTED) {
+    const char* ssid = config_doc["wifi"]["ssid"] | "";
     IPAddress ip = WiFi.localIP();
     const uint8_t* bssid = WiFi.BSSID();
     uint8_t zeroBssid[6] = {0, 0, 0, 0, 0, 0};
@@ -215,7 +218,7 @@ size_t wifiGetStatus(char* buffer, size_t maxLen) {
         PSTR("{\"sta_ip\":\"%u.%u.%u.%u\",\"status\":\"got ip\",\"ssid\":\"%s\","
         "\"bssid\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"rssi\":%d,\"ap_client_count\":0}"),
         (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
-        WiFi.SSID().c_str(),
+        ssid,
         (unsigned int)bssid[0], (unsigned int)bssid[1], (unsigned int)bssid[2], (unsigned int)bssid[3], (unsigned int)bssid[4], (unsigned int)bssid[5],
         WiFi.RSSI()
     );
