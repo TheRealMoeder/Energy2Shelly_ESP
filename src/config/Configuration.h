@@ -326,7 +326,7 @@ extern IPAddress multicastIP;
 
 // MODBUS settings
 extern IPAddress modbus_ip;
-extern ModbusIP modbus1;
+extern ModbusIP* modbus1;
 extern int16_t modbus_result[256];
 
 // Default electrical values and offset

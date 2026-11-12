@@ -516,9 +516,10 @@ void setup(void)
       break;
 
     case input_type_enum::SUNSPEC:
-      modbus1.client();
+      modbus1 = new ModbusIP();
+      modbus1->client();
       DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
-      modbus1.connect(modbus_ip, sunspec_port_int);
+      modbus1->connect(modbus_ip, sunspec_port_int);
       break;
 
       case input_type_enum::SMLSERIAL:
@@ -573,7 +574,7 @@ void worker_loop(int currentMillis)
       parseSHRDZM();
       break;
     case input_type_enum::SUNSPEC:
-      modbus1.task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
+      modbus1->task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
       if (currentMillis - startMillis >= query_period_modbus_u32)
       {
         parseSUNSPEC();

@@ -30,7 +30,7 @@ IPAddress multicastIP(239, 12, 255, 254);
 
 // MODBUS settings
 IPAddress modbus_ip;
-ModbusIP modbus1;
+ModbusIP* modbus1 = nullptr;
 int16_t modbus_result[256];
 
 // Default electrical values and offset
@@ -105,6 +105,11 @@ static void destroyClientObjects()
     Udp->stop();
     delete Udp;
     Udp = nullptr;
+  }
+
+  if (modbus1 != nullptr) {
+    delete modbus1;
+    modbus1 = nullptr;
   }
 }
 
