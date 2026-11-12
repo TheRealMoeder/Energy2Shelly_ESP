@@ -68,12 +68,13 @@
         ws.onmessage = function(event) {
             messageBuffer += event.data;
             if (messageBuffer.indexOf('\n') !== -1) {
-                var lines = messageBuffer.split('\n');
+                var lines = messageBuffer.split(/\r?\n/);
                 messageBuffer = lines.pop();
                 var timeTag = '<span class="timestamp">' + getTimestamp() + '</span>';
                 lines.forEach(function(line) {
-                    if (line.length > 0 || line === "") {
-                        consoleDiv.innerHTML += timeTag + line + '<br>';
+                    var cleanLine = line.trim();
+                    if (cleanLine.length > 0) {
+                        consoleDiv.innerHTML += timeTag + cleanLine + '<br>';
                     }
                 });
                 if (autoscrollCheck.checked) {
