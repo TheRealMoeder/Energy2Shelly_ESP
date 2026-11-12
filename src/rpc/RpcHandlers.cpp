@@ -135,20 +135,65 @@ size_t shellyGetConfig(char* buffer, size_t maxLen) {
 
 // aligned with Shelly API docs
 size_t shellyComponents(char* buffer, size_t maxLen) {
-  char emStatus[768] = "";
-  char emConfig[256] = "";
-  char emDataStatus[512] = "";
+  if (buffer == nullptr || maxLen == 0) {
+    return 0;
+  }
 
-  EMGetStatus(emStatus, sizeof(emStatus));
-  EMGetConfig(emConfig, sizeof(emConfig));
-  EMDataGetStatus(emDataStatus, sizeof(emDataStatus));
+  size_t pos = 0;
 
-  int written = snprintf_P(buffer, maxLen,
-      PSTR("{\"components\":[{\"key\":\"em:0\",\"status\":%s,\"config\":%s},{\"key\":\"emdata:0\",\"status\":%s,\"config\":{}}],\"cfg_rev\":1,\"offset\":0,\"total\":2}"),
-      emStatus, emConfig, emDataStatus
-  );
+  // 1) em:0 + status
+  if (pos < maxLen - 1) {
+    pos += finalize_buffer(
+      snprintf_P(buffer + pos, maxLen - pos,
+        PSTR("{\"components\":[{\"key\":\"em:0\",\"status\":")),
+      maxLen - pos
+    );
+  }
+  if (pos < maxLen - 1) {
+    pos += EMGetStatus(buffer + pos, maxLen - pos);
+  }
+
+  // 2) config
+  if (pos < maxLen - 1) {
+    pos += finalize_buffer(
+      snprintf_P(buffer + pos, maxLen - pos,
+        PSTR(",\"config\":")),
+      maxLen - pos
+    );
+  }
+  if (pos < maxLen - 1) {
+    pos += EMGetConfig(buffer + pos, maxLen - pos);
+  }
+
+  // 3) emdata:0 + status
+  if (pos < maxLen - 1) {
+    pos += finalize_buffer(
+      snprintf_P(buffer + pos, maxLen - pos,
+        PSTR("},{\"key\":\"emdata:0\",\"status\":")),
+      maxLen - pos
+    );
+  }
+  if (pos < maxLen - 1) {
+    pos += EMDataGetStatus(buffer + pos, maxLen - pos);
+  }
+
+  // 4) config + closing JSON
+  if (pos < maxLen - 1) {
+    pos += finalize_buffer(
+      snprintf_P(buffer + pos, maxLen - pos,
+        PSTR(",\"config\":{}}],\"cfg_rev\":1,\"offset\":0,\"total\":2}")),
+      maxLen - pos
+    );
+  }
+
+  if (pos < maxLen) {
+    buffer[pos] = '\0';
+  } else {
+    buffer[maxLen - 1] = '\0';
+  }
+
   blinkled(ledblinkduration);
-  return finalize_buffer(written, maxLen);
+  return pos;
 }
 
 // aligned with Shelly API docs
