@@ -1,36 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Energy2Shelly_ESP HTTP Console</title>
+    <title>Energy2Shelly ESP - Live Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { background-color: #1e1e1e; color: #00ff00; font-family: monospace; padding: 20px; margin: 0; }
-        h2 { color: #ffffff; font-family: sans-serif; margin-bottom: 10px; }
-        #console { width: calc(100% - 20px); height: 500px; border: 1px solid #444; overflow-y: scroll; padding: 10px; background: #000; box-shadow: inset 0 0 10px #000; }
-        .status { color: #888; font-style: italic; }
-        .timestamp { color: #00aaaa; margin-right: 8px; }
-        .controls-container { margin-top: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; width: calc(100% - 0px); }
-        .btn-container { display: flex; gap: 10px; }
-        .btn { background-color: #000; color: #00ff00; border: 1px solid #00ff00; padding: 8px 15px; font-family: monospace; cursor: pointer; transition: all 0.2s; }
-        .btn:hover { background-color: #00ff00; color: #000; }
-        .scroll-lock-label { color: #ffffff; font-family: sans-serif; font-size: 14px; display: flex; align-items: center; cursor: pointer; }
-        .scroll-lock-label input { margin-right: 8px; cursor: pointer; }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f4f4f4; color: #333; margin: 0; }
+        h1 { color: #0056b3; margin-bottom: 10px; }
+        p { font-size: 1.1em; margin-top: 5px; }
+        .nav { margin: 30px 0; }
+        .nav a { display: inline-block; padding: 12px 24px; margin: 8px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; transition: background-color 0.3s; }
+        .nav a:hover { background-color: #0056b3; }
+        .data-container { max-width: 1300px; margin: 0 auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: left; }
+        .data-section { margin: 20px 0; }
+        .data-section h2 { color: #0056b3; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 15px; font-size: 1.3em; }
+        #console { width: 100%; height: 500px; box-sizing: border-box; border: 1px solid #dee2e6; border-radius: 5px; overflow-y: auto; padding: 12px; background: #1e1e1e; color: #f8f9fa; box-shadow: inset 0 0 8px rgba(0,0,0,0.25); font-family: monospace; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .status { color: #adb5bd; font-style: italic; }
+        .timestamp { color: #6c757d; margin-right: 8px; }
+        .controls-container { margin-top: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; }
+        .btn-container { display: flex; flex-wrap: wrap; gap: 10px; }
+        .btn { background-color: #007bff; color: white; border: 0; border-radius: 5px; padding: 10px 16px; font-family: Arial, sans-serif; cursor: pointer; transition: background-color 0.2s; }
+        .btn:hover { background-color: #0056b3; }
+        .scroll-lock-label { color: #555; font-size: 14px; display: flex; align-items: center; cursor: pointer; }
+        .scroll-lock-label input { margin-right: 8px; cursor: pointer; accent-color: #007bff; }
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            .data-container { padding: 15px; }
+            #console { height: 60vh; }
+            .controls-container { align-items: flex-start; }
+        }
     </style>
 </head>
 <body>
-    <h2>Energy2Shelly_ESP Live Web Console</h2>
-    <div id="console"><span class="status">[Connecting to console stream...]</span><br></div>
-    <div class="controls-container">
-        <div class="btn-container">
-            <button class="btn" onclick="clearConsole()">Clear Console</button>
-            <button class="btn" onclick="saveConsole()">Save Log</button>
+    <h1>Energy2Shelly ESP</h1>
+    <p>Live Web Console</p>
+    <div class="nav">
+        <a href="/">Home</a>
+    </div>
+
+    <div class="data-container">
+        <div class="data-section">
+            <h2>Console Output</h2>
+            <div id="console"><span class="status">[Connecting to console stream...]</span><br></div>
+            <div class="controls-container">
+                <div class="btn-container">
+                    <button class="btn" onclick="clearConsole()">Clear Console</button>
+                    <button class="btn" onclick="saveConsole()">Save Log</button>
+                </div>
+                <label class="scroll-lock-label">
+                    <input type="checkbox" id="autoscroll" checked> Enable Autoscroll
+                </label>
+            </div>
         </div>
-        <label class="scroll-lock-label">
-            <input type="checkbox" id="autoscroll" checked> Enable Autoscroll
-        </label>
     </div>
     <script>
-        var wsPort = 8080; 
-        var ws = new WebSocket('ws://' + window.location.hostname +  '/consolews');
+        var wsPort = 8080;
+        var ws = new WebSocket('ws://' + window.location.hostname + '/consolews');
         var consoleDiv = document.getElementById('console');
         var autoscrollCheck = document.getElementById('autoscroll');
         var messageBuffer = "";
@@ -39,7 +63,7 @@
             return '[' + now.toTimeString().split(' ')[0] + '] ';
         }
         ws.onopen = function() {
-            consoleDiv.innerHTML += '<span class="timestamp">' + getTimestamp() + '</span><span style="color:#00ff00;">[Connected to WebSocket on Port ' + wsPort + ']</span><br>';
+            consoleDiv.innerHTML += '<span class="timestamp">' + getTimestamp() + '</span><span style="color:#28a745;">[Connected to WebSocket on Port ' + wsPort + ']</span><br>';
         };
         ws.onmessage = function(event) {
             messageBuffer += event.data;
@@ -58,11 +82,11 @@
             }
         };
         ws.onclose = function() {
-            consoleDiv.innerHTML += '<span class="timestamp">' + getTimestamp() + '</span><span style="color:#ff0000; font-weight:bold;">[Disconnected from Server]</span><br>';
+            consoleDiv.innerHTML += '<span class="timestamp">' + getTimestamp() + '</span><span style="color:#dc3545; font-weight:bold;">[Disconnected from Server]</span><br>';
         };
         function clearConsole() {
             consoleDiv.innerHTML = '<span class="timestamp">' + getTimestamp() + '</span><span class="status">[Console cleared]</span><br>';
-            messageBuffer = ""; 
+            messageBuffer = "";
         }
         function saveConsole() {
             var text = consoleDiv.innerText;
