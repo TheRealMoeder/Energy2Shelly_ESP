@@ -2,21 +2,40 @@
 #include "../data/DataProcessing.h"
 
 void parseSHRDZM() {
-  JsonDocument json;
-  uint8_t buffer[1024];
   int packetSize = Udp.parsePacket();
-  if (packetSize) {
-    int rSize = Udp.read(buffer, 1024);
-    buffer[rSize] = 0;
-    deserializeJson(json, buffer);
-    if (json["data"]["16.7.0"].is<JsonVariant>()) {
-      double power = json["data"]["16.7.0"];
-      setPowerData(power);
-    }
-    if (json["data"]["1.8.0"].is<JsonVariant>() && json["data"]["2.8.0"].is<JsonVariant>()) {
-      double energyIn = 0.001 * json["data"]["1.8.0"].as<double>();
-      double energyOut = 0.001 * json["data"]["2.8.0"].as<double>();
-      setEnergyData(energyIn, energyOut);
-    }
+  if (packetSize <= 0) {
+    return;
+  }
+
+  char buffer[1024];
+  int rSize = Udp.read(buffer, sizeof(buffer));
+  if (rSize <= 0) {
+    return;
+  }
+
+  JsonDocument json;
+  DeserializationError error = deserializeJson(json, buffer, rSize);
+  if (error) {
+    DEBUG_SERIAL.print(F("SHRDZM deserializeJson() error: "));
+    DEBUG_SERIAL.println(error.f_str());
+    return;
+  }
+
+  JsonVariant data = json["data"];
+  if (data.isNull()) {
+    return;
+  }
+
+  JsonVariant pwr = data["16.7.0"];
+  if (!pwr.isNull()) {
+    setPowerData(pwr.as<double>());
+  }
+
+  JsonVariant eIn = data["1.8.0"];
+  JsonVariant eOut = data["2.8.0"];
+  if (!eIn.isNull() && !eOut.isNull()) {
+    double energyIn = 0.001 * eIn.as<double>();
+    double energyOut = 0.001 * eOut.as<double>();
+    setEnergyData(energyIn, energyOut);
   }
 }

@@ -5,7 +5,6 @@
 // Global data structures
 PowerData PhasePower[3];
 EnergyData PhaseEnergy[3];
-String serJsonResponse;
 
 double round2(double value) {
   return round(value * 100.0) / 100.0;
@@ -17,20 +16,35 @@ bool isValidIPAddress(const char* ipString) {
 }
 
 JsonVariant resolveJsonPath(JsonVariant variant, const char *path) {
-  for (size_t n = 0; path[n]; n++) {
-    // Not a full array support, but works for Shelly 3EM emeters array!
-    if (path[n] == '[') {
-      variant = variant[JsonString(path, n)][atoi(&path[n+1])];
-      path += n + 4;
-      n = 0;
+  if (path == nullptr || *path == '\0') {
+    return variant;
+  }
+
+  while (*path != '\0' && !variant.isNull()) {
+    // Nächstes Trennzeichen ('.' oder '[') suchen
+    size_t n = 0;
+    while (path[n] != '\0' && path[n] != '.' && path[n] != '[') {
+      n++;
     }
-    if (path[n] == '.') {
+    if (n > 0) {
       variant = variant[JsonString(path, n)];
-      path += n + 1;
-      n = 0;
+      path += n;
+    }
+    if (*path == '[') {
+      char *endBracket = nullptr;
+      long idx = strtol(path + 1, &endBracket, 10);
+      if (endBracket == path + 1 || *endBracket != ']' || idx < 0) {
+        return JsonVariant();
+      }
+
+      variant = variant[static_cast<size_t>(idx)];
+      path = endBracket + 1;
+    }
+    if (*path == '.') {
+      path++;
     }
   }
-  return variant[path];
+  return variant;
 }
 
 void setPowerData(double totalPower) {
@@ -155,9 +169,9 @@ void setEnergyData(double totalEnergyGridSupply, double totalEnergyGridFeedIn) {
   DEBUG_SERIAL.println(totalEnergyGridFeedIn);
 }
 
-void setJsonPathPower(JsonDocument json) {
+void setJsonPathPower(JsonDocument &json) {
   // If the incoming JSON already uses Shelly 3EM field names, parse directly
-  double offsetPerPhase = String(power_offset).toDouble() / 3.0;  // distribute offset equally across phases
+  double offsetPerPhase = power_offset / 3.0;  // distribute offset equally across phases
   
   if (json["a_current"].is<JsonVariant>() || json["a_act_power"].is<JsonVariant>()) {
     DEBUG_SERIAL.println(F("Parsing direct Shelly 3EM payload"));
@@ -224,20 +238,4 @@ void setJsonPathPower(JsonDocument json) {
     double energyOut = resolveJsonPath(json, energy_out_path);
     setEnergyData(energyIn, energyOut);
   }
-}
-
-// Helper: parse a raw Shelly JSON string and forward to setJsonPathPower
-void parseShellyString(const char *jsonStr) {
-  JsonDocument doc;
-  DeserializationError err = deserializeJson(doc, jsonStr);
-  if (err) {
-    DEBUG_SERIAL.print(F("deserializeJson failed: "));
-    DEBUG_SERIAL.println(err.c_str());
-    return;
-  }
-  setJsonPathPower(doc);
-}
-
-void parseShellyString(const String &s) {
-  parseShellyString(s.c_str());
 }
