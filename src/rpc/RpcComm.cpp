@@ -4,7 +4,7 @@
 #include "RpcComm.h"
 
 #define MAX_TRACKED_WS_CLIENTS 5
-static unsigned long lastClientRpcTime = {0};
+static unsigned long lastClientRpcTime[MAX_TRACKED_WS_CLIENTS] = {0};
 
 static bool isPollingClient(uint32_t clientId) {
     if (clientId < MAX_TRACKED_WS_CLIENTS) {
@@ -112,7 +112,7 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
           if (client->canSend()) {
             client->text(wsAnswer);
           } else {
-            DEBUG_SERIAL.printf([%u] Websocket: TX queue full, dropping RPC reply\n", (unsigned int)client->id());
+            DEBUG_SERIAL.printf("[%u] Websocket: TX queue full, dropping RPC reply\n", (unsigned int)client->id());
           }
         }
       }
