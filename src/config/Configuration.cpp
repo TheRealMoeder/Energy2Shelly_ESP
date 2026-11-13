@@ -32,7 +32,7 @@ IPAddress multicastIP(239, 12, 255, 254);
 // MODBUS settings
 IPAddress modbus_ip;
 ModbusIP* modbus1 = nullptr;
-int16_t modbus_result[MAX_MODBUS_REGISTERS];
+int16_t* modbus_result = nullptr;
 
 // Default electrical values and offset
 const uint8_t defaultVoltage = 230;
@@ -111,6 +111,10 @@ static void destroyClientObjects()
   if (modbus1 != nullptr) {
     delete modbus1;
     modbus1 = nullptr;
+  }
+  if (modbus_result!=nullptr) {
+    delete modbus_result;
+    modbus_result = nullptr;
   }
 }
 
@@ -246,6 +250,8 @@ void interprete_parameters()
         filter["sunspec"]=true;
         filter["sunspec_registers"]=true;
         load_filtered_parameters(filter);
+        modbus_result = new int16_t[MAX_MODBUS_REGISTERS];
+        memset(modbus_result, 0, MAX_MODBUS_REGISTERS * sizeof(int16_t));
         convert_json_to_sunspec_registers();
         filter.clear();
         filter["sunspec_registers"]=true;

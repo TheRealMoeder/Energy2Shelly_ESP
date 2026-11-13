@@ -327,7 +327,7 @@ extern IPAddress multicastIP;
 // MODBUS settings
 extern IPAddress modbus_ip;
 #define MAX_MODBUS_REGISTERS 256
-extern int16_t modbus_result[MAX_MODBUS_REGISTERS];
+extern int16_t *modbus_result;
 extern ModbusIP* modbus1;
 
 // Default electrical values and offset
