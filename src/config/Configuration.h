@@ -326,7 +326,7 @@ extern IPAddress multicastIP;
 
 // MODBUS settings
 extern IPAddress modbus_ip;
-extern ModbusIP modbus1;
+extern ModbusIP* modbus1;
 extern int16_t modbus_result[256];
 
 // Default electrical values and offset
@@ -354,13 +354,13 @@ extern input_type_enum current_input_type;
 // ============================================================================
 
 extern WiFiClient wifi_client;
-extern PubSubClient mqtt_client;
+extern PubSubClient* mqtt_client;
 extern AsyncWebServer server;
 extern AsyncWebSocket webSocket;
 extern uint16_t wifi_reconnect_attempts;
 
-extern WiFiUDP Udp;
-extern HTTPClient http;
+extern WiFiUDP* Udp;
+extern HTTPClient* http;
 extern WiFiUDP UdpRPC;
 extern void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
 

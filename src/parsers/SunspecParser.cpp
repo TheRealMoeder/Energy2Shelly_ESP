@@ -146,7 +146,7 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
     // error like timeout, connection lost, etc.
     DEBUG_SERIAL.print(F("Modbus-error: "));
     DEBUG_SERIAL.println(event);
-    modbus1.disconnect(modbus_ip); // disconnect from the device to reset the connection
+    modbus1->disconnect(modbus_ip); // disconnect from the device to reset the connection
   }
   return true;
 }
@@ -155,18 +155,18 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
 void parseSUNSPEC()
 {
 
-  if (!modbus1.isConnected(modbus_ip))
+  if (!modbus1->isConnected(modbus_ip))
   {
     modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
     sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
     modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
-    modbus1.connect(modbus_ip, sunspec_port_int);
+    modbus1->connect(modbus_ip, sunspec_port_int);
   }
   else
   {
     // issue an holding register read to read the SUNSPEC registers, the callback will be called when the data is available
-    modbus1.readHreg(modbus_ip, SUNSPEC_BASE, (uint16_t *)&modbus_result[0], SUNSPEC_REGISTER_COUNT, modbusSunSpecCallback, modbusdev_int);
+    modbus1->readHreg(modbus_ip, SUNSPEC_BASE, (uint16_t *)&modbus_result[0], SUNSPEC_REGISTER_COUNT, modbusSunSpecCallback, modbusdev_int);
     delay(10);
-    modbus1.task();
+    modbus1->task();
   }
 }
