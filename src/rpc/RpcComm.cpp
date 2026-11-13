@@ -4,13 +4,22 @@
 #include "RpcComm.h"
 
 #define MAX_TRACKED_WS_CLIENTS 5
+#define WS_RPC_ACTIVE_WINDOW_MS 5000
+
 static unsigned long lastClientRpcTime[MAX_TRACKED_WS_CLIENTS] = {0};
 
 static bool isPollingClient(uint32_t clientId) {
-    if (clientId < MAX_TRACKED_WS_CLIENTS) {
-      return (lastClientRpcTime[clientId]);
+    if (clientId >= MAX_TRACKED_WS_CLIENTS) {
+        return false;
     }
-    return false;
+
+    unsigned long lastRpc = lastClientRpcTime[clientId];
+    if (lastRpc == 0) {
+        return false;
+    }
+
+    // Only treat a client as active if it recently sent RPC traffic.
+    return (millis() - lastRpc) < WS_RPC_ACTIVE_WINDOW_MS;
 }
 
 // Aligned with Shelly API docs: Script.GetCode
@@ -80,7 +89,7 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
     case WS_EVT_DISCONNECT:
       if (client->id() < MAX_TRACKED_WS_CLIENTS) {
         lastClientRpcTime[client->id()] = 0;
-      }  
+      }
       DEBUG_SERIAL.printf("[%u] Websocket: disconnected!\n", (unsigned int)client->id());
       break;
     case WS_EVT_CONNECT:
@@ -152,7 +161,7 @@ void notifyStatusWebSocket() {
   if (powerChanged) {
     float total_power = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
     float total_apparent = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
-    
+
     snprintf_P(emStatusBuffer, sizeof(emStatusBuffer),
       PSTR("\"em:0\":{\"id\":0,\"a_current\":%.2f,\"a_voltage\":%.2f,\"a_act_power\":%.2f,\"a_aprt_power\":%.2f,\"a_pf\":%.2f,\"a_freq\":%.2f,"
       "\"b_current\":%.2f,\"b_voltage\":%.2f,\"b_act_power\":%.2f,\"b_aprt_power\":%.2f,\"b_pf\":%.2f,\"b_freq\":%.2f,"
