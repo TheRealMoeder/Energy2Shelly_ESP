@@ -3,6 +3,16 @@
 #include "../data/DataStructures.h"
 #include "RpcComm.h"
 
+#define MAX_TRACKED_WS_CLIENTS 5
+static unsigned long lastClientRpcTime = {0};
+
+static bool isPollingClient(uint32_t clientId) {
+    if (clientId < MAX_TRACKED_WS_CLIENTS) {
+      return (lastClientRpcTime[clientId]);
+    }
+    return false;
+}
+
 // Aligned with Shelly API docs: Script.GetCode
 size_t scriptGetCode(char* buffer, size_t maxLen) {
     int written = snprintf_P(buffer, maxLen, PSTR("{\"data\":\"\",\"left\":\"0\"}"));
@@ -68,6 +78,9 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
 {
   switch (type) {
     case WS_EVT_DISCONNECT:
+      if (client->id() < MAX_TRACKED_WS_CLIENTS) {
+        lastClientRpcTime[client->id()] = 0;
+      }  
       DEBUG_SERIAL.printf("[%u] Websocket: disconnected!\n", (unsigned int)client->id());
       break;
     case WS_EVT_CONNECT:
@@ -88,11 +101,19 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
         const char* method = json["method"] | "";
         const char* src = json["src"] | "EMPTY";
 
+        if (client->id() < MAX_TRACKED_WS_CLIENTS) {
+          lastClientRpcTime[client->id()] = millis();
+        }
+
         String wsAnswer;
         buildRpcResponse(method, localRpcId, src, wsAnswer);
 
         if (wsAnswer.length() > 0 && client->status() == WS_CONNECTED) {
-          client->text(wsAnswer);
+          if (client->canSend()) {
+            client->text(wsAnswer);
+          } else {
+            DEBUG_SERIAL.printf(F([%u] Websocket: TX queue full, dropping RPC reply\n"), (unsigned int)client->id());
+          }
         }
       }
       break;
@@ -104,7 +125,7 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
   }
 }
 
-// Push live data packets to connected WebSockets completely string/JSON-document-free via stack buffering
+// Push live data packets to connected WebSockets, if they don't actively query
 // Home Assistant only polls once on connect and relies on these notifications afterwards.
 // Event driven: sent as soon as a data source has written new values. The minimum interval
 // (NOTIFY_STATUS_MIN_INTERVAL) merges updates that arrive in several parts (e.g. one MQTT message per phase).
@@ -120,9 +141,7 @@ void notifyStatusWebSocket() {
   if (!powerChanged && !energyChanged) {
     return;
   }
-  if (!webSocket.availableForWriteAll()) {
-    return; // a client is not consuming its queue, try again on the next pass
-  }
+
   lastNotify = millis();
   memcpy(lastPower, PhasePower, sizeof(lastPower));
   memcpy(lastEnergy, PhaseEnergy, sizeof(lastEnergy));
@@ -177,7 +196,13 @@ void notifyStatusWebSocket() {
   message = String(finalPtr);
   DEBUG_SERIAL.print(F("NotifyStatus: "));
   DEBUG_SERIAL.println(message);
-  webSocket.textAll(message);
+
+  // only send notifications to passive clients
+  for (auto* client : webSocket.getClients()) {
+    if (client && client->status() == WS_CONNECTED && !isPollingClient(client->id()) && client->canSend()) {
+      client->text(message);
+    }
+  }
 }
 
 void parseUdpRPC() {
