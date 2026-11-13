@@ -198,9 +198,9 @@ void notifyStatusWebSocket() {
   DEBUG_SERIAL.println(message);
 
   // only send notifications to passive clients
-  for (auto* client : webSocket.getClients()) {
-    if (client && client->status() == WS_CONNECTED && !isPollingClient(client->id()) && client->canSend()) {
-      client->text(message);
+  for (auto& client : webSocket.getClients()) {
+    if (client.status() == WS_CONNECTED && !isPollingClient(client.id()) && client.canSend()) {
+      client.text(message);
     }
   }
 }
