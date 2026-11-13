@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <memory>
 
 #ifdef ESP32
 #include "esp_task_wdt.h"
@@ -63,6 +64,36 @@ static AsyncWebServerResponse *beginGzipHtmlResponse(AsyncWebServerRequest *requ
 
   response->addHeader("Content-Encoding", "gzip");
   return response;
+}
+
+template <size_t N, typename Func>
+void sendJsonRpcResult(AsyncWebServerRequest *request, Func generator) {
+  if (N <= 512) {
+    char buf[N];
+    buf[0] = '\0';
+    generator(buf, N);
+    request->send(200, "application/json", buf);
+    return;
+  }
+
+  auto buffer = std::make_shared<std::array<char, N>>();
+  auto raw = buffer->data();
+  raw[0] = '\0';
+  generator(raw, N);
+
+  size_t len = strnlen(raw, N);
+  AsyncWebServerResponse *response = request->beginResponse(
+      "application/json",
+      len,
+      [buffer, len](uint8_t *out, size_t maxLen, size_t index) -> size_t {
+        if (index >= len) return 0;
+
+        size_t n = (maxLen < (len - index)) ? maxLen : (len - index);
+        memcpy(out, buffer->data() + index, n);
+        return n;
+      });
+
+  request->send(response);
 }
 
 void setup(void)
@@ -380,93 +411,34 @@ void setup(void)
   
   // Shelly RPC routes mapping directly to local buffer string parsers
   server.on("/rpc/EM.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 192;
-    String buf;
-    buf.reserve(BUFFER_SIZE); 
-    char* p = const_cast<char*>(buf.c_str());
-    EMGetConfig(p, BUFFER_SIZE); buf = String(p);
-    request->send(200, "application/json", buf); 
+    sendJsonRpcResult<192>(request, EMGetConfig);
   });
-  
   server.on("/rpc/EM.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 768;
-    String buf;
-    buf.reserve(BUFFER_SIZE); 
-    char* p = const_cast<char*>(buf.c_str());
-    EMGetStatus(p, BUFFER_SIZE); buf = String(p);
-    request->send(200, "application/json", buf); 
+    sendJsonRpcResult<768>(request, EMGetStatus);
   });
-
   server.on("/rpc/EMData.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 384;
-    String buf;
-    buf.reserve(BUFFER_SIZE); 
-    char* p = const_cast<char*>(buf.c_str());
-    EMDataGetStatus(p, BUFFER_SIZE); buf = String(p);
-    request->send(200, "application/json", buf); 
+    sendJsonRpcResult<384>(request, EMDataGetStatus);
   });
-
   server.on("/rpc/Shelly.GetComponents", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 1280;
-    String buf;
-    buf.reserve(BUFFER_SIZE); 
-    char* p = const_cast<char*>(buf.c_str());
-    shellyComponents(p, BUFFER_SIZE); buf = String(p);
-    request->send(200, "application/json", buf); 
+    sendJsonRpcResult<1280>(request, shellyComponents);
   });
-  
   server.on("/rpc/Shelly.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 1024;
-    String buf;
-    buf.reserve(BUFFER_SIZE); 
-    char* p = const_cast<char*>(buf.c_str());
-    shellyGetConfig(p, BUFFER_SIZE); buf = String(p);
-    request->send(200, "application/json", buf); 
+    sendJsonRpcResult<1024>(request, shellyGetConfig);
   });
-  
   server.on("/rpc/Shelly.GetDeviceInfo", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 256;
-    String buf;
-    buf.reserve(BUFFER_SIZE); 
-    char* p = const_cast<char*>(buf.c_str());
-    shellyGetDeviceInfo(p, BUFFER_SIZE); buf = String(p);
-    request->send(200, "application/json", buf); 
+    sendJsonRpcResult<256>(request, shellyGetDeviceInfo);
   });
-  
   server.on("/rpc/Shelly.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 1792;
-    String buf;
-    buf.reserve(BUFFER_SIZE); 
-    char* p = const_cast<char*>(buf.c_str());
-    shellyGetStatus(p, BUFFER_SIZE); buf = String(p);
-    request->send(200, "application/json", buf); 
+    sendJsonRpcResult<1792>(request, shellyGetStatus);
   });
-
   server.on("/rpc/Sys.GetConfig", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 512;
-    String buf;
-    buf.reserve(BUFFER_SIZE); 
-    char* p = const_cast<char*>(buf.c_str());
-    sysGetConfig(p, BUFFER_SIZE); buf = String(p);
-    request->send(200, "application/json", buf); 
+    sendJsonRpcResult<512>(request, sysGetConfig);
   });
-  
   server.on("/rpc/Sys.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 512;
-    String buf;
-    buf.reserve(BUFFER_SIZE); 
-    char* p = const_cast<char*>(buf.c_str());
-    sysGetStatus(p, BUFFER_SIZE); buf = String(p);
-    request->send(200, "application/json", buf); 
+    sendJsonRpcResult<512>(request, sysGetStatus);
   });
-
   server.on("/rpc/WiFi.GetStatus", AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest *request) {
-    const size_t BUFFER_SIZE = 256;
-    String buf;
-    buf.reserve(BUFFER_SIZE); 
-    char* p = const_cast<char*>(buf.c_str());
-    wifiGetStatus(p, BUFFER_SIZE); buf = String(p);
-    request->send(200, "application/json", buf); 
+    sendJsonRpcResult<256>(request, wifiGetStatus);
   });
 
   // Thread-safe JSON-RPC POST payload assembler
@@ -515,37 +487,40 @@ void setup(void)
   switch (current_input_type) { 
     case input_type_enum::MQTT:
     {
+      mqtt_client = new PubSubClient(wifi_client);
       IPAddress ip;
-      mqtt_client.setBufferSize(2048);
+      mqtt_client->setBufferSize(2048);
       if (ip.fromString(mqtt_server))
       {
-        mqtt_client.setServer(ip, mqtt_port);
+        mqtt_client->setServer(ip, mqtt_port);
       }
       else
       {
-        mqtt_client.setServer(mqtt_server, mqtt_port);
+        mqtt_client->setServer(mqtt_server, mqtt_port);
       }
-      mqtt_client.setCallback(mqtt_callback);
+      mqtt_client->setCallback(mqtt_callback);
       break;
     }
     case input_type_enum::SMA:
-      Udp.begin(multicastPort);
+      Udp = new WiFiUDP();
 #ifdef ESP8266
-      Udp.beginMulticast(WiFi.localIP(), multicastIP, multicastPort);
+      Udp->beginMulticast(WiFi.localIP(), multicastIP, multicastPort);
 #else
-      Udp.beginMulticast(multicastIP, multicastPort);
+      Udp->beginMulticast(multicastIP, multicastPort);
 #endif
      break;
     
      case input_type_enum::SHRDZM:
       // Set Up UDP for SHRDZM smart meter interface
-      Udp.begin(multicastPort);
+      Udp = new WiFiUDP();
+      Udp->begin(multicastPort);
       break;
 
     case input_type_enum::SUNSPEC:
-      modbus1.client();
+      modbus1 = new ModbusIP();
+      modbus1->client();
       DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
-      modbus1.connect(modbus_ip, sunspec_port_int);
+      modbus1->connect(modbus_ip, sunspec_port_int);
       break;
 
       case input_type_enum::SMLSERIAL:
@@ -553,7 +528,8 @@ void setup(void)
       break;
 
       case input_type_enum::HTTP:
-      http.useHTTP10(true);
+      http = new HTTPClient();
+      http->useHTTP10(true);
       break;
 
       case input_type_enum::NONE:
@@ -593,11 +569,11 @@ void worker_loop(int currentMillis)
 
   switch (current_input_type) {
     case input_type_enum::MQTT:
-      if (!mqtt_client.connected())
+      if (!mqtt_client->connected())
       {
         mqtt_reconnect();
       }
-      mqtt_client.loop();
+      mqtt_client->loop();
       break;
     case input_type_enum::SMA:
       parseSMA();
@@ -606,7 +582,7 @@ void worker_loop(int currentMillis)
       parseSHRDZM();
       break;
     case input_type_enum::SUNSPEC:
-      modbus1.task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
+      modbus1->task(); // allow modbus TCP client to process incoming data and maintain connection, call callbacks
       if (currentMillis - startMillis >= query_period_modbus_u32)
       {
         parseSUNSPEC();
@@ -683,6 +659,13 @@ void loop()
     all_esp_reset(Energy2Shelly_ResetReason::REBOOT_REQUEST);
   }
 
+  // Clean up disconnected/zombie WebSocket clients every 1 second
+  static unsigned long wsCleanupTimer = 0;
+  if (currentMillis - wsCleanupTimer >= 1000)
+  {
+    webSocket.cleanupClients();
+    wsCleanupTimer = currentMillis;
+  }
 
   // check Watchdogs and print status info
   static unsigned long WDTimer = 0;
@@ -718,11 +701,20 @@ void loop()
 
   if (parametersUpdated) {
     DEBUG_SERIAL.println(F("New keys"));
+    input_type_enum previous_input_type = current_input_type;
+
     load_parameters();
     serializeJsonPretty(config_doc, DEBUG_SERIAL);
     DEBUG_SERIAL.println();
     interprete_parameters();
     parametersUpdated = false;
+
+    if (previous_input_type != current_input_type) {
+      DEBUG_SERIAL.println(F("Input type changed, rebooting..."));
+      current_input_type = input_type_enum::NONE; // avoid nullptr access before reboot
+      updateTimestamp = millis();
+      shouldReboot = true;
+    }
   }
 
   // set reset counter to 0, after one minute

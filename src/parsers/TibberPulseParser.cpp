@@ -29,19 +29,19 @@ bool parseTibberPulse()
   char url[128];
   snprintf_P(url, sizeof(url), PSTR("http://%s%s%u"), tibber_host, tibber_rpc[guess], tibber_nodeid);
   DEBUG_SERIAL.printf("URL:%s, user:%s\r\n", url, tibber_user);
-  http.begin(wifi_client, url);
-  http.setAuthorization(tibber_user, tibber_password);
-  http.setTimeout(HTTP_TIMEOUT);
-  int httpResponseCode = http.GET();
+  http->begin(wifi_client, url);
+  http->setAuthorization(tibber_user, tibber_password);
+  http->setTimeout(HTTP_TIMEOUT);
+  int httpResponseCode = http->GET();
   if (httpResponseCode > 0)
   {
 
-    WiFiClient *w = http.getStreamPtr();    
+    WiFiClient *w = http->getStreamPtr();    
     sml_states_t s;
     unsigned int counter=0;
     unsigned long timeout = millis();
     // keep polling until exit condition met
-    while (http.connected() && (w->available() || w->peek() != -1))
+    while (http->connected() && (w->available() || w->peek() != -1))
     {
       if (w->available())
       {
@@ -86,6 +86,6 @@ bool parseTibberPulse()
   }
   if (ret==false)  TibberPulse_URL_guesser();
   // Free resources
-  http.end();
+  http->end();
   return ret;
 }

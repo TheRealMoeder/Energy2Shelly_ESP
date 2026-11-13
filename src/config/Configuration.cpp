@@ -33,8 +33,8 @@ IPAddress multicastIP(239, 12, 255, 254);
 
 // MODBUS settings
 IPAddress modbus_ip;
-ModbusIP modbus1;
-int16_t modbus_result[64];
+ModbusIP* modbus1 = nullptr;
+int16_t modbus_result[256];
 
 // Default electrical values and offset
 const uint8_t defaultVoltage = 230;
@@ -67,12 +67,12 @@ bool ONA_validVoltage = false;
 // ============================================================================
 
 WiFiClient wifi_client;
-PubSubClient mqtt_client(wifi_client);
+PubSubClient* mqtt_client = nullptr;
 AsyncWebServer server(80);
 AsyncWebSocket webSocket("/rpc");
 AsyncWebSocket wsConsole("/consolews");
-WiFiUDP Udp;
-HTTPClient http;
+WiFiUDP* Udp = nullptr;
+HTTPClient* http = nullptr;
 WiFiUDP UdpRPC;
 uint16_t wifi_reconnect_attempts = 0;
 DNSServer dnsServer;
@@ -97,6 +97,31 @@ MDNSResponder::hMDNSService hMDNSService2 = 0; // handle of the shelly service i
 #endif
 
 
+static void destroyClientObjects()
+{
+  if (mqtt_client != nullptr) {
+    mqtt_client->disconnect();
+    delete mqtt_client;
+    mqtt_client = nullptr;
+  }
+
+  if (http != nullptr) {
+    http->end();
+    delete http;
+    http = nullptr;
+  }
+
+  if (Udp != nullptr) {
+    Udp->stop();
+    delete Udp;
+    Udp = nullptr;
+  }
+
+  if (modbus1 != nullptr) {
+    delete modbus1;
+    modbus1 = nullptr;
+  }
+}
 
 // Blink LED handlers
 void blinkled(int duration)
@@ -193,6 +218,7 @@ void interprete_parameters()
 {
   // Interpret the loaded parameters and set flags accordingly
   current_input_type = static_cast<input_type_enum>(config_doc["basic"]["input_type"].as<uint32_t>());
+  destroyClientObjects(); // Destroy unused client objects; Todo: Input change without reboot will lead to crash!
   switch (current_input_type) {
     case input_type_enum::SMA:
         DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));

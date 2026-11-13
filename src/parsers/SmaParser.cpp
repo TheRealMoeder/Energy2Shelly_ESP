@@ -4,9 +4,9 @@
 
 void parseSMA() {
   uint8_t buffer[1024];
-  int packetSize = Udp.parsePacket();
+  int packetSize = Udp->parsePacket();
   if (packetSize) {
-    int rSize = Udp.read(buffer, 1024);
+    int rSize = Udp->read(buffer, 1024);
     if (buffer[0] != 'S' || buffer[1] != 'M' || buffer[2] != 'A') {
       DEBUG_SERIAL.println(F("Not an SMA packet?"));
       return;
