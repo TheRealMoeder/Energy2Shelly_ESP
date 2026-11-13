@@ -227,7 +227,7 @@ size_t shellyGetStatus(char* buffer, size_t maxLen) {
   } else {
     json.write(PSTR("{\"sta_ip\":null,\"status\":\"connecting\",\"ssid\":null,\"bssid\":null,\"rssi\":0,\"sta_ip6\":[]}"));
   }
-
+  json.write(PSTR("}"));
   blinkled(ledblinkduration);
   return json.pos;
 }
