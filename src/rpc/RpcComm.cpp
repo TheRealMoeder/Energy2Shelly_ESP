@@ -6,20 +6,51 @@
 #define MAX_TRACKED_WS_CLIENTS 5
 #define WS_RPC_ACTIVE_WINDOW_MS 5000
 
-static unsigned long lastClientRpcTime[MAX_TRACKED_WS_CLIENTS] = {0};
+struct WsClientSlot {
+    uint32_t id;
+    unsigned long lastRpcTime;
+    bool inUse;
+};
 
-static bool isPollingClient(uint32_t clientId) {
-    if (clientId >= MAX_TRACKED_WS_CLIENTS) {
-        return false;
+static WsClientSlot trackedClients[MAX_TRACKED_WS_CLIENTS] = {0};
+
+static void updateClientActivity(uint32_t clientId, bool isRpcTraffic) {
+    int freeSlot = -1;
+    int oldestSlot = 0;
+    unsigned long oldestTime = ULONG_MAX;
+
+    for (int i = 0; i < MAX_TRACKED_WS_CLIENTS; i++) {
+        if (trackedClients[i].inUse) {
+            if (trackedClients[i].id == clientId) {
+                if (isRpcTraffic) {
+                    trackedClients[i].lastRpcTime = millis();
+                }
+                return;
+            }
+            if (trackedClients[i].lastRpcTime < oldestTime) {
+                oldestTime = trackedClients[i].lastRpcTime;
+                oldestSlot = i;
+            }
+        } else if (freeSlot == -1) {
+            freeSlot = i;
+        }
     }
 
-    unsigned long lastRpc = lastClientRpcTime[clientId];
-    if (lastRpc == 0) {
-        return false;
-    }
+    int targetSlot = (freeSlot != -1) ? freeSlot : oldestSlot;
+    trackedClients[targetSlot].id = clientId;
+    trackedClients[targetSlot].lastRpcTime = isRpcTraffic ? millis() : 0;
+    trackedClients[targetSlot].inUse = true;
+}
 
-    // Only treat a client as active if it recently sent RPC traffic.
-    return (millis() - lastRpc) < WS_RPC_ACTIVE_WINDOW_MS;
+static void removeClientSlot(uint32_t clientId) {
+    for (int i = 0; i < MAX_TRACKED_WS_CLIENTS; i++) {
+        if (trackedClients[i].inUse && trackedClients[i].id == clientId) {
+            trackedClients[i].inUse = false;
+            trackedClients[i].id = 0;
+            trackedClients[i].lastRpcTime = 0;
+            return;
+        }
+    }
 }
 
 // Aligned with Shelly API docs: Script.GetCode
@@ -87,12 +118,11 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
 {
   switch (type) {
     case WS_EVT_DISCONNECT:
-      if (client->id() < MAX_TRACKED_WS_CLIENTS) {
-        lastClientRpcTime[client->id()] = 0;
-      }
+      removeClientSlot(client->id());
       DEBUG_SERIAL.printf("[%u] Websocket: disconnected!\n", (unsigned int)client->id());
       break;
     case WS_EVT_CONNECT:
+      updateClientActivity(client->id(), false);
       DEBUG_SERIAL.printf("[%u] Websocket: connected from %s\n", (unsigned int)client->id(), client->remoteIP().toString().c_str());
       break;
     case WS_EVT_DATA: {
@@ -110,9 +140,7 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
         const char* method = json["method"] | "";
         const char* src = json["src"] | "EMPTY";
 
-        if (client->id() < MAX_TRACKED_WS_CLIENTS) {
-          lastClientRpcTime[client->id()] = millis();
-        }
+        updateClientActivity(client->id(), true);
 
         String wsAnswer;
         buildRpcResponse(method, localRpcId, src, wsAnswer);
@@ -206,10 +234,10 @@ void notifyStatusWebSocket() {
   DEBUG_SERIAL.print(F("NotifyStatus: "));
   DEBUG_SERIAL.println(message);
 
-  // only send notifications to passive clients
-  for (auto& client : webSocket.getClients()) {
-    if (client.status() == WS_CONNECTED && !isPollingClient(client.id()) && client.canSend()) {
-      client.text(message);
+  unsigned long now = millis();
+  for (int i = 0; i < MAX_TRACKED_WS_CLIENTS; i++) {
+    if (trackedClients[i].inUse && (trackedClients[i].lastRpcTime == 0 || (now - trackedClients[i].lastRpcTime) >= WS_RPC_ACTIVE_WINDOW_MS)) {
+        webSocket.text(trackedClients[i].id, message);
     }
   }
 }
