@@ -112,7 +112,7 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
           if (client->canSend()) {
             client->text(wsAnswer);
           } else {
-            DEBUG_SERIAL.printf(F([%u] Websocket: TX queue full, dropping RPC reply\n"), (unsigned int)client->id());
+            DEBUG_SERIAL.printf([%u] Websocket: TX queue full, dropping RPC reply\n", (unsigned int)client->id());
           }
         }
       }
