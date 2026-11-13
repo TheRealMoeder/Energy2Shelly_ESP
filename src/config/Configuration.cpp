@@ -129,6 +129,7 @@ void remove_filtered_parameters_ram(JsonDocument filter) {
   for (JsonPair p : filter.as<JsonObject>()) {
     config_doc.remove(p.key());
   }
+  config_doc.shrinkToFit();
   DEBUG_SERIAL.println(F("Sections successfully removed from config_doc in RAM."));
 }
 
@@ -285,7 +286,7 @@ void interprete_parameters()
     shelly_name = shelly_name.substring(0, 128);
   }
 
-
+config_doc.shrinkToFit();
 
 }
 
@@ -463,7 +464,8 @@ void WifiManagerSetup(bool SW_update)
       LITTLEFS_BEGIN();
    }
   init_parameters();
-  load_filtered_parameters(filter); // load all
+  filter["wifi"]=true; filter["shelly"]=true;
+  load_filtered_parameters(filter); 
   if (config_doc["wifi"]["ssid"] == "") // check for valid WiFi credentials, if not present, start config portal
   {
       DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
@@ -501,11 +503,11 @@ void WifiManagerSetup(bool SW_update)
   // Set Shelly ID to ESP's MAC address by default
   String currentMac = config_doc["shelly"]["shelly_mac"].as<String>();
  
-  if (currentMac == "null" || currentMac.length() == 0) {
-    
+  if (currentMac == "null" || currentMac.length() == 0) {// at least first time boot setup
+    filter.clear();
+    load_filtered_parameters(filter);//load all 
     String macStr = WiFi.macAddress(); 
-    macStr.replace(":", "");        
-    
+    macStr.replace(":", "");            
     config_doc["shelly"]["shelly_mac"] = macStr;
     save_parameters();
   }
