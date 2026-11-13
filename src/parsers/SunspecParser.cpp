@@ -341,7 +341,7 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
       }
       
     }
-
+    power=PhasePower[0].power+PhasePower[1].power+PhasePower[2].power;
 
     DEBUG_SERIAL.print(F("SUNSPEC power: "));
     DEBUG_SERIAL.println(power);
