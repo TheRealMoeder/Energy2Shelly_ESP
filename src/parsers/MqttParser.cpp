@@ -56,15 +56,15 @@ void mqtt_reconnect() {
     pass = nullptr;
   }
 
-  if (mqtt_client.connect(shelly_name.c_str(), user, pass)) {
+  if (mqtt_client->connect(shelly_name.c_str(), user, pass)) {
     DEBUG_SERIAL.println(F("connected"));
     const char* topic = mqtt_topic;
     if (topic != nullptr && topic[0] != '\0') {
-      mqtt_client.subscribe(topic);
+      mqtt_client->subscribe(topic);
     }
   } else {
     DEBUG_SERIAL.print(F("failed, rc="));
-    DEBUG_SERIAL.print(mqtt_client.state());
+    DEBUG_SERIAL.print(mqtt_client->state());
     DEBUG_SERIAL.println(F(" try again in 5 seconds"));
   }
 }

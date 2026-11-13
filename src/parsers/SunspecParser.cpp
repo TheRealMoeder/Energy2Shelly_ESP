@@ -351,7 +351,7 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
     // error like timeout, connection lost, etc.
     DEBUG_SERIAL.print(F("Modbus-error: "));
     DEBUG_SERIAL.println(event);
-    modbus1.disconnect(modbus_ip); // disconnect from the device to reset the connection
+    modbus1->disconnect(modbus_ip); // disconnect from the device to reset the connection
   }
   return true;
 }
@@ -359,9 +359,9 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
 void parseSUNSPEC()
 {
 
-  if (!modbus1.isConnected(modbus_ip))
+  if (!modbus1->isConnected(modbus_ip))
   {
-    modbus1.connect(modbus_ip, sunspec_port_int);
+    modbus1->connect(modbus_ip, sunspec_port_int);
   }
   else
   {
@@ -371,8 +371,8 @@ void parseSUNSPEC()
           DEBUG_SERIAL.println(F(", please check your configuration!"));
           return;
     }
-    modbus1.readHreg(modbus_ip, SUNSPEC_BASE, (uint16_t *)&modbus_result[0], SUNSPEC_REGISTER_COUNT, modbusSunSpecCallback, modbusdev_int);
+    modbus1->readHreg(modbus_ip, SUNSPEC_BASE, (uint16_t *)&modbus_result[0], SUNSPEC_REGISTER_COUNT, modbusSunSpecCallback, modbusdev_int);
     delay(10);
-    modbus1.task();
+    modbus1->task();
   }
 }

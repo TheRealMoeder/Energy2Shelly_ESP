@@ -2,13 +2,13 @@
 #include "../data/DataProcessing.h"
 
 void parseSHRDZM() {
-  int packetSize = Udp.parsePacket();
+  int packetSize = Udp->parsePacket();
   if (packetSize <= 0) {
     return;
   }
 
   char buffer[1024];
-  int rSize = Udp.read(buffer, sizeof(buffer));
+  int rSize = Udp->read(buffer, sizeof(buffer));
   if (rSize <= 0) {
     return;
   }

@@ -10,6 +10,37 @@ size_t finalize_buffer(int written, size_t maxLen) {
   return (size_t)written;
 }
 
+// Stack-only helper for safe, zero-heap JSON composition
+struct JsonWriter {
+  char* buf;
+  size_t maxLen;
+  size_t pos;
+
+  JsonWriter(char* buffer, size_t len) : buf(buffer), maxLen(len), pos(0) {
+    if (buf != nullptr && maxLen > 0) {
+      buf[0] = '\0';
+    }
+  }
+
+  bool hasSpace() const {
+    return buf != nullptr && maxLen > 0 && pos < maxLen - 1;
+  }
+
+  // Overload 1: Append formatted PROGMEM string
+  template <typename... Args>
+  void write(PGM_P fmt, Args... args) {
+    if (!hasSpace()) return;
+    int written = snprintf_P(buf + pos, maxLen - pos, fmt, args...);
+    pos += finalize_buffer(written, maxLen - pos);
+  }
+
+  // Overload 2: Embed output from another RPC handler function
+  void write(size_t (*handler)(char*, size_t)) {
+    if (!hasSpace()) return;
+    pos += handler(buf + pos, maxLen - pos);
+  }
+};
+
 // aligned with Shelly API docs
 size_t shellyGetDeviceInfo(char* buffer, size_t maxLen) {
   int written = snprintf_P(buffer, maxLen,
@@ -107,103 +138,105 @@ size_t EMGetConfig(char* buffer, size_t maxLen) {
 
 // aligned with Shelly API docs
 size_t shellyGetConfig(char* buffer, size_t maxLen) {
-  char emConfig[256] = "";
-  char sysConfig[512] = "";
-  EMGetConfig(emConfig, sizeof(emConfig));
-  sysGetConfig(sysConfig, sizeof(sysConfig));
+  JsonWriter json(buffer, maxLen);
+
+  json.write(PSTR("{\"ble\":{\"enable\":false},\"cloud\":{\"enable\":false,\"server\":null},\"em:0\":"));
+  json.write(EMGetConfig);
+  json.write(PSTR(",\"sys\":"));
+  json.write(sysGetConfig);
 
   IPAddress ip = WiFi.localIP();
   IPAddress mask = WiFi.subnetMask();
   IPAddress gw = WiFi.gatewayIP();
   IPAddress dns = WiFi.dnsIP();
+  const char* ssid = config_doc["wifi"]["ssid"] | "";
 
-  int written = snprintf_P(buffer, maxLen,
-      PSTR("{\"ble\":{\"enable\":false},\"cloud\":{\"enable\":false,\"server\":null},\"em:0\":%s,\"sys\":%s,"
-      "\"wifi\":{\"sta\":{\"ssid\":\"%s\",\"is_open\":false,\"enable\":true,\"ipv4mode\":\"dhcp\","
-      "\"ip\":\"%u.%u.%u.%u\",\"netmask\":\"%u.%u.%u.%u\",\"gw\":\"%u.%u.%u.%u\",\"nameserver\":\"%u.%u.%u.%u\"},"
-      "\"ws\":{\"enable\":false,\"server\":null,\"ssl_ca\":\"ca.pem\"}}}"),
-      emConfig, sysConfig, WiFi.SSID().c_str(),
+  json.write(
+      PSTR(",\"wifi\":{\"sta\":{\"ssid\":\"%s\",\"is_open\":false,\"enable\":true,\"ipv4mode\":\"dhcp\","
+           "\"ip\":\"%u.%u.%u.%u\",\"netmask\":\"%u.%u.%u.%u\","
+           "\"gw\":\"%u.%u.%u.%u\",\"nameserver\":\"%u.%u.%u.%u\"},"
+           "\"ws\":{\"enable\":false,\"server\":null,\"ssl_ca\":\"ca.pem\"}}}"),
+      ssid,
       (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
       (unsigned int)mask[0], (unsigned int)mask[1], (unsigned int)mask[2], (unsigned int)mask[3],
       (unsigned int)gw[0], (unsigned int)gw[1], (unsigned int)gw[2], (unsigned int)gw[3],
       (unsigned int)dns[0], (unsigned int)dns[1], (unsigned int)dns[2], (unsigned int)dns[3]
   );
+
   blinkled(ledblinkduration);
-  return finalize_buffer(written, maxLen);
+  return json.pos;
 }
 
 // aligned with Shelly API docs
 size_t shellyComponents(char* buffer, size_t maxLen) {
-  char emStatus[768] = "";
-  char emConfig[256] = "";
-  char emDataStatus[512] = "";
+  JsonWriter json(buffer, maxLen);
 
-  EMGetStatus(emStatus, sizeof(emStatus));
-  EMGetConfig(emConfig, sizeof(emConfig));
-  EMDataGetStatus(emDataStatus, sizeof(emDataStatus));
+  json.write(PSTR("{\"components\":[{\"key\":\"em:0\",\"status\":"));
+  json.write(EMGetStatus);
+  json.write(PSTR(",\"config\":"));
+  json.write(EMGetConfig);
+  json.write(PSTR("},{\"key\":\"emdata:0\",\"status\":"));
+  json.write(EMDataGetStatus);
+  json.write(PSTR(",\"config\":{}}],\"cfg_rev\":1,\"offset\":0,\"total\":2}"));
 
-  int written = snprintf_P(buffer, maxLen,
-      PSTR("{\"components\":[{\"key\":\"em:0\",\"status\":%s,\"config\":%s},{\"key\":\"emdata:0\",\"status\":%s,\"config\":{}}],\"cfg_rev\":1,\"offset\":0,\"total\":2}"),
-      emStatus, emConfig, emDataStatus
-  );
   blinkled(ledblinkduration);
-  return finalize_buffer(written, maxLen);
+  return json.pos;
 }
 
 // aligned with Shelly API docs
 size_t shellyGetStatus(char* buffer, size_t maxLen) {
+  JsonWriter json(buffer, maxLen);
+
   double temperature = 26.55;
 #ifdef ESP32
   temperature = temperatureRead();
 #endif
 
-  char emStatus[768] = "";
-  char emDataStatus[512] = "";
-  char sysStatus[512] = "";
+  json.write(PSTR("{\"ble\":{},\"bthome\":{},\"cloud\":{\"connected\":false},\"em:0\":"));
+  json.write(EMGetStatus);
+  json.write(PSTR(",\"emdata:0\":"));
+  json.write(EMDataGetStatus);
+  json.write(PSTR(",\"eth\":{\"ip\":null,\"ip6\":null},\"modbus\":{},\"mqtt\":{\"connected\":false},\"sys\":"));
+  json.write(sysGetStatus);
+  json.write(
+      PSTR(",\"temperature:0\":{\"id\":0,\"tC\":%.2f,\"tF\":%.2f},\"wifi\":"),
+      temperature,
+      (temperature * 9.0 / 5.0) + 32.0
+  );
 
-  EMGetStatus(emStatus, sizeof(emStatus));
-  EMDataGetStatus(emDataStatus, sizeof(emDataStatus));
-  sysGetStatus(sysStatus, sizeof(sysStatus));
-
-  bool connected = (WiFi.status() == WL_CONNECTED);
-  char wifiBlock[256];
-
-  if (connected) {
+  if (WiFi.status() == WL_CONNECTED) {
     IPAddress ip = WiFi.localIP();
     const uint8_t* bssid = WiFi.BSSID();
-    uint8_t zeroBssid[6] = {0, 0, 0, 0, 0, 0};
+    uint8_t zeroBssid[6] = {0};
+
     if (bssid == nullptr) {
       bssid = zeroBssid;
     }
 
-    snprintf_P(wifiBlock, sizeof(wifiBlock),
+    const char* ssid = config_doc["wifi"]["ssid"] | "";
+
+    json.write(
         PSTR("{\"sta_ip\":\"%u.%u.%u.%u\",\"status\":\"got ip\",\"ssid\":\"%s\","
-        "\"bssid\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"rssi\":%d,\"sta_ip6\":[]}"),
+             "\"bssid\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"rssi\":%d,\"sta_ip6\":[]}"),
         (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
-        WiFi.SSID().c_str(),
-        (unsigned int)bssid[0], (unsigned int)bssid[1], (unsigned int)bssid[2], (unsigned int)bssid[3], (unsigned int)bssid[4], (unsigned int)bssid[5],
+        ssid,
+        (unsigned int)bssid[0], (unsigned int)bssid[1], (unsigned int)bssid[2],
+        (unsigned int)bssid[3], (unsigned int)bssid[4], (unsigned int)bssid[5],
         WiFi.RSSI()
     );
   } else {
-    snprintf_P(wifiBlock, sizeof(wifiBlock),
-        PSTR("{\"sta_ip\":null,\"status\":\"connecting\",\"ssid\":null,\"bssid\":null,\"rssi\":0,\"sta_ip6\":[]}")
-    );
+    json.write(PSTR("{\"sta_ip\":null,\"status\":\"connecting\",\"ssid\":null,\"bssid\":null,\"rssi\":0,\"sta_ip6\":[]}"));
   }
-
-  int written = snprintf_P(buffer, maxLen,
-      PSTR("{\"ble\":{},\"bthome\":{},\"cloud\":{\"connected\":false},\"em:0\":%s,\"emdata:0\":%s,\"eth\":{\"ip\":null,\"ip6\":null},"
-      "\"modbus\":{},\"mqtt\":{\"connected\":false},\"sys\":%s,\"temperature:0\":{\"id\":0,\"tC\":%.2f,\"tF\":%.2f},"
-      "\"wifi\":%s,\"ws\":{\"connected\":false}}"),
-      emStatus, emDataStatus, sysStatus, temperature, (temperature * 9.0 / 5.0) + 32.0, wifiBlock
-  );
+  json.write(PSTR("}"));
   blinkled(ledblinkduration);
-  return finalize_buffer(written, maxLen);
+  return json.pos;
 }
 
 // aligned with Shelly API docs
 size_t wifiGetStatus(char* buffer, size_t maxLen) {
   int written = 0;
   if (WiFi.status() == WL_CONNECTED) {
+    const char* ssid = config_doc["wifi"]["ssid"] | "";
     IPAddress ip = WiFi.localIP();
     const uint8_t* bssid = WiFi.BSSID();
     uint8_t zeroBssid[6] = {0, 0, 0, 0, 0, 0};
@@ -215,7 +248,7 @@ size_t wifiGetStatus(char* buffer, size_t maxLen) {
         PSTR("{\"sta_ip\":\"%u.%u.%u.%u\",\"status\":\"got ip\",\"ssid\":\"%s\","
         "\"bssid\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"rssi\":%d,\"ap_client_count\":0}"),
         (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
-        WiFi.SSID().c_str(),
+        ssid,
         (unsigned int)bssid[0], (unsigned int)bssid[1], (unsigned int)bssid[2], (unsigned int)bssid[3], (unsigned int)bssid[4], (unsigned int)bssid[5],
         WiFi.RSSI()
     );
