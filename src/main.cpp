@@ -501,7 +501,6 @@ void setup(void)
     }
     case input_type_enum::SMA:
       Udp = new WiFiUDP();
-      Udp->begin(multicastPort);
 #ifdef ESP8266
       Udp->beginMulticast(WiFi.localIP(), multicastIP, multicastPort);
 #else
@@ -641,6 +640,13 @@ void loop()
     all_esp_reset(Energy2Shelly_ResetReason::REBOOT_REQUEST);
   }
 
+  // Clean up disconnected/zombie WebSocket clients every 1 second
+  static unsigned long wsCleanupTimer = 0;
+  if (currentMillis - wsCleanupTimer >= 1000)
+  {
+    webSocket.cleanupClients();
+    wsCleanupTimer = currentMillis;
+  }
 
   // check Watchdogs and print status info
   static unsigned long WDTimer = 0;
