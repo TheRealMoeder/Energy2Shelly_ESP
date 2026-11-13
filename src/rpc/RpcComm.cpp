@@ -3,18 +3,6 @@
 #include "../data/DataStructures.h"
 #include "RpcComm.h"
 
-static const JsonDocument& getRpcFilter() {
-  static JsonDocument filter;
-  static bool initialized = false;
-  if (!initialized) {
-    filter["id"] = true;
-    filter["method"] = true;
-    filter["src"] = true;
-    initialized = true;
-  }
-  return filter;
-}
-
 // Aligned with Shelly API docs: Script.GetCode
 size_t scriptGetCode(char* buffer, size_t maxLen) {
     int written = snprintf_P(buffer, maxLen, PSTR("{\"data\":\"\",\"left\":\"0\"}"));
@@ -90,7 +78,7 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
 
       if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
         JsonDocument json;
-        DeserializationError error = deserializeJson(json, (const char *)data, len,DeserializationOption::Filter(getRpcFilter()));
+        DeserializationError error = deserializeJson(json, (const char *)data, len);
         if (error) {
           DEBUG_SERIAL.print(F("Websocket: deserializeJson() error: "));
           DEBUG_SERIAL.println(error.f_str());
@@ -201,7 +189,7 @@ void parseUdpRPC() {
     buffer[rSize] = '\0';
     DEBUG_SERIAL.print(F("Received UDP packet on port 1010: "));
     DEBUG_SERIAL.println((char *)buffer);
-    deserializeJson(json, buffer, DeserializationOption::Filter(getRpcFilter()));
+    deserializeJson(json, buffer);
     if (json["method"].is<JsonVariant>()) {
       long localRpcId = json["id"] | 0;
       const char* method = json["method"] | "";
@@ -225,7 +213,7 @@ void parseHttpRPC(const String& requestBody, String& responseBody) {
   DEBUG_SERIAL.print(F("Received HTTP RPC request: "));
   DEBUG_SERIAL.println(requestBody);
 
-  if (deserializeJson(json, requestBody, DeserializationOption::Filter(getRpcFilter())) || !json["method"].is<const char*>()) {
+  if (deserializeJson(json, requestBody) || !json["method"].is<const char*>()) {
     responseBody = F("{\"error\":{\"code\":-32600,\"message\":\"Invalid request\"}}");
     return;
   }
