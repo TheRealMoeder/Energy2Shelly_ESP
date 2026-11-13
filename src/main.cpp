@@ -682,11 +682,20 @@ void loop()
 
   if (parametersUpdated) {
     DEBUG_SERIAL.println(F("New keys"));
+    input_type_enum previous_input_type = current_input_type;
+
     load_parameters();
     serializeJsonPretty(config_doc, DEBUG_SERIAL);
     DEBUG_SERIAL.println();
     interprete_parameters();
     parametersUpdated = false;
+
+    if (previous_input_type != current_input_type) {
+      DEBUG_SERIAL.println(F("Input type changed, rebooting..."));
+      current_input_type = input_type_enum::NONE; // avoid nullptr access before reboot
+      updateTimestamp = millis();
+      shouldReboot = true;
+    }
   }
 
   // set reset counter to 0, after one minute
