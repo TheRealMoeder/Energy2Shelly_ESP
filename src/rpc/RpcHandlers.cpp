@@ -10,6 +10,37 @@ size_t finalize_buffer(int written, size_t maxLen) {
   return (size_t)written;
 }
 
+// Stack-only helper for safe, zero-heap JSON composition
+struct JsonWriter {
+  char* buf;
+  size_t maxLen;
+  size_t pos;
+
+  JsonWriter(char* buffer, size_t len) : buf(buffer), maxLen(len), pos(0) {
+    if (buf != nullptr && maxLen > 0) {
+      buf[0] = '\0';
+    }
+  }
+
+  bool hasSpace() const {
+    return buf != nullptr && maxLen > 0 && pos < maxLen - 1;
+  }
+
+  // Overload 1: Append formatted PROGMEM string
+  template <typename... Args>
+  void write(PGM_P fmt, Args... args) {
+    if (!hasSpace()) return;
+    int written = snprintf_P(buf + pos, maxLen - pos, fmt, args...);
+    pos += finalize_buffer(written, maxLen - pos);
+  }
+
+  // Overload 2: Embed output from another RPC handler function
+  void write(size_t (*handler)(char*, size_t)) {
+    if (!hasSpace()) return;
+    pos += handler(buf + pos, maxLen - pos);
+  }
+};
+
 // aligned with Shelly API docs
 size_t shellyGetDeviceInfo(char* buffer, size_t maxLen) {
   int written = snprintf_P(buffer, maxLen,
@@ -107,53 +138,12 @@ size_t EMGetConfig(char* buffer, size_t maxLen) {
 
 // aligned with Shelly API docs
 size_t shellyGetConfig(char* buffer, size_t maxLen) {
-  if (buffer == nullptr || maxLen == 0) {
-    return 0;
-  }
+  JsonWriter json(buffer, maxLen);
 
-  size_t pos = 0;
-  int written = snprintf_P(buffer + pos, maxLen - pos,
-      PSTR("{\"ble\":{\"enable\":false},\"cloud\":{\"enable\":false,\"server\":null},\"em:0\":"));
-  if (written < 0 || (size_t)written >= maxLen - pos) {
-    buffer[maxLen - 1] = '\0';
-    return maxLen - 1;
-  }
-  pos += (size_t)written;
-
-  // em:0-Konfiguration direkt in den Ausgabepuffer schreiben
-  size_t remaining = maxLen - pos;
-  if (remaining <= 1) {
-    buffer[maxLen - 1] = '\0';
-    return maxLen - 1;
-  }
-
-  size_t appended = EMGetConfig(buffer + pos, remaining);
-  if (appended >= remaining - 1) {
-    buffer[maxLen - 1] = '\0';
-    return maxLen - 1;
-  }
-  pos += appended;
-
-  written = snprintf_P(buffer + pos, maxLen - pos, PSTR(",\"sys\":"));
-  if (written < 0 || (size_t)written >= maxLen - pos) {
-    buffer[maxLen - 1] = '\0';
-    return maxLen - 1;
-  }
-  pos += (size_t)written;
-
-  // sys-Konfiguration direkt in den Ausgabepuffer schreiben
-  remaining = maxLen - pos;
-  if (remaining <= 1) {
-    buffer[maxLen - 1] = '\0';
-    return maxLen - 1;
-  }
-
-  appended = sysGetConfig(buffer + pos, remaining);
-  if (appended >= remaining - 1) {
-    buffer[maxLen - 1] = '\0';
-    return maxLen - 1;
-  }
-  pos += appended;
+  json.write(PSTR("{\"ble\":{\"enable\":false},\"cloud\":{\"enable\":false,\"server\":null},\"em:0\":"));
+  json.write(EMGetConfig);
+  json.write(PSTR(",\"sys\":"));
+  json.write(sysGetConfig);
 
   IPAddress ip = WiFi.localIP();
   IPAddress mask = WiFi.subnetMask();
@@ -161,7 +151,7 @@ size_t shellyGetConfig(char* buffer, size_t maxLen) {
   IPAddress dns = WiFi.dnsIP();
   const char* ssid = config_doc["wifi"]["ssid"] | "";
 
-  written = snprintf_P(buffer + pos, maxLen - pos,
+  json.write(
       PSTR(",\"wifi\":{\"sta\":{\"ssid\":\"%s\",\"is_open\":false,\"enable\":true,\"ipv4mode\":\"dhcp\","
            "\"ip\":\"%u.%u.%u.%u\",\"netmask\":\"%u.%u.%u.%u\","
            "\"gw\":\"%u.%u.%u.%u\",\"nameserver\":\"%u.%u.%u.%u\"},"
@@ -170,179 +160,76 @@ size_t shellyGetConfig(char* buffer, size_t maxLen) {
       (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
       (unsigned int)mask[0], (unsigned int)mask[1], (unsigned int)mask[2], (unsigned int)mask[3],
       (unsigned int)gw[0], (unsigned int)gw[1], (unsigned int)gw[2], (unsigned int)gw[3],
-      (unsigned int)dns[0], (unsigned int)dns[1], (unsigned int)dns[2], (unsigned int)dns[3]);
+      (unsigned int)dns[0], (unsigned int)dns[1], (unsigned int)dns[2], (unsigned int)dns[3]
+  );
 
-  if (written < 0 || (size_t)written >= maxLen - pos) {
-    buffer[maxLen - 1] = '\0';
-    return maxLen - 1;
-  }
-
-  pos += (size_t)written;
   blinkled(ledblinkduration);
-  return pos;
+  return json.pos;
 }
 
 // aligned with Shelly API docs
 size_t shellyComponents(char* buffer, size_t maxLen) {
-  if (buffer == nullptr || maxLen == 0) {
-    return 0;
-  }
+  JsonWriter json(buffer, maxLen);
 
-  size_t pos = 0;
-
-  // 1) em:0 + status
-  if (pos < maxLen - 1) {
-    pos += finalize_buffer(
-      snprintf_P(buffer + pos, maxLen - pos,
-        PSTR("{\"components\":[{\"key\":\"em:0\",\"status\":")),
-      maxLen - pos
-    );
-  }
-  if (pos < maxLen - 1) {
-    pos += EMGetStatus(buffer + pos, maxLen - pos);
-  }
-
-  // 2) config
-  if (pos < maxLen - 1) {
-    pos += finalize_buffer(
-      snprintf_P(buffer + pos, maxLen - pos,
-        PSTR(",\"config\":")),
-      maxLen - pos
-    );
-  }
-  if (pos < maxLen - 1) {
-    pos += EMGetConfig(buffer + pos, maxLen - pos);
-  }
-
-  // 3) emdata:0 + status
-  if (pos < maxLen - 1) {
-    pos += finalize_buffer(
-      snprintf_P(buffer + pos, maxLen - pos,
-        PSTR("},{\"key\":\"emdata:0\",\"status\":")),
-      maxLen - pos
-    );
-  }
-  if (pos < maxLen - 1) {
-    pos += EMDataGetStatus(buffer + pos, maxLen - pos);
-  }
-
-  // 4) config + closing JSON
-  if (pos < maxLen - 1) {
-    pos += finalize_buffer(
-      snprintf_P(buffer + pos, maxLen - pos,
-        PSTR(",\"config\":{}}],\"cfg_rev\":1,\"offset\":0,\"total\":2}")),
-      maxLen - pos
-    );
-  }
-
-  if (pos < maxLen) {
-    buffer[pos] = '\0';
-  } else {
-    buffer[maxLen - 1] = '\0';
-  }
+  json.write(PSTR("{\"components\":[{\"key\":\"em:0\",\"status\":"));
+  json.write(EMGetStatus);
+  json.write(PSTR(",\"config\":"));
+  json.write(EMGetConfig);
+  json.write(PSTR("},{\"key\":\"emdata:0\",\"status\":"));
+  json.write(EMDataGetStatus);
+  json.write(PSTR(",\"config\":{}}],\"cfg_rev\":1,\"offset\":0,\"total\":2}"));
 
   blinkled(ledblinkduration);
-  return pos;
+  return json.pos;
 }
 
 // aligned with Shelly API docs
 size_t shellyGetStatus(char* buffer, size_t maxLen) {
-  if (buffer == nullptr || maxLen == 0) {
-    return 0;
-  }
+  JsonWriter json(buffer, maxLen);
 
   double temperature = 26.55;
 #ifdef ESP32
   temperature = temperatureRead();
 #endif
 
-  size_t pos = 0;
+  json.write(PSTR("{\"ble\":{},\"bthome\":{},\"cloud\":{\"connected\":false},\"em:0\":"));
+  json.write(EMGetStatus);
+  json.write(PSTR(",\"emdata:0\":"));
+  json.write(EMDataGetStatus);
+  json.write(PSTR(",\"eth\":{\"ip\":null,\"ip6\":null},\"modbus\":{},\"mqtt\":{\"connected\":false},\"sys\":"));
+  json.write(sysGetStatus);
+  json.write(
+      PSTR(",\"temperature:0\":{\"id\":0,\"tC\":%.2f,\"tF\":%.2f},\"wifi\":"),
+      temperature,
+      (temperature * 9.0 / 5.0) + 32.0
+  );
 
-  if (pos < maxLen - 1) {
-    pos += finalize_buffer(
-      snprintf_P(buffer + pos, maxLen - pos,
-        PSTR("{\"ble\":{},\"bthome\":{},\"cloud\":{\"connected\":false},\"em:0\":")),
-      maxLen - pos
-    );
-  }
-  if (pos < maxLen - 1) {
-    pos += EMGetStatus(buffer + pos, maxLen - pos);
-  }
+  if (WiFi.status() == WL_CONNECTED) {
+    IPAddress ip = WiFi.localIP();
+    const uint8_t* bssid = WiFi.BSSID();
+    uint8_t zeroBssid[6] = {0};
 
-  if (pos < maxLen - 1) {
-    pos += finalize_buffer(
-      snprintf_P(buffer + pos, maxLen - pos,
-        PSTR(",\"emdata:0\":")),
-      maxLen - pos
-    );
-  }
-  if (pos < maxLen - 1) {
-    pos += EMDataGetStatus(buffer + pos, maxLen - pos);
-  }
-
-  if (pos < maxLen - 1) {
-    pos += finalize_buffer(
-      snprintf_P(buffer + pos, maxLen - pos,
-        PSTR(",\"eth\":{\"ip\":null,\"ip6\":null},\"modbus\":{},\"mqtt\":{\"connected\":false},\"sys\":")),
-      maxLen - pos
-    );
-  }
-  if (pos < maxLen - 1) {
-    pos += sysGetStatus(buffer + pos, maxLen - pos);
-  }
-
-  if (pos < maxLen - 1) {
-    pos += finalize_buffer(
-      snprintf_P(buffer + pos, maxLen - pos,
-        PSTR(",\"temperature:0\":{\"id\":0,\"tC\":%.2f,\"tF\":%.2f},\"wifi\":"),
-        temperature,
-        (temperature * 9.0 / 5.0) + 32.0),
-      maxLen - pos
-    );
-  }
-
-  if (pos < maxLen - 1) {
-    if (WiFi.status() == WL_CONNECTED) {
-      IPAddress ip = WiFi.localIP();
-      const uint8_t* bssid = WiFi.BSSID();
-      uint8_t zeroBssid[6] = {0};
-
-      if (bssid == nullptr) {
-        bssid = zeroBssid;
-      }
-
-      const char* ssid = config_doc["wifi"]["ssid"] | "";
-
-      pos += finalize_buffer(
-        snprintf_P(buffer + pos, maxLen - pos,
-          PSTR("{\"sta_ip\":\"%u.%u.%u.%u\",\"status\":\"got ip\",\"ssid\":\"%s\","
-               "\"bssid\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"rssi\":%d,\"sta_ip6\":[]}"),
-          (unsigned int)ip[0], (unsigned int)ip[1],
-          (unsigned int)ip[2], (unsigned int)ip[3],
-          ssid,
-          (unsigned int)bssid[0], (unsigned int)bssid[1],
-          (unsigned int)bssid[2], (unsigned int)bssid[3],
-          (unsigned int)bssid[4], (unsigned int)bssid[5],
-          WiFi.RSSI()),
-        maxLen - pos
-      );
-    } else {
-      pos += finalize_buffer(
-        snprintf_P(buffer + pos, maxLen - pos,
-          PSTR("{\"sta_ip\":null,\"status\":\"connecting\",\"ssid\":null,\"bssid\":null,\"rssi\":0,\"sta_ip6\":[]}")),
-        maxLen - pos
-      );
+    if (bssid == nullptr) {
+      bssid = zeroBssid;
     }
-  }
 
-  if (pos < maxLen) {
-    buffer[pos] = '\0';
+    const char* ssid = config_doc["wifi"]["ssid"] | "";
+
+    json.write(
+        PSTR("{\"sta_ip\":\"%u.%u.%u.%u\",\"status\":\"got ip\",\"ssid\":\"%s\","
+             "\"bssid\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"rssi\":%d,\"sta_ip6\":[]}"),
+        (unsigned int)ip[0], (unsigned int)ip[1], (unsigned int)ip[2], (unsigned int)ip[3],
+        ssid,
+        (unsigned int)bssid[0], (unsigned int)bssid[1], (unsigned int)bssid[2],
+        (unsigned int)bssid[3], (unsigned int)bssid[4], (unsigned int)bssid[5],
+        WiFi.RSSI()
+    );
   } else {
-    buffer[maxLen - 1] = '\0';
+    json.write(PSTR("{\"sta_ip\":null,\"status\":\"connecting\",\"ssid\":null,\"bssid\":null,\"rssi\":0,\"sta_ip6\":[]}"));
   }
 
   blinkled(ledblinkduration);
-  return pos;
+  return json.pos;
 }
 
 // aligned with Shelly API docs
