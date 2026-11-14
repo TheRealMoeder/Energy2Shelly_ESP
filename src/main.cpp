@@ -514,13 +514,6 @@ void setup(void)
       Udp->begin(multicastPort);
       break;
 
-    case input_type_enum::SUNSPEC:
-      modbus1 = new ModbusIP();
-      modbus1->client();
-      DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
-      modbus1->connect(modbus_ip, sunspec_port_int);
-      break;
-
       case input_type_enum::SMLSERIAL:
       setupSMLSerial();
       break;
