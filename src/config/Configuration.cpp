@@ -1,5 +1,6 @@
 #include "Configuration.h"
 #include "../utils/utils.h"
+#include "../parsers/SunspecParser.h"
 const char* configPath = "/config.json";
 unsigned long startMillis = 0;
 unsigned long currentMillis;
@@ -31,7 +32,7 @@ IPAddress multicastIP(239, 12, 255, 254);
 // MODBUS settings
 IPAddress modbus_ip;
 ModbusIP* modbus1 = nullptr;
-int16_t modbus_result[256];
+int16_t* modbus_result = nullptr;
 
 // Default electrical values and offset
 const uint8_t defaultVoltage = 230;
@@ -111,6 +112,10 @@ static void destroyClientObjects()
     delete modbus1;
     modbus1 = nullptr;
   }
+  if (modbus_result!=nullptr) {
+    delete modbus_result;
+    modbus_result = nullptr;
+  }
 }
 
 // Blink LED handlers
@@ -147,6 +152,14 @@ void handleblinkled()
       ledOffTime = 0;
     }
   }
+}
+
+void remove_filtered_parameters_ram(JsonDocument filter) {
+  for (JsonPair p : filter.as<JsonObject>()) {
+    config_doc.remove(p.key());
+  }
+  config_doc.shrinkToFit();
+  DEBUG_SERIAL.println(F("Sections successfully removed from config_doc in RAM."));
 }
 
 void WiFi_processScanResult(int n) {
@@ -206,35 +219,62 @@ void wifi_scan()
 
 void interprete_parameters()
 {
+  JsonDocument filter;
+  config_doc.clear();
+
+  filter["shelly"]=true; filter["basic"]=true; filter["console"]=true; filter["led"]=true;
+
   // Interpret the loaded parameters and set flags accordingly
+  load_filtered_parameters(filter);
+  serializeJsonPretty(config_doc,Serial);
+  filter.clear();
   current_input_type = static_cast<input_type_enum>(config_doc["basic"]["input_type"].as<uint32_t>());
   destroyClientObjects(); // Destroy unused client objects; Todo: Input change without reboot will lead to crash!
+  
   switch (current_input_type) {
     case input_type_enum::SMA:
+        filter["sma"]=true;
+        load_filtered_parameters(filter);
         DEBUG_SERIAL.println(F("Enabling SMA Multicast data input"));
         break;
     case input_type_enum::SHRDZM:
         DEBUG_SERIAL.println(F("Enabling SHRDZM UDP data input"));
         break;
     case input_type_enum::HTTP:
+        filter["http"]=true;
+        filter["json"]=true;
+        load_filtered_parameters(filter);
         DEBUG_SERIAL.println(F("Enabling generic HTTP data input"));
         break;
     case input_type_enum::SUNSPEC:
-        modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
-        sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
-        modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>()); // Todo, replace by DNS resolver for hostnames, currently only IP addresses are supported
+        filter["sunspec"]=true;
+        filter["sunspec_registers"]=true;
+        load_filtered_parameters(filter);
+        modbus_result = new int16_t[MAX_MODBUS_REGISTERS];
+        memset(modbus_result, 0, MAX_MODBUS_REGISTERS * sizeof(int16_t));
+        convert_json_to_sunspec_registers();
+        filter.clear();
+        filter["sunspec_registers"]=true;
+        remove_filtered_parameters_ram(filter);
         DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
         break;
    case input_type_enum::TIBBERPULSE:
+        filter["tibber"]=true;
+        load_filtered_parameters(filter);
         DEBUG_SERIAL.println(F("Enabling TIBBERPULSE data input"));
         break;
    case input_type_enum::SMLSERIAL:
         DEBUG_SERIAL.println(F("Enabling SML serial (UART) data input"));
         break;
    case input_type_enum::RCT:
+        filter["rct"]=true;
+        load_filtered_parameters(filter);
         DEBUG_SERIAL.println(F("Enabling RCT Power data input"));
         break;
    case input_type_enum::MQTT:
+        filter["mqtt"]=true;
+        filter["json"]=true;
+        load_filtered_parameters(filter);
         DEBUG_SERIAL.println(F("Enabling MQTT data input"));
         break;
    case input_type_enum::NONE:
@@ -278,7 +318,7 @@ void interprete_parameters()
     shelly_name = shelly_name.substring(0, 128);
   }
 
-
+config_doc.shrinkToFit();
 
 }
 
@@ -358,29 +398,61 @@ const char DEFAULT_CONFIG_JSON[] PROGMEM = R"=====(
 }
 )=====";
 
-void load_parameters() {
+void init_parameters() {
   config_doc.clear();
-  DeserializationError defaultError = deserializeJson(config_doc, FPSTR(DEFAULT_CONFIG_JSON));
-  if (defaultError) {
-    DEBUG_SERIAL.println(F("Error during default config initialization!"));
-  }
 
   if (LittleFS.exists(configPath)) {
     File configFile = LittleFS.open(configPath, "r");
-    if (configFile) {
-      JsonDocument fs_doc;
-      DeserializationError fsError = deserializeJson(fs_doc, configFile);
+    if (configFile) { // exists?, super!
       configFile.close();
-      if (fsError == DeserializationError::Ok) {
-        mergeJson(config_doc.to<JsonVariant>(), fs_doc.as<JsonVariantConst>());
+      return; 
       }
-    }
-  } 
-
+  }
  
+  DEBUG_SERIAL.println(F("Config file does not exist, creating default..."));
+ 
+  // else write default file
+  File configFile = LittleFS.open(configPath, "w");
+  if (configFile) {
+    configFile.print(FPSTR(DEFAULT_CONFIG_JSON)); 
+    configFile.close();
+    DEBUG_SERIAL.println(F("Default config text successfully written to LittleFS."));
+  }
 }
 
 
+
+void load_filtered_parameters(JsonVariantConst filter) {
+  if (!LittleFS.exists(configPath)) {
+    DEBUG_SERIAL.println(F("Config file does not exist for filtered loading."));
+    return;
+  }
+
+  File configFile = LittleFS.open(configPath, "r");
+  if (!configFile) {
+    DEBUG_SERIAL.println(F("Failed to open config file for filtered loading."));
+    return;
+  }
+
+  JsonDocument temp;
+  DeserializationError error;
+  if (filter.isNull()|| filter.size()==0) {
+    error = deserializeJson(config_doc, configFile);  
+  }
+  else {
+    error = deserializeJson(temp, configFile, DeserializationOption::Filter(filter));  
+    mergeJson(config_doc,temp);
+  }
+  configFile.close();
+  
+
+  if (error) {
+    DEBUG_SERIAL.print(F("Error during filtered deserialization: "));
+    DEBUG_SERIAL.println(error.f_str());
+  } else {
+    DEBUG_SERIAL.println(F("Filtered parameters successfully loaded."));
+  }
+}
 
 
 
@@ -414,18 +486,18 @@ void saveConfigCallback() {
 
 void WifiManagerSetup(bool SW_update)
 {
+  JsonDocument filter;
   WiFi.setAutoReconnect(true);
  
    if (!LITTLEFS_BEGIN()) {
       DEBUG_SERIAL.println(F("LittleFS Mounting Error. Try formating..."));
       LittleFS.end();
       LittleFS.format();
-      LITTLEFS_BEGIN(); 
-  }
-
-  load_parameters(); // Load parameters from LittleFS
- 
-
+      LITTLEFS_BEGIN();
+   }
+  init_parameters();
+  filter["wifi"]=true; filter["shelly"]=true;
+  load_filtered_parameters(filter); 
   if (config_doc["wifi"]["ssid"] == "") // check for valid WiFi credentials, if not present, start config portal
   {
       DEBUG_SERIAL.println(F("No WiFi credentials found, starting config portal..."));
@@ -459,17 +531,17 @@ void WifiManagerSetup(bool SW_update)
       }
   }
   
-  
-  
- 
+   
   // Set Shelly ID to ESP's MAC address by default
   String currentMac = config_doc["shelly"]["shelly_mac"].as<String>();
-  if (currentMac == "null" || currentMac.length() == 0) {
-    
+ 
+  if (currentMac == "null" || currentMac.length() == 0) {// at least first time boot setup
+    filter.clear();
+    load_filtered_parameters(filter);//load all 
     String macStr = WiFi.macAddress(); 
-    macStr.replace(":", "");        
-    
-    config_doc["shelly"]["shelly_mac"] = macStr;  
+    macStr.replace(":", "");            
+    config_doc["shelly"]["shelly_mac"] = macStr;
+    save_parameters();
   }
 
   interprete_parameters();
@@ -477,6 +549,32 @@ void WifiManagerSetup(bool SW_update)
   DEBUG_SERIAL.println(F("local ip"));
   DEBUG_SERIAL.println(WiFi.localIP());
 }
+
+
+String read_config_as_string() {
+  if (!LittleFS.exists(configPath)) {
+    DEBUG_SERIAL.println(F("Config file does not exist."));
+    return "";
+  }
+
+  File configFile = LittleFS.open(configPath, "r");
+  if (!configFile) {
+    DEBUG_SERIAL.println(F("Failed to open config file for reading."));
+    return "";
+  }
+
+  String jsonString = "";
+  
+  jsonString.reserve(configFile.size());
+
+  while (configFile.available()) {
+    jsonString += (char)configFile.read();
+  }
+
+  configFile.close();
+  return jsonString;
+}
+
 
 void setupMdns()
 {

@@ -236,6 +236,172 @@ document.getElementById('rebootBtn').addEventListener('click', async () => {
                 }
             },
 
+            sunspec_registers: {
+                _label: "SUNSPEC Register Settings",
+                _description: "Settings for SUNSPEC Modbus registers.",
+                _show_if: ["SUNSPEC"],
+
+                base: {
+                    label: "Base Register",
+                    description: "The base register address for SUNSPEC Modbus communication."
+                },
+                register_count: {
+                    label: "Register Count",
+                    description: "The number of registers to read from the SUNSPEC Modbus server."
+                },
+                voltage_scale: {
+                    label: "Voltage Scale",
+                    description: "Scale factor for voltage readings."
+                },
+                voltage_type: {
+                    label: "Voltage Type",
+                    description: "Type of voltage measurement.",
+                    options: ["uint16", "int16", "uint32", "int32", "float32"]
+                },
+                current_scale: {
+                    label: "Current Scale",
+                    description: "Scale factor for current readings."
+                },
+                current_type: {
+                    label: "Current Type",
+                    description: "Type of current measurement.",
+                    options: ["uint16", "int16", "uint32", "int32", "float32"]
+                },
+                real_power_scale: {
+                    label: "Real Power Scale",
+                    description: "Scale factor for real power readings."
+                },
+                real_power_type: {
+                    label: "Real Power Type",
+                    description: "Type of real power measurement.",
+                    options: ["uint16", "int16", "uint32", "int32", "float32"]
+                },
+                apparent_power_scale: {
+                    label: "Apparent Power Scale",
+                    description: "Scale factor for apparent power readings."
+                },
+                apparent_power_type: {
+                    label: "Apparent Power Type",
+                    description: "Type of apparent power measurement.",
+                    options: ["uint16", "int16", "uint32", "int32", "float32"]
+                },
+                power_factor_scale: {
+                    label: "Power Factor Scale",
+                    description: "Scale factor for power factor readings."
+                },
+                power_factor_type: {
+                    label: "Power Factor Type",
+                    description: "Type of power factor measurement.",
+                    options: ["uint16", "int16", "uint32", "int32", "float32"]
+                },
+                frequency_scale: {
+                    label: "Frequency Scale",
+                    description: "Scale factor for frequency readings."
+                },
+                frequency_type: {
+                    label: "Frequency Type",
+                    description: "Type of frequency measurement.",
+                    options: ["uint16", "int16", "uint32", "int32", "float32"]
+                },
+                real_energy_scale: {
+                    label: "Real Energy Scale",
+                    description: "Scale factor for real energy readings."
+                },
+                real_energy_type: {
+                    label: "Real Energy Type",
+                    description: "Type of real energy measurement.",
+                    options: ["uint16", "int16", "uint32", "int32", "float32"]
+                },
+                real_power0: {
+                    label: "Real Power 0",
+                    description: "Register address for real power phase 0."
+                },
+                real_power1: {
+                    label: "Real Power 1",
+                    description: "Register address for real power phase 1."
+                },
+                real_power2: {
+                    label: "Real Power 2",
+                    description: "Register address for real power phase 2."
+                },
+                apparent_power0: {
+                    label: "Apparent Power 0",
+                    description: "Register address for apparent power phase 0."
+                },
+                apparent_power1: {
+                    label: "Apparent Power 1",
+                    description: "Register address for apparent power phase 1."
+                },
+                apparent_power2: {
+                    label: "Apparent Power 2",
+                    description: "Register address for apparent power phase 2."
+                },
+                current0: {
+                    label: "Current 0",
+                    description: "Register address for current phase 0."
+                },
+                current1: {
+                    label: "Current 1",
+                    description: "Register address for current phase 1."
+                },
+                current2: {
+                    label: "Current 2",
+                    description: "Register address for current phase 2."
+                },
+                voltage0: {
+                    label: "Voltage 0",
+                    description: "Register address for voltage phase 0."
+                },
+                voltage1: {
+                    label: "Voltage 1",
+                    description: "Register address for voltage phase 1."
+                },
+                voltage2: {
+                    label: "Voltage 2",
+                    description: "Register address for voltage phase 2."
+                },
+                frequency: {
+                    label: "Frequency",
+                    description: "Register address for frequency measurement."
+                },
+                power_factor0: {
+                    label: "Power Factor 0",
+                    description: "Register address for power factor phase 0."
+                },
+                power_factor1: {
+                    label: "Power Factor 1",
+                    description: "Register address for power factor phase 1."
+                },
+                power_factor2: {
+                    label: "Power Factor 2",
+                    description: "Register address for power factor phase 2."   
+                },
+                real_energy_imported0: {
+                    label: "Real Energy Imported 0",
+                    description: "Register address for real energy phase 0."
+                },
+                real_energy_imported1: {
+                    label: "Real Energy Imported 1",
+                    description: "Register address for real energy phase 1."
+                },
+                real_energy_imported2: {
+                    label: "Real Energy Imported 2",
+                    description: "Register address for real energy phase 2."
+                },
+                real_energy_exported0: {
+                    label: "Real Energy Exported 0",
+                    description: "Register address for real energy phase 0."
+                },
+                real_energy_exported1: {
+                    label: "Real Energy Exported 1",
+                    description: "Register address for real energy phase 1."
+                },
+                real_energy_exported2: {
+                    label: "Real Energy Exported 2",
+                    description: "Register address for real energy phase 2."
+                }
+            },
+
             rct: {
                 _label: "RCT Settings",
                 _description: "Settings related to RCT inverter communication.",
