@@ -48,8 +48,8 @@
 
 
 
-extern bool enableConsoleOutputSerial; // Global flag to control console output visibility
-extern bool enableConsoleOutputWeb; // Global flag to control console output visibility
+extern volatile bool enableConsoleOutputSerial; // Global flag to control console output visibility
+extern volatile bool enableConsoleOutputWeb; // Global flag to control console output visibility
 
 extern AsyncWebSocket wsConsole;
 // Custom Logger class inheriting from Print to natively support all data types
@@ -204,6 +204,9 @@ public:
 //#define DEBUG_SERIAL if(DEBUG)Serial
 
 extern unsigned long startMillis;
+#ifdef ONA_ACTIVE
+extern unsigned long ONA_Millis;
+#endif
 extern unsigned long currentMillis;
 // for time synchronization
 extern time_t now;
@@ -348,6 +351,13 @@ extern bool shouldReboot;
 
 // flags for data sources
 extern input_type_enum current_input_type;
+
+#ifdef ONA_ACTIVE
+extern bool enableONA;
+extern bool ONA_validfrequency;
+extern bool ONA_validVoltage;
+#endif
+
 
 // ============================================================================
 // NETWORK OBJECTS

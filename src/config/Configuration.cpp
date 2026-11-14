@@ -2,6 +2,9 @@
 #include "../utils/utils.h"
 const char* configPath = "/config.json";
 unsigned long startMillis = 0;
+#ifdef ONA_ACTIVE
+unsigned long ONA_Millis = 0;
+#endif
 unsigned long currentMillis;
 // for time synchronization
 time_t now;
@@ -51,6 +54,13 @@ bool shouldReboot = false;
 
 // flags for data sources
 input_type_enum current_input_type  = input_type_enum::NONE;
+
+#ifdef ONA_ACTIVE
+bool enableONA = false;
+bool ONA_validfrequency = false;
+bool ONA_validVoltage = false;
+#endif
+
 
 // ============================================================================
 // NETWORK OBJECTS
@@ -251,7 +261,8 @@ void interprete_parameters()
     led_i = false;
   }
 
-  String temp=config_doc["console"]["web_console"]|"";
+  if (config_doc["console"]["web_console"].isNull())  config_doc["console"]["web_console"]="true";
+  String temp=config_doc["console"]["web_console"];
   if (strlen(temp.c_str())>=4 && strncmp(temp.c_str(), "true",4) == 0) {
     enableConsoleOutputWeb=true;
   }
@@ -278,7 +289,12 @@ void interprete_parameters()
     shelly_name = shelly_name.substring(0, 128);
   }
 
-
+#ifdef ONA_ACTIVE
+  if (config_doc["ona"]["publish_period"].isNull())  config_doc["ona"]["publish_period"]=0;
+  enableONA=config_doc["ona"]["publish_period"].as<int>()>0;
+#endif
+  if (config_doc["ona"]["latitude"].isNull())  config_doc["ona"]["latitude"]=0.0;
+  if (config_doc["ona"]["longitude"].isNull()) config_doc["ona"]["longitude"]=0.0;
 
 }
 
@@ -386,8 +402,8 @@ void load_parameters() {
 
 #if DEBUG
 WebDebugLogger DebugConsole;
-bool enableConsoleOutputSerial = true;
-bool enableConsoleOutputWeb = true;
+volatile bool enableConsoleOutputSerial = true;
+volatile bool enableConsoleOutputWeb = true;
 
 #else
 NullDebug EmptyConsole;

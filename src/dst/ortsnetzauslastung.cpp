@@ -1,0 +1,284 @@
+#include "../config/Configuration.h"
+#include "../data/DataProcessing.h"
+#include "../data/DataStructures.h"
+#include "../utils/utils.h"
+#include "ortsnetzauslastung.h"
+
+#ifdef ONA_ACTIVE
+
+#if defined(ESP8266)
+    #include <ESP8266WiFi.h>
+    #include <ESP8266HTTPClient.h>
+    #include <WiFiClientSecure.h>
+#elif defined(ESP32)
+    #include <WiFiClientSecure.h>
+    #include <HTTPClient.h>
+#endif
+
+#include <ArduinoJson.h>
+
+struct MeasurementData {
+    char timeStr[25]; 
+    double latitude;
+    double longitude;
+    float l1_v;
+    float l2_v;
+    float l3_v;
+    float frequency;
+};
+
+
+const char* api_url = "https://www.ortsnetz-auslastung.de/v1/measurements";
+
+
+const char ona_root_ca[] PROGMEM = R"=====(
+-----BEGIN CERTIFICATE-----
+MIICGzCCAaGgAwIBAgIQQdKd0XLq7qeAwSxs6S+HUjAKBggqhkjOPQQDAzBPMQsw
+CQYDVQQGEwJVUzEpMCcGA1UEChMgSW50ZXJuZXQgU2VjdXJpdHkgUmVzZWFyY2gg
+R3JvdXAxFTATBgNVBAMTDElTUkcgUm9vdCBYMjAeFw0yMDA5MDQwMDAwMDBaFw00
+MDA5MTcxNjAwMDBaME8xCzAJBgNVBAYTAlVTMSkwJwYDVQQKEyBJbnRlcm5ldCBT
+ZWN1cml0eSBSZXNlYXJjaCBHcm91cDEVMBMGA1UEAxMMSVNSRyBSb290IFgyMHYw
+EAYHKoZIzj0CAQYFK4EEACIDYgAEzZvVn4CDCuwJSvMWSj5cz3es3mcFDR0HttwW
++1qLFNvicWDEukWVEYmO6gbf9yoWHKS5xcUy4APgHoIYOIvXRdgKam7mAHf7AlF9
+ItgKbppbd9/w+kHsOdx1ymgHDB/qo0IwQDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0T
+AQH/BAUwAwEB/zAdBgNVHQ4EFgQUfEKWrt5LSDv6kviejM9ti6lyN5UwCgYIKoZI
+zj0EAwMDaAAwZQIwe3lORlCEwkSHRhtFcP9Ymd70/aTSVaYgLXTWNLxBo1BfASdW
+tL4ndQavEi51mI38AjEAi/V3bNTIZargCyzuFJ0nN6T5U6VR5CmD1/iQMVtCnwr1
+/q4AaOeMSQ+2b1tbFfLn
+-----END CERTIFICATE-----
+)=====";
+
+
+String ona_lastResponse = "";
+int ona_lastResponseCode = 0;
+volatile bool ona_responseReady = false; 
+
+
+#ifdef ESP32
+QueueHandle_t onaQueue = NULL;
+const int ONA_QUEUE_SIZE = 1;
+static WiFiClientSecure ona_client;
+volatile TaskHandle_t onaTaskHandle = NULL;
+
+void ONA_loop_state_machine() {
+   
+}
+
+void ONA_sendMeasurementTask(void * pvParameters) {
+    HTTPClient http; 
+    MeasurementData data; 
+    JsonDocument doc;
+    String requestBody;
+    requestBody.reserve(512);
+
+    for (;;) {
+        
+        if (xQueueReceive(onaQueue, &data, portMAX_DELAY) == pdPASS) {
+            if (WiFi.status() == WL_CONNECTED) {
+                doc.clear();
+                doc["observed_at"] = data.timeStr;
+                doc["latitude"] = config_doc["ona"]["latitude"].as<double>();
+                doc["longitude"] = config_doc["ona"]["longitude"].as<double>();
+                doc["l1_v"] = data.l1_v;
+                doc["l2_v"] = data.l2_v;
+                doc["l3_v"] = data.l3_v;
+                doc["smartmeter_model"] = "Energy2Shelly";
+                doc["integration_version"] = VERSION_BUILD;                
+                doc["grid_frequency_hz"] = data.frequency;
+
+                requestBody = "";
+                serializeJson(doc, requestBody);
+
+                if (http.begin(ona_client, api_url)) {
+                    http.addHeader("Content-Type", "application/json");
+                    
+                    ona_lastResponseCode = http.POST(requestBody);
+                    
+                    if (ona_lastResponseCode > 0) {
+                        ona_lastResponse = http.getString();
+                    } else {
+                        ona_lastResponse = http.errorToString(ona_lastResponseCode);
+                    }
+                    
+                    ona_responseReady = true;
+                    http.end();
+                }
+            }
+        }
+    }
+}
+#endif
+
+
+#ifdef ESP8266
+static volatile bool ona_esp8266_has_data = false;
+static BearSSL::WiFiClientSecure ona_client;
+static HTTPClient http_client;
+static bool ona_setup_active = false;
+
+static unsigned long ona_timeoutStart = 0;
+#define ONA_TIMEOUT_MS 10000
+
+enum ONA_State { 
+    ONA_IDLE, 
+    ONA_WAITING_FOR_RESPONSE 
+};
+static ONA_State ona_currentState = ONA_IDLE;
+
+void ONA_loop_state_machine() {
+    if (ona_setup_active==false) return;
+    switch (ona_currentState) {
+        case ONA_IDLE:
+            if (ona_esp8266_has_data && WiFi.status() == WL_CONNECTED) {
+                char payload[256]; 
+                char freqPart[40] = "";
+                char timestr[28];
+                memset(timestr,0,sizeof(timestr));
+                getISO8601Time(timestr,sizeof(timestr)-1);
+                if (ONA_validfrequency) {
+                   snprintf_P(freqPart, sizeof(freqPart), PSTR(",\"grid_frequency_hz\":%.2f"), PhasePower[0].frequency);
+                }
+
+                int len = snprintf_P(payload, sizeof(payload),
+                            PSTR("{\"observed_at\":\"%s\","
+                                "\"latitude\":%.6f,"
+                                "\"longitude\":%.6f,"
+                                "\"l1_v\":%.2f,"
+                                "\"l2_v\":%.2f,"
+                                "\"l3_v\":%.2f,"
+                                "\"smartmeter_model\":\"Energy2Shelly\","
+                                "\"integration_version\":\"%s\"%s}"),
+                                timestr,
+                                config_doc["ona"]["latitude"].as<double>(),
+                                config_doc["ona"]["longitude"].as<double>(),
+                                fabs(PhasePower[0].voltage),
+                                fabs(PhasePower[1].voltage),
+                                fabs(PhasePower[2].voltage),
+                                VERSION_BUILD,
+                                freqPart
+                            );
+                if (len < 0 || len >= (int)sizeof(payload)) {
+                    ona_esp8266_has_data = false;
+                    return;
+                }
+
+                if (http_client.begin(ona_client, api_url)) {
+                    http_client.setTimeout(8000);
+                    ona_client.setTimeout(8000);
+                    http_client.addHeader("Content-Type", "application/json");
+                    
+                    ona_timeoutStart = millis();
+                    ona_lastResponseCode = http_client.POST((uint8_t*)payload, len);
+                    
+                    ona_currentState = ONA_WAITING_FOR_RESPONSE;
+                } else {
+                    ona_esp8266_has_data = false;
+                }
+            }
+            break;
+        case ONA_WAITING_FOR_RESPONSE:
+            if (millis() - ona_timeoutStart > ONA_TIMEOUT_MS) {
+                ona_lastResponseCode = -11;
+                ona_lastResponse = "Software Timeout - No Server Response";
+                ona_responseReady = true;
+                
+                ona_esp8266_has_data = false; 
+                http_client.end();
+                ona_currentState = ONA_IDLE;
+            }
+            else {
+                if (ona_lastResponseCode > 0) {
+                    ona_lastResponse = http_client.getString();
+                } else {
+                    ona_lastResponse = http_client.errorToString(ona_lastResponseCode);
+                }   
+                ona_responseReady = true;
+                ona_esp8266_has_data = false; 
+                http_client.end();
+                ona_currentState = ONA_IDLE;
+            }
+            break;
+    }
+}
+#endif
+
+
+bool ONA_sendMeasurement() {
+    DEBUG_SERIAL.println("Ona");
+
+#ifdef ESP8266
+    if (extendedMillis()<(300ull*1000ull)) {// do not send data in the first 5 minutes
+        return false;
+    }
+    if (ona_setup_active==false) ONA_Setup();
+#endif
+    if (phase_number != 3) {
+        DEBUG_SERIAL.println(F("Ona: Phase number must be 3"));
+        return false; 
+    }
+    if (!ONA_validVoltage) {
+        DEBUG_SERIAL.println(F("Ona: No valid voltages values"));
+        return false; 
+    }
+
+    if (ona_responseReady) {
+        ona_responseReady=false;
+        DEBUG_SERIAL.println(ona_lastResponse);
+    }
+   
+    
+
+#ifdef ESP32
+    MeasurementData data;
+    
+    memset(data.timeStr,0,sizeof(data.timeStr));
+    getISO8601Time(data.timeStr,sizeof(data.timeStr) - 1);
+
+    data.latitude = config_doc["ona"]["latitude"].as<double>();
+    data.longitude = config_doc["ona"]["longitude"].as<double>();
+    
+    //maybe some sources are indicating with the sign, if we have import or export. Force positiv
+    data.l1_v = fabs(PhasePower[0].voltage); 
+    data.l2_v = fabs(PhasePower[1].voltage);
+    data.l3_v = fabs(PhasePower[2].voltage);
+    if (ONA_validfrequency) {
+        data.frequency = PhasePower[0].frequency;
+    }
+    else {
+        data.frequency = 0; // ONA server rejects frequencies = 0
+    }
+
+
+
+
+    if (onaQueue == NULL) return false;
+    
+    return (xQueueSend(onaQueue, &data, 0) == pdPASS);
+#elif defined(ESP8266)
+    if (ona_esp8266_has_data) return false; 
+    ona_esp8266_has_data = true;
+    return true;
+#else
+    return false;
+#endif
+}
+
+#ifdef ESP8266
+BearSSL::X509List cert(ona_root_ca);
+#endif
+
+void ONA_Setup() {
+#ifdef ESP32
+    ona_client.setCACert(ona_root_ca);
+    onaQueue = xQueueCreate(ONA_QUEUE_SIZE, sizeof(MeasurementData));
+    
+    xTaskCreate(ONA_sendMeasurementTask, "ONAHTTPTask", 8192, NULL, 1, NULL);
+#elif defined(ESP8266)
+    ona_client.setBufferSizes(1024, 512);
+    ona_client.setTrustAnchors(&cert);
+    ona_client.probeMaxFragmentLength("www.ortsnetz-auslastung.de", 443, 1024); 
+    ona_setup_active=true;
+#endif
+}
+
+#endif // ONA_ACTIVE
