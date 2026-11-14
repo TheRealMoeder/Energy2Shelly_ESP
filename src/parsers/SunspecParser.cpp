@@ -36,254 +36,94 @@ ModbusType get_modbus_type(const String& type) {
   return TYPE_UNKNOWN;
 }
 
+int32_t SUNSPEC_BASE = 0;
+int32_t SUNSPEC_REGISTER_COUNT=0;
 
 
-    #define SUNSPEC_VOLTAGE_SCALE_INT config_doc["sunspec_registers"]["voltage_scale"].as<int>()
-    #define SUNSPEC_VOLTAGE_SCALE_NULL config_doc["sunspec_registers"]["voltage_scale"].isNull()
-    #define SUNSPEC_FREQUENCY_SCALE_INT config_doc["sunspec_registers"]["frequency_scale"].as<int>()
-    #define SUNSPEC_FREQUENCY_SCALE_NULL config_doc["sunspec_registers"]["frequency_scale"].isNull()
-    #define SUNSPEC_REAL_ENERGY_SCALE_INT config_doc["sunspec_registers"]["real_energy_scale"].as<int>()
-    #define SUNSPEC_REAL_ENERGY_SCALE_NULL config_doc["sunspec_registers"]["real_energy_scale"].isNull()
-    #define SUNSPEC_REAL_POWER_SCALE_INT config_doc["sunspec_registers"]["real_power_scale"].as<int>()
-    #define SUNSPEC_REAL_POWER_SCALE_NULL config_doc["sunspec_registers"]["real_power_scale"].isNull()  
-    #define SUNSPEC_APPARANT_POWER_SCALE_INT config_doc["sunspec_registers"]["apparent_power_scale"].as<int>()
-    #define SUNSPEC_APPARANT_POWER_SCALE_NULL config_doc["sunspec_registers"]["apparent_power_scale"].isNull()
-    #define SUNSPEC_REAL_POWER_SCALE_INT config_doc["sunspec_registers"]["real_power_scale"].as<int>()
-    #define SUNSPEC_CURRENT_SCALE_INT config_doc["sunspec_registers"]["current_scale"].as<int>()
-    #define SUNSPEC_CURRENT_SCALE_NULL config_doc["sunspec_registers"]["current_scale"].isNull()
-    #define SUNSPEC_POWER_FACTOR_SCALE_INT config_doc["sunspec_registers"]["power_factor_scale"].as<int>()
-    #define SUNSPEC_POWER_FACTOR_SCALE_NULL config_doc["sunspec_registers"]["power_factor_scale"].isNull()
-    #define SUNSPEC_REAL_POWER0_INT config_doc["sunspec_registers"]["real_power0"].as<int>()
-    #define SUNSPEC_REAL_POWER0_NULL config_doc["sunspec_registers"]["real_power0"].isNull()
-    #define SUNSPEC_REAL_POWER1_INT config_doc["sunspec_registers"]["real_power1"].as<int>()
-    #define SUNSPEC_REAL_POWER1_NULL config_doc["sunspec_registers"]["real_power1"].isNull()
-    #define SUNSPEC_REAL_POWER2_INT config_doc["sunspec_registers"]["real_power2"].as<int>()
-    #define SUNSPEC_REAL_POWER2_NULL config_doc["sunspec_registers"]["real_power2"].isNull()
-    #define SUNSPEC_APPARANT_POWER0_INT config_doc["sunspec_registers"]["apparent_power0"].as<int>()
-    #define SUNSPEC_APPARANT_POWER0_NULL config_doc["sunspec_registers"]["apparent_power0"].isNull()
-    #define SUNSPEC_APPARANT_POWER1_INT config_doc["sunspec_registers"]["apparent_power1"].as<int>()
-    #define SUNSPEC_APPARANT_POWER1_NULL config_doc["sunspec_registers"]["apparent_power1"].isNull()
-    #define SUNSPEC_APPARANT_POWER2_INT config_doc["sunspec_registers"]["apparent_power2"].as<int>()
-    #define SUNSPEC_APPARANT_POWER2_NULL config_doc["sunspec_registers"]["apparent_power2"].isNull()
-    #define SUNSPEC_CURRENT0_NULL config_doc["sunspec_registers"]["current0"].isNull()
-    #define SUNSPEC_CURRENT0_INT config_doc["sunspec_registers"]["current0"].as<int>()
-    #define SUNSPEC_CURRENT1_NULL config_doc["sunspec_registers"]["current1"].isNull()
-    #define SUNSPEC_CURRENT1_INT config_doc["sunspec_registers"]["current1"].as<int>()
-    #define SUNSPEC_CURRENT2_NULL config_doc["sunspec_registers"]["current2"].isNull()
-    #define SUNSPEC_CURRENT2_INT config_doc["sunspec_registers"]["current2"].as<int>()
-    #define SUNSPEC_VOLTAGE0_NULL config_doc["sunspec_registers"]["voltage0"].isNull()
-    #define SUNSPEC_VOLTAGE0_INT config_doc["sunspec_registers"]["voltage0"].as<int>()
-    #define SUNSPEC_VOLTAGE1_NULL config_doc["sunspec_registers"]["voltage1"].isNull()
-    #define SUNSPEC_VOLTAGE1_INT config_doc["sunspec_registers"]["voltage1"].as<int>()
-    #define SUNSPEC_VOLTAGE2_NULL config_doc["sunspec_registers"]["voltage2"].isNull()
-    #define SUNSPEC_VOLTAGE2_INT config_doc["sunspec_registers"]["voltage2"].as<int>()
-    #define SUNSPEC_POWER_FACTOR0_NULL config_doc["sunspec_registers"]["power_factor0"].isNull()
-    #define SUNSPEC_POWER_FACTOR0_INT config_doc["sunspec_registers"]["power_factor0"].as<int>()
-    #define SUNSPEC_POWER_FACTOR1_NULL config_doc["sunspec_registers"]["power_factor1"].isNull()
-    #define SUNSPEC_POWER_FACTOR1_INT config_doc["sunspec_registers"]["power_factor1"].as<int>()
-    #define SUNSPEC_POWER_FACTOR2_NULL config_doc["sunspec_registers"]["power_factor2"].isNull()
-    #define SUNSPEC_POWER_FACTOR2_INT config_doc["sunspec_registers"]["power_factor2"].as<int>()
-    #define SUNSPEC_FREQUENCY_NULL config_doc["sunspec_registers"]["frequency"].isNull()
-    #define SUNSPEC_FREQUENCY_INT config_doc["sunspec_registers"]["frequency"].as<int>()
-    #define SUNSPEC_REAL_ENERGY_IMPORTED0_NULL config_doc["sunspec_registers"]["real_energy_imported0"].isNull()
-    #define SUNSPEC_REAL_ENERGY_IMPORTED0_INT config_doc["sunspec_registers"]["real_energy_imported0"].as<int>()
-    #define SUNSPEC_REAL_ENERGY_IMPORTED1_NULL config_doc["sunspec_registers"]["real_energy_imported1"].isNull()
-    #define SUNSPEC_REAL_ENERGY_IMPORTED1_INT config_doc["sunspec_registers"]["real_energy_imported1"].as<int>()
-    #define SUNSPEC_REAL_ENERGY_IMPORTED2_NULL config_doc["sunspec_registers"]["real_energy_imported2"].isNull()
-    #define SUNSPEC_REAL_ENERGY_IMPORTED2_INT config_doc["sunspec_registers"]["real_energy_imported2"].as<int>() 
-    #define SUNSPEC_REAL_ENERGY_EXPORTED0_NULL config_doc["sunspec_registers"]["real_energy_exported0"].isNull()
-    #define SUNSPEC_REAL_ENERGY_EXPORTED0_INT config_doc["sunspec_registers"]["real_energy_exported0"].as<int>()
-    #define SUNSPEC_REAL_ENERGY_EXPORTED1_NULL config_doc["sunspec_registers"]["real_energy_exported1"].isNull()
-    #define SUNSPEC_REAL_ENERGY_EXPORTED1_INT config_doc["sunspec_registers"]["real_energy_exported1"].as<int>()
-    #define SUNSPEC_REAL_ENERGY_EXPORTED2_NULL config_doc["sunspec_registers"]["real_energy_exported2"].isNull()
-    #define SUNSPEC_REAL_ENERGY_EXPORTED2_INT config_doc["sunspec_registers"]["real_energy_exported2"].as<int>()
-    #define SUNSPEC_REGISTER_COUNT_INT config_doc["sunspec_registers"]["register_count"].as<int>()
-    #define SUNSPEC_REGISTER_COUNT_NULL config_doc["sunspec_registers"]["register_count"].isNull()
-    #define SUNSPEC_BASE_NULL config_doc["sunspec_registers"]["base"].isNull()
-    #define SUNSPEC_BASE_INT config_doc["sunspec_registers"]["base"].as<int>()
-
-
-#define CHECK(b,a) (b) ? -1 : ( (a)-SUNSPEC_BASE<0) ? -1 : ( (a)-SUNSPEC_BASE>SUNSPEC_REGISTER_COUNT-2) ? -1 : (a)-SUNSPEC_BASE 
-
-int32_t SUNSPEC_BASE = 40073;
-int32_t SUNSPEC_REGISTER_COUNT = 64;
-
-
-void convert_json_to_sunspec_registers()
-{
-
-  if (!config_doc["sunspec"].isNull()) {
-  modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
-  sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
-  modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"].as<const char*>());
-  }
-  if (!config_doc["sunspec_registers"].isNull()) {
-
-    SUNSPEC_BASE = SUNSPEC_BASE_NULL? 0xFFFF : min(0xFFFF,SUNSPEC_BASE_INT);
-    SUNSPEC_REGISTER_COUNT = SUNSPEC_REGISTER_COUNT_NULL? 0 : min(MAX_MODBUS_REGISTERS,SUNSPEC_REGISTER_COUNT_INT);
-
-
-    int n=0;
-    /* frequency */
-    sunspecTable[n]= {.dst=&PhasePower[0].frequency,
-                       .reg=CHECK(SUNSPEC_FREQUENCY_NULL,SUNSPEC_FREQUENCY_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["frequency_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_FREQUENCY_SCALE_NULL,SUNSPEC_FREQUENCY_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=50 };n++;
-    sunspecTable[n]=  sunspecTable[n-1];sunspecTable[n].dst=&PhasePower[1].frequency; n++;
-    sunspecTable[n]=  sunspecTable[n-1];sunspecTable[n].dst=&PhasePower[2].frequency; n++; 
-    // n=3
+template <typename TKey>
+int32_t get_checked_reg(JsonObject regs, TKey key, bool is_32bit = false) {
+  if (regs.isNull() || regs[key].isNull()) return -1;
   
-    /* voltage */
-    sunspecTable[n]= {.dst=&PhasePower[0].voltage,
-                       .reg=CHECK(SUNSPEC_VOLTAGE0_NULL,SUNSPEC_VOLTAGE0_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["voltage_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_VOLTAGE_SCALE_NULL,SUNSPEC_VOLTAGE_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=230 };n++;
-    sunspecTable[n]= {.dst=&PhasePower[1].voltage,
-                       .reg=CHECK(SUNSPEC_VOLTAGE1_NULL,SUNSPEC_VOLTAGE1_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["voltage_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_VOLTAGE_SCALE_NULL,SUNSPEC_VOLTAGE_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=230 };n++;
-    sunspecTable[n]= {.dst=&PhasePower[2].voltage,
-                       .reg=CHECK(SUNSPEC_VOLTAGE2_NULL,SUNSPEC_VOLTAGE2_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["voltage_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_VOLTAGE_SCALE_NULL,SUNSPEC_VOLTAGE_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=230 };n++;
-    // n= 6
- 
-    /* current */
-    sunspecTable[n]= {.dst=&PhasePower[0].current,
-                       .reg=CHECK(SUNSPEC_CURRENT0_NULL,SUNSPEC_CURRENT0_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["current_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_CURRENT_SCALE_NULL,SUNSPEC_CURRENT_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;
-    sunspecTable[n]= {.dst=&PhasePower[1].current,
-                       .reg=CHECK(SUNSPEC_CURRENT1_NULL,SUNSPEC_CURRENT1_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["current_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_CURRENT_SCALE_NULL,SUNSPEC_CURRENT_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;                       
-    sunspecTable[n]= {.dst=&PhasePower[2].current,
-                       .reg=CHECK(SUNSPEC_CURRENT2_NULL,SUNSPEC_CURRENT2_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["current_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_CURRENT_SCALE_NULL,SUNSPEC_CURRENT_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;
-    // n= 9
+  int32_t reg = regs[key].template as<int32_t>();
+  int32_t offset = reg - SUNSPEC_BASE;
+  int32_t size = is_32bit ? 2 : 1;
+  
+  if (offset < 0 || (offset + size) > SUNSPEC_REGISTER_COUNT) {
+    return -1;
+  }
+  return offset;
+}
 
-    /* real power */
-    sunspecTable[n]= {.dst=&PhasePower[0].power,
-                       .reg=CHECK(SUNSPEC_REAL_POWER0_NULL,SUNSPEC_REAL_POWER0_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["real_power_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_REAL_POWER_SCALE_NULL,SUNSPEC_REAL_POWER_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;
-    sunspecTable[n]= {.dst=&PhasePower[1].power,
-                       .reg=CHECK(SUNSPEC_REAL_POWER1_NULL,SUNSPEC_REAL_POWER1_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["real_power_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_REAL_POWER_SCALE_NULL,SUNSPEC_REAL_POWER_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;                       
-    sunspecTable[n]= {.dst=&PhasePower[2].power,
-                       .reg=CHECK(SUNSPEC_REAL_POWER2_NULL,SUNSPEC_REAL_POWER2_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["real_power_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_REAL_POWER_SCALE_NULL,SUNSPEC_REAL_POWER_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;
-    // n = 12
 
-    /* apprant power */
-    sunspecTable[n]= {.dst=&PhasePower[0].apparentPower,
-                       .reg=CHECK(SUNSPEC_APPARANT_POWER0_NULL,SUNSPEC_APPARANT_POWER0_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["apparent_power_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_APPARANT_POWER_SCALE_NULL,SUNSPEC_APPARANT_POWER_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;
-    sunspecTable[n]= {.dst=&PhasePower[1].apparentPower,
-                       .reg=CHECK(SUNSPEC_APPARANT_POWER1_NULL,SUNSPEC_APPARANT_POWER1_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["apparent_power_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_APPARANT_POWER_SCALE_NULL,SUNSPEC_APPARANT_POWER_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;                       
-    sunspecTable[n]= {.dst=&PhasePower[2].apparentPower,
-                       .reg=CHECK(SUNSPEC_APPARANT_POWER2_NULL,SUNSPEC_APPARANT_POWER2_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["apparent_power_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_APPARANT_POWER_SCALE_NULL,SUNSPEC_APPARANT_POWER_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;
-    // n = 15
+template <typename TReg, typename TType, typename TScale>
+void add_sunspec_entry(int& index, JsonObject regs, double* dst, 
+                       TReg regKey, TType typeKey, 
+                       TScale scaleKey, double defaultVal) {
+  if (index >= N_SUNSPEC_TABLE) return;
 
-    /* power factor */
-    sunspecTable[n]= {.dst=&PhasePower[0].powerFactor,
-                       .reg=CHECK(SUNSPEC_POWER_FACTOR0_NULL,SUNSPEC_POWER_FACTOR0_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["power_factor_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_POWER_FACTOR_SCALE_NULL,SUNSPEC_POWER_FACTOR_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=1 };n++;
-    sunspecTable[n]= {.dst=&PhasePower[1].powerFactor,
-                       .reg=CHECK(SUNSPEC_POWER_FACTOR1_NULL,SUNSPEC_POWER_FACTOR1_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["power_factor_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_POWER_FACTOR_SCALE_NULL,SUNSPEC_POWER_FACTOR_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=1 };n++;                       
-    sunspecTable[n]= {.dst=&PhasePower[2].powerFactor,
-                       .reg=CHECK(SUNSPEC_POWER_FACTOR2_NULL,SUNSPEC_POWER_FACTOR2_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["power_factor_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_POWER_FACTOR_SCALE_NULL,SUNSPEC_POWER_FACTOR_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=1 };n++;
-    // n = 18
+  ModbusType mType = get_modbus_type(regs[typeKey] | "");
+  bool is32Bit = (mType == TYPE_INT32 || mType == TYPE_UINT32 || mType == TYPE_FLOAT32);
 
-    /* real energy exported */
-    sunspecTable[n]= {.dst=&PhaseEnergy[0].gridfeedin,
-                       .reg=CHECK(SUNSPEC_REAL_ENERGY_EXPORTED0_NULL,SUNSPEC_REAL_ENERGY_EXPORTED0_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["real_energy_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_REAL_ENERGY_SCALE_NULL,SUNSPEC_REAL_ENERGY_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;
-    sunspecTable[n]= {.dst=&PhaseEnergy[1].gridfeedin,
-                       .reg=CHECK(SUNSPEC_REAL_ENERGY_EXPORTED1_NULL,SUNSPEC_REAL_ENERGY_EXPORTED1_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["real_energy_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_REAL_ENERGY_SCALE_NULL,SUNSPEC_REAL_ENERGY_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;                       
-    sunspecTable[n]= {.dst=&PhaseEnergy[2].gridfeedin,
-                       .reg=CHECK(SUNSPEC_REAL_ENERGY_EXPORTED2_NULL,SUNSPEC_REAL_ENERGY_EXPORTED2_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["real_energy_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_REAL_ENERGY_SCALE_NULL,SUNSPEC_REAL_ENERGY_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;
-    // n = 21
+  sunspecTable[index] = {
+    .dst = dst,
+    .reg = get_checked_reg(regs, regKey, is32Bit),
+    .modbusType = mType,
+    .scale_register = get_checked_reg(regs, scaleKey, false),
+    .offset = 0,
+    .defaultVal = defaultVal
+  };
+  index++;
+}
 
-    /* real energy imported */
-    sunspecTable[n]= {.dst=&PhaseEnergy[0].consumption,
-                       .reg=CHECK(SUNSPEC_REAL_ENERGY_IMPORTED0_NULL,SUNSPEC_REAL_ENERGY_IMPORTED0_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["real_energy_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_REAL_ENERGY_SCALE_NULL,SUNSPEC_REAL_ENERGY_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;
-    sunspecTable[n]= {.dst=&PhaseEnergy[1].consumption,
-                       .reg=CHECK(SUNSPEC_REAL_ENERGY_IMPORTED1_NULL,SUNSPEC_REAL_ENERGY_IMPORTED1_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["real_energy_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_REAL_ENERGY_SCALE_NULL,SUNSPEC_REAL_ENERGY_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;                       
-    sunspecTable[n]= {.dst=&PhaseEnergy[2].consumption,
-                       .reg=CHECK(SUNSPEC_REAL_ENERGY_IMPORTED2_NULL,SUNSPEC_REAL_ENERGY_IMPORTED2_INT),
-                       .modbusType = get_modbus_type(config_doc["sunspec_registers"]["real_energy_type"].as<String>()),
-                       .scale_register=CHECK(SUNSPEC_REAL_ENERGY_SCALE_NULL,SUNSPEC_REAL_ENERGY_SCALE_INT),
-                       .offset =0,
-                       .defaultVal=0 };n++;
-    // n = 24
 
+void add_phase_entry(int& index, JsonObject regs, double* dst, 
+                     const __FlashStringHelper* baseKey, int idx, 
+                     const __FlashStringHelper* typeKey, 
+                     const __FlashStringHelper* scaleKey, double defaultVal) {
+  char keyBuf[32];
+  snprintf_P(keyBuf, sizeof(keyBuf), PSTR("%S%d"), baseKey, idx);
+  add_sunspec_entry(index, regs, dst, keyBuf, typeKey, scaleKey, defaultVal);
+}
+
+
+void add_phase_entry(int& index, JsonObject regs, double* dst, 
+                     const char* baseKey, int idx, 
+                     const char* typeKey, 
+                     const char* scaleKey, double defaultVal) {
+  char keyBuf[32];
+  snprintf_P(keyBuf, sizeof(keyBuf), PSTR("%s%d"), baseKey, idx);
+  add_sunspec_entry(index, regs, dst, keyBuf, typeKey, scaleKey, defaultVal);
+}
+
+void convert_json_to_sunspec_registers() {
+  if (!config_doc["sunspec"].isNull()) {
+    modbusdev_int = config_doc["sunspec"]["modbus_dev"].as<uint8_t>();
+    sunspec_port_int = config_doc["sunspec"]["modbus_port"].as<uint16_t>();
+    modbus_ip.fromString(config_doc["sunspec"]["modbus_ip"] | "");
   }
 
+  JsonObject regs = config_doc["sunspec_registers"];
+  if (regs.isNull()) return;
+
+  SUNSPEC_BASE = regs["base"].isNull() ? 0xFFFF : min(0xFFFF, regs["base"].as<int>());
+  SUNSPEC_REGISTER_COUNT = regs["register_count"].isNull() ? 0 : min(MAX_MODBUS_REGISTERS, regs["register_count"].as<int>());
+
+  int n = 0;
+
+  for (int i = 0; i < 3; i++) {
+    add_sunspec_entry(n, regs, &PhasePower[i].frequency, 
+                      F("frequency"), F("frequency_type"), F("frequency_scale"), 50.0);
+  }
+
+  for (int i = 0; i < 3; i++) {
+    add_phase_entry(n, regs, &PhasePower[i].voltage,       F("voltage"),              i, F("voltage_type"),        F("voltage_scale"),        230.0);
+    add_phase_entry(n, regs, &PhasePower[i].current,       F("current"),              i, F("current_type"),        F("current_scale"),        0.0);
+    add_phase_entry(n, regs, &PhasePower[i].power,         F("real_power"),           i, F("real_power_type"),     F("real_power_scale"),     0.0);
+    add_phase_entry(n, regs, &PhasePower[i].apparentPower, F("apparent_power"),       i, F("apparent_power_type"), F("apparent_power_scale"), 0.0);
+    add_phase_entry(n, regs, &PhasePower[i].powerFactor,   F("power_factor"),         i, F("power_factor_type"),   F("power_factor_scale"),   1.0);
+    add_phase_entry(n, regs, &PhaseEnergy[i].gridfeedin,   F("real_energy_exported"), i, F("real_energy_type"),    F("real_energy_scale"),    0.0);
+    add_phase_entry(n, regs, &PhaseEnergy[i].consumption,  F("real_energy_imported"), i, F("real_energy_type"),    F("real_energy_scale"),    0.0);
+ }
 
 }
 
