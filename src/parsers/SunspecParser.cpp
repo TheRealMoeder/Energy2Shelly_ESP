@@ -24,7 +24,7 @@ struct SunspecMap {
 
 
 #define N_SUNSPEC_TABLE 24
-SunspecMap sunspecTable[N_SUNSPEC_TABLE] = {0};
+SunspecMap *sunspecTable=NULL;
 
 
 ModbusType get_modbus_type(const String& type) {
@@ -81,9 +81,14 @@ void add_phase_entry(int& index, JsonObject regs, double* dst,
                      const __FlashStringHelper* typeKey, 
                      const __FlashStringHelper* scaleKey, double defaultVal) {
   char keyBuf[32];
+#if defined(ESP32)
+  snprintf(keyBuf, sizeof(keyBuf), "%s%d", reinterpret_cast<const char*>(baseKey), idx);
+#else
   snprintf_P(keyBuf, sizeof(keyBuf), PSTR("%S%d"), baseKey, idx);
+#endif
   add_sunspec_entry(index, regs, dst, keyBuf, typeKey, scaleKey, defaultVal);
 }
+
 
 
 void add_phase_entry(int& index, JsonObject regs, double* dst, 
@@ -107,6 +112,10 @@ void convert_json_to_sunspec_registers() {
 
   SUNSPEC_BASE = regs["base"].isNull() ? 0xFFFF : min(0xFFFF, regs["base"].as<int>());
   SUNSPEC_REGISTER_COUNT = regs["register_count"].isNull() ? 0 : min(MAX_MODBUS_REGISTERS, regs["register_count"].as<int>());
+
+
+  if (sunspecTable==NULL) { sunspecTable = new SunspecMap[N_SUNSPEC_TABLE]; }
+  memset(sunspecTable, 0, N_SUNSPEC_TABLE * sizeof(SunspecMap));
 
   int n = 0;
 
