@@ -109,16 +109,9 @@ static void destroyClientObjects()
   }
 
   if (modbus1 != nullptr) {
-    modbus1->disconnect(modbus_ip); 
-    modbus1->dropTransactions();     
-    delay(10);                   
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
     delete modbus1;
-#pragma GCC diagnostic pop
     modbus1 = nullptr;
   }
-  
   if (modbus_result!=nullptr) {
     delete modbus_result;
     modbus_result = nullptr;
@@ -264,10 +257,6 @@ void interprete_parameters()
         filter["sunspec_registers"]=true;
         remove_filtered_parameters_ram(filter);
         DEBUG_SERIAL.println(F("Enabling SUNSPEC data input"));
-        modbus1 = new ModbusIP();
-        modbus1->client();
-        DEBUG_SERIAL.println(F("Trying to connect SUNSPEC powermeter data"));
-        modbus1->connect(modbus_ip, sunspec_port_int);
         break;
    case input_type_enum::TIBBERPULSE:
         filter["tibber"]=true;
