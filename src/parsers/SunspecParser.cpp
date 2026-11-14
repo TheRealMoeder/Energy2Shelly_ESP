@@ -14,12 +14,12 @@ enum ModbusType {
 };
 
 struct SunspecMap {
-    double* dst;              
-    int32_t reg;            
-    ModbusType modbusType;  
-    int32_t scale_register;    
     double offset;          
-    double defaultVal;      
+    double defaultVal;    
+    double* dst;              
+    int32_t reg;    
+    int32_t scale_register;    
+    ModbusType modbusType;       
 };
 
 
@@ -65,12 +65,12 @@ void add_sunspec_entry(int& index, JsonObject regs, double* dst,
   bool is32Bit = (mType == TYPE_INT32 || mType == TYPE_UINT32 || mType == TYPE_FLOAT32);
 
   sunspecTable[index] = {
+    .offset = 0,
+    .defaultVal = defaultVal,
     .dst = dst,
     .reg = get_checked_reg(regs, regKey, is32Bit),
-    .modbusType = mType,
     .scale_register = get_checked_reg(regs, scaleKey, false),
-    .offset = 0,
-    .defaultVal = defaultVal
+    .modbusType = mType
   };
   index++;
 }
