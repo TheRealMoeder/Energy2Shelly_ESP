@@ -3,6 +3,56 @@
 #include "../data/DataStructures.h"
 #include "RpcComm.h"
 
+#define MAX_TRACKED_WS_CLIENTS 5
+#define WS_RPC_ACTIVE_WINDOW_MS 5000
+
+struct WsClientSlot {
+    uint32_t id;
+    unsigned long lastRpcTime;
+    bool inUse;
+};
+
+static WsClientSlot trackedClients[MAX_TRACKED_WS_CLIENTS] = {0};
+
+static void updateClientActivity(uint32_t clientId, bool isRpcTraffic) {
+    int freeSlot = -1;
+    int oldestSlot = 0;
+    unsigned long oldestTime = ULONG_MAX;
+
+    for (int i = 0; i < MAX_TRACKED_WS_CLIENTS; i++) {
+        if (trackedClients[i].inUse) {
+            if (trackedClients[i].id == clientId) {
+                if (isRpcTraffic) {
+                    trackedClients[i].lastRpcTime = millis();
+                }
+                return;
+            }
+            if (trackedClients[i].lastRpcTime < oldestTime) {
+                oldestTime = trackedClients[i].lastRpcTime;
+                oldestSlot = i;
+            }
+        } else if (freeSlot == -1) {
+            freeSlot = i;
+        }
+    }
+
+    int targetSlot = (freeSlot != -1) ? freeSlot : oldestSlot;
+    trackedClients[targetSlot].id = clientId;
+    trackedClients[targetSlot].lastRpcTime = isRpcTraffic ? millis() : 0;
+    trackedClients[targetSlot].inUse = true;
+}
+
+static void removeClientSlot(uint32_t clientId) {
+    for (int i = 0; i < MAX_TRACKED_WS_CLIENTS; i++) {
+        if (trackedClients[i].inUse && trackedClients[i].id == clientId) {
+            trackedClients[i].inUse = false;
+            trackedClients[i].id = 0;
+            trackedClients[i].lastRpcTime = 0;
+            return;
+        }
+    }
+}
+
 // Aligned with Shelly API docs: Script.GetCode
 size_t scriptGetCode(char* buffer, size_t maxLen) {
     int written = snprintf_P(buffer, maxLen, PSTR("{\"data\":\"\",\"left\":\"0\"}"));
@@ -68,9 +118,11 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
 {
   switch (type) {
     case WS_EVT_DISCONNECT:
+      removeClientSlot(client->id());
       DEBUG_SERIAL.printf("[%u] Websocket: disconnected!\n", (unsigned int)client->id());
       break;
     case WS_EVT_CONNECT:
+      updateClientActivity(client->id(), false);
       DEBUG_SERIAL.printf("[%u] Websocket: connected from %s\n", (unsigned int)client->id(), client->remoteIP().toString().c_str());
       break;
     case WS_EVT_DATA: {
@@ -88,11 +140,17 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
         const char* method = json["method"] | "";
         const char* src = json["src"] | "EMPTY";
 
+        updateClientActivity(client->id(), true);
+
         String wsAnswer;
         buildRpcResponse(method, localRpcId, src, wsAnswer);
 
         if (wsAnswer.length() > 0 && client->status() == WS_CONNECTED) {
-          client->text(wsAnswer);
+          if (client->canSend()) {
+            client->text(wsAnswer);
+          } else {
+            DEBUG_SERIAL.printf("[%u] Websocket: TX queue full, dropping RPC reply\n", (unsigned int)client->id());
+          }
         }
       }
       break;
@@ -104,7 +162,7 @@ void webSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEve
   }
 }
 
-// Push live data packets to connected WebSockets completely string/JSON-document-free via stack buffering
+// Push live data packets to connected WebSockets, if they don't actively query
 // Home Assistant only polls once on connect and relies on these notifications afterwards.
 // Event driven: sent as soon as a data source has written new values. The minimum interval
 // (NOTIFY_STATUS_MIN_INTERVAL) merges updates that arrive in several parts (e.g. one MQTT message per phase).
@@ -120,9 +178,7 @@ void notifyStatusWebSocket() {
   if (!powerChanged && !energyChanged) {
     return;
   }
-  if (!webSocket.availableForWriteAll()) {
-    return; // a client is not consuming its queue, try again on the next pass
-  }
+
   lastNotify = millis();
   memcpy(lastPower, PhasePower, sizeof(lastPower));
   memcpy(lastEnergy, PhaseEnergy, sizeof(lastEnergy));
@@ -133,7 +189,7 @@ void notifyStatusWebSocket() {
   if (powerChanged) {
     float total_power = PhasePower[0].power + PhasePower[1].power + PhasePower[2].power;
     float total_apparent = PhasePower[0].apparentPower + PhasePower[1].apparentPower + PhasePower[2].apparentPower;
-    
+
     snprintf_P(emStatusBuffer, sizeof(emStatusBuffer),
       PSTR("\"em:0\":{\"id\":0,\"a_current\":%.2f,\"a_voltage\":%.2f,\"a_act_power\":%.2f,\"a_aprt_power\":%.2f,\"a_pf\":%.2f,\"a_freq\":%.2f,"
       "\"b_current\":%.2f,\"b_voltage\":%.2f,\"b_act_power\":%.2f,\"b_aprt_power\":%.2f,\"b_pf\":%.2f,\"b_freq\":%.2f,"
@@ -177,7 +233,13 @@ void notifyStatusWebSocket() {
   message = String(finalPtr);
   DEBUG_SERIAL.print(F("NotifyStatus: "));
   DEBUG_SERIAL.println(message);
-  webSocket.textAll(message);
+
+  unsigned long now = millis();
+  for (int i = 0; i < MAX_TRACKED_WS_CLIENTS; i++) {
+    if (trackedClients[i].inUse && (trackedClients[i].lastRpcTime == 0 || (now - trackedClients[i].lastRpcTime) >= WS_RPC_ACTIVE_WINDOW_MS)) {
+        webSocket.text(trackedClients[i].id, message);
+    }
+  }
 }
 
 void parseUdpRPC() {
