@@ -2,7 +2,26 @@
 #include "../data/DataProcessing.h"
 #include "../data/DataStructures.h"
 
-#define SUNSPEC_scale(n) (abs(n) < 10 ? pow(10.0, (double)n) : 1.0)
+
+
+
+
+const char STR_INT16[]   PROGMEM = "int16";
+const char STR_UINT16[]  PROGMEM = "uint16";
+const char STR_INT32[]   PROGMEM = "int32";
+const char STR_UINT32[]  PROGMEM = "uint32";
+const char STR_FLOAT32[] PROGMEM = "float32";
+
+template <typename... Args>
+constexpr size_t max_sizeof(const Args&... args) {
+  size_t result = 0;
+  ((result = sizeof(args) > result ? sizeof(args) : result), ...);
+  return result;
+}
+
+constexpr size_t MAX_TYPE_LEN = max_sizeof(
+  STR_INT16, STR_UINT16, STR_INT32, STR_UINT32, STR_FLOAT32
+);
 
 enum ModbusType {
   TYPE_UNKNOWN,
@@ -12,6 +31,80 @@ enum ModbusType {
   TYPE_UINT32,
   TYPE_FLOAT32
 };
+
+struct ModbusTypeEntry {
+  const char* name;
+  ModbusType type;
+};
+
+const ModbusTypeEntry MODBUS_TYPES[] PROGMEM = {
+  { STR_INT16,   TYPE_INT16   },
+  { STR_UINT16,  TYPE_UINT16  },
+  { STR_INT32,   TYPE_INT32   },
+  { STR_UINT32,  TYPE_UINT32  },
+  { STR_FLOAT32, TYPE_FLOAT32 }
+};
+
+constexpr size_t MODBUS_TYPES_COUNT = sizeof(MODBUS_TYPES) / sizeof(MODBUS_TYPES[0]);
+
+ModbusType get_modbus_type(const char* type) {
+  if (!type) return TYPE_UNKNOWN;
+
+  for (size_t i = 0; i < MODBUS_TYPES_COUNT; ++i) {
+    const char* flash_str = reinterpret_cast<const char*>(pgm_read_ptr(&MODBUS_TYPES[i].name));
+    
+    if (strncmp_P(type, flash_str, MAX_TYPE_LEN) == 0) {
+      return static_cast<ModbusType>(pgm_read_byte(&MODBUS_TYPES[i].type));
+    }
+  }
+  return TYPE_UNKNOWN;
+}
+
+ModbusType get_modbus_type(const __FlashStringHelper* type) {
+  if (!type) return TYPE_UNKNOWN;
+
+  char buf[MAX_TYPE_LEN];
+  strncpy_P(buf, reinterpret_cast<const char*>(type), MAX_TYPE_LEN - 1);
+  buf[MAX_TYPE_LEN - 1] = '\0';
+
+  return get_modbus_type(buf);
+}
+
+ModbusType get_modbus_type(const String& type) {
+  return get_modbus_type(type.c_str());
+}
+
+
+
+const double SCALE_FACTORS[] PROGMEM = {
+  1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1,
+  1.0,
+  1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10
+};
+
+inline double get_sunspec_scale(int16_t n) {
+  if (n >= -10 && n <= 10) {
+    return pgm_read_double(&SCALE_FACTORS[n + 10]);
+  }
+  return 1.0;
+}
+
+const float SCALE_FACTORS_F[] PROGMEM = {
+  1e-10f, 1e-9f, 1e-8f, 1e-7f, 1e-6f, 1e-5f, 1e-4f, 1e-3f, 1e-2f, 1e-1f,
+  1.0f,
+  1e1f, 1e2f, 1e3f, 1e4f, 1e5f, 1e6f, 1e7f, 1e8f, 1e9f, 1e10f
+};
+
+inline double get_sunspec_scale_f(int16_t n) {
+  if (n >= -10 && n <= 10) {
+    return pgm_read_float(&SCALE_FACTORS_F[n + 10]);
+  }
+  return 1.0f;
+}
+
+
+
+#define SUNSPEC_scale(n) (abs(n) < 10 ? pow(10.0, (double)n) : 1.0)
 
 struct SunspecMap {
     double offset;          
@@ -25,16 +118,6 @@ struct SunspecMap {
 
 #define N_SUNSPEC_TABLE 24
 SunspecMap *sunspecTable=NULL;
-
-
-ModbusType get_modbus_type(const String& type) {
-  if (type == "int16")   return TYPE_INT16;
-  if (type == "uint16")  return TYPE_UINT16;
-  if (type == "int32")   return TYPE_INT32;
-  if (type == "uint32")  return TYPE_UINT32;
-  if (type == "float32") return TYPE_FLOAT32;
-  return TYPE_UNKNOWN;
-}
 
 int32_t SUNSPEC_BASE = 0;
 int32_t SUNSPEC_REGISTER_COUNT=0;
@@ -184,7 +267,7 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
           sunspecTable[n].dst[0]=sunspecTable[n].defaultVal;
           continue;
         }
-        scale =  (sunspecTable[n].scale_register>=0) ? SUNSPEC_scale(modbus_result[sunspecTable[n].scale_register])  : 1.0;
+        scale =  (sunspecTable[n].scale_register>=0) ? get_sunspec_scale(modbus_result[sunspecTable[n].scale_register])  : 1.0;
         sunspecTable[n].dst[0]=convert_modbus_type(&modbus_result[sunspecTable[n].reg],sunspecTable[n].modbusType)*scale;
 
       }
