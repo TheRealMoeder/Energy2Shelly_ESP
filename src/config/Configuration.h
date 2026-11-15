@@ -326,8 +326,9 @@ extern IPAddress multicastIP;
 
 // MODBUS settings
 extern IPAddress modbus_ip;
+#define MAX_MODBUS_REGISTERS 256
+extern int16_t *modbus_result;
 extern ModbusIP* modbus1;
-extern int16_t modbus_result[256];
 
 // Default electrical values and offset
 extern const uint8_t defaultVoltage;
@@ -401,7 +402,9 @@ void WifiManagerSetup(bool stationmode);
 void setupMdns();
 void interprete_parameters();
 bool save_parameters();
-void load_parameters();
+void load_filtered_parameters(JsonVariantConst filter);
+String read_config_as_string();
 void mergeJson(JsonObject target, JsonObjectConst source);
+void remove_filtered_parameters_ram(JsonVariantConst filter);
 void wifi_scan();
 #endif // CONFIGURATION_H

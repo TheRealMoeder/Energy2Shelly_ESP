@@ -684,10 +684,9 @@ void loop()
     DEBUG_SERIAL.println(F("New keys"));
     input_type_enum previous_input_type = current_input_type;
 
-    load_parameters();
-    serializeJsonPretty(config_doc, DEBUG_SERIAL);
-    DEBUG_SERIAL.println();
     interprete_parameters();
+    serializeJsonPretty(config_doc, DEBUG_SERIAL);
+    DEBUG_SERIAL.println();   
     parametersUpdated = false;
 
     if (previous_input_type != current_input_type) {
