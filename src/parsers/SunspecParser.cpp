@@ -23,11 +23,13 @@ constexpr size_t MAX_TYPE_LEN = max_sizeof(
   STR_INT16, STR_UINT16, STR_INT32, STR_UINT32, STR_FLOAT32
 );
 
+#define MODBUSTYPE_32BIT_DOMAIN 128
+
 enum ModbusType {
-  TYPE_UNKNOWN,
+  TYPE_UNKNOWN=0,
   TYPE_INT16,
   TYPE_UINT16,
-  TYPE_INT32,
+  TYPE_INT32=MODBUSTYPE_32BIT_DOMAIN,
   TYPE_UINT32,
   TYPE_FLOAT32
 };
@@ -75,20 +77,6 @@ ModbusType get_modbus_type(const String& type) {
 }
 
 
-
-const double SCALE_FACTORS[] PROGMEM = {
-  1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1,
-  1.0,
-  1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10
-};
-
-inline double get_sunspec_scale(int16_t n) {
-  if (n >= -10 && n <= 10) {
-    return pgm_read_double(&SCALE_FACTORS[n + 10]);
-  }
-  return 1.0;
-}
-
 const float SCALE_FACTORS_F[] PROGMEM = {
   1e-10f, 1e-9f, 1e-8f, 1e-7f, 1e-6f, 1e-5f, 1e-4f, 1e-3f, 1e-2f, 1e-1f,
   1.0f,
@@ -102,13 +90,7 @@ inline double get_sunspec_scale_f(int16_t n) {
   return 1.0f;
 }
 
-
-
-#define SUNSPEC_scale(n) (abs(n) < 10 ? pow(10.0, (double)n) : 1.0)
-
 struct SunspecMap {
-    double offset;          
-    double defaultVal;    
     double* dst;              
     int32_t reg;    
     int32_t scale_register;    
@@ -141,15 +123,13 @@ int32_t get_checked_reg(JsonObject regs, TKey key, bool is_32bit = false) {
 template <typename TReg, typename TType, typename TScale>
 void add_sunspec_entry(int& index, JsonObject regs, double* dst, 
                        TReg regKey, TType typeKey, 
-                       TScale scaleKey, double defaultVal) {
+                       TScale scaleKey) {
   if (index >= N_SUNSPEC_TABLE) return;
 
   ModbusType mType = get_modbus_type(regs[typeKey] | "");
-  bool is32Bit = (mType == TYPE_INT32 || mType == TYPE_UINT32 || mType == TYPE_FLOAT32);
+  bool is32Bit = (mType >= MODBUSTYPE_32BIT_DOMAIN);
 
   sunspecTable[index] = {
-    .offset = 0,
-    .defaultVal = defaultVal,
     .dst = dst,
     .reg = get_checked_reg(regs, regKey, is32Bit),
     .scale_register = get_checked_reg(regs, scaleKey, false),
@@ -162,14 +142,14 @@ void add_sunspec_entry(int& index, JsonObject regs, double* dst,
 void add_phase_entry(int& index, JsonObject regs, double* dst, 
                      const __FlashStringHelper* baseKey, int idx, 
                      const __FlashStringHelper* typeKey, 
-                     const __FlashStringHelper* scaleKey, double defaultVal) {
+                     const __FlashStringHelper* scaleKey) {
   char keyBuf[32];
 #if defined(ESP32)
   snprintf(keyBuf, sizeof(keyBuf), "%s%d", reinterpret_cast<const char*>(baseKey), idx);
 #else
   snprintf_P(keyBuf, sizeof(keyBuf), PSTR("%S%d"), baseKey, idx);
 #endif
-  add_sunspec_entry(index, regs, dst, keyBuf, typeKey, scaleKey, defaultVal);
+  add_sunspec_entry(index, regs, dst, keyBuf, typeKey, scaleKey);
 }
 
 
@@ -177,10 +157,10 @@ void add_phase_entry(int& index, JsonObject regs, double* dst,
 void add_phase_entry(int& index, JsonObject regs, double* dst, 
                      const char* baseKey, int idx, 
                      const char* typeKey, 
-                     const char* scaleKey, double defaultVal) {
+                     const char* scaleKey) {
   char keyBuf[32];
   snprintf_P(keyBuf, sizeof(keyBuf), PSTR("%s%d"), baseKey, idx);
-  add_sunspec_entry(index, regs, dst, keyBuf, typeKey, scaleKey, defaultVal);
+  add_sunspec_entry(index, regs, dst, keyBuf, typeKey, scaleKey);
 }
 
 void convert_json_to_sunspec_registers() {
@@ -204,22 +184,22 @@ void convert_json_to_sunspec_registers() {
 
   for (int i = 0; i < 3; i++) {
     add_sunspec_entry(n, regs, &PhasePower[i].frequency, 
-                      F("frequency"), F("frequency_type"), F("frequency_scale"), 50.0);
+                      F("frequency"), F("frequency_type"), F("frequency_scale"));
   }
 
   for (int i = 0; i < 3; i++) {
-    add_phase_entry(n, regs, &PhasePower[i].voltage,       F("voltage"),              i, F("voltage_type"),        F("voltage_scale"),        230.0);
-    add_phase_entry(n, regs, &PhasePower[i].current,       F("current"),              i, F("current_type"),        F("current_scale"),        0.0);
-    add_phase_entry(n, regs, &PhasePower[i].power,         F("real_power"),           i, F("real_power_type"),     F("real_power_scale"),     0.0);
-    add_phase_entry(n, regs, &PhasePower[i].apparentPower, F("apparent_power"),       i, F("apparent_power_type"), F("apparent_power_scale"), 0.0);
-    add_phase_entry(n, regs, &PhasePower[i].powerFactor,   F("power_factor"),         i, F("power_factor_type"),   F("power_factor_scale"),   1.0);
-    add_phase_entry(n, regs, &PhaseEnergy[i].gridfeedin,   F("real_energy_exported"), i, F("real_energy_type"),    F("real_energy_scale"),    0.0);
-    add_phase_entry(n, regs, &PhaseEnergy[i].consumption,  F("real_energy_imported"), i, F("real_energy_type"),    F("real_energy_scale"),    0.0);
+    add_phase_entry(n, regs, &PhasePower[i].voltage,       F("voltage"),              i, F("voltage_type"),        F("voltage_scale"));
+    add_phase_entry(n, regs, &PhasePower[i].current,       F("current"),              i, F("current_type"),        F("current_scale"));
+    add_phase_entry(n, regs, &PhasePower[i].power,         F("real_power"),           i, F("real_power_type"),     F("real_power_scale"));
+    add_phase_entry(n, regs, &PhasePower[i].apparentPower, F("apparent_power"),       i, F("apparent_power_type"), F("apparent_power_scale"));
+    add_phase_entry(n, regs, &PhasePower[i].powerFactor,   F("power_factor"),         i, F("power_factor_type"),   F("power_factor_scale"));
+    add_phase_entry(n, regs, &PhaseEnergy[i].gridfeedin,   F("real_energy_exported"), i, F("real_energy_type"),    F("real_energy_scale"));
+    add_phase_entry(n, regs, &PhaseEnergy[i].consumption,  F("real_energy_imported"), i, F("real_energy_type"),    F("real_energy_scale"));
  }
 
 }
 
-double convert_modbus_type(int16_t *data, ModbusType type) {
+float convert_modbus_type(int16_t *data, ModbusType type) {
   uint16_t *u16_data = (uint16_t *)data;
 
   switch (type) {
@@ -251,6 +231,17 @@ double convert_modbus_type(int16_t *data, ModbusType type) {
   }
 }
 
+double check_and_deliver_default_value(double *target)
+{
+  for (int n=0;n<3;n++) {
+    if (target==&PhasePower[n].voltage) return 230.0;
+    if (target==&PhasePower[n].frequency) return 50.0;
+    if (target==&PhasePower[n].powerFactor) return 1.0;
+  }
+  return 0;
+}
+
+
 bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, void *data)
 {
  
@@ -260,15 +251,15 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
 
  
     int32_t power = 0;
-    double scale=1.0;
+    float scale=1.0f;
     for (int n=0;n<N_SUNSPEC_TABLE;n++) {
       if (sunspecTable[n].dst!=NULL) {
         if (sunspecTable[n].reg<0) {
-          sunspecTable[n].dst[0]=sunspecTable[n].defaultVal;
+          sunspecTable[n].dst[0]=check_and_deliver_default_value(sunspecTable[n].dst);
           continue;
         }
-        scale =  (sunspecTable[n].scale_register>=0) ? get_sunspec_scale(modbus_result[sunspecTable[n].scale_register])  : 1.0;
-        sunspecTable[n].dst[0]=convert_modbus_type(&modbus_result[sunspecTable[n].reg],sunspecTable[n].modbusType)*scale;
+        scale =  (sunspecTable[n].scale_register>=0) ? get_sunspec_scale_f(modbus_result[sunspecTable[n].scale_register])  : 1.0f;
+        sunspecTable[n].dst[0]= (double) (convert_modbus_type(&modbus_result[sunspecTable[n].reg],sunspecTable[n].modbusType)*scale);
 
       }
       
