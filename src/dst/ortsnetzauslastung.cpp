@@ -113,6 +113,7 @@ void ONA_sendMeasurementTask(void * pvParameters) {
 
 #ifdef ESP8266
 static volatile bool ona_esp8266_has_data = false;
+static BearSSL::Session ona_ssl_session;
 static BearSSL::WiFiClientSecure ona_client;
 static HTTPClient http_client;
 static bool ona_setup_active = false;
@@ -275,6 +276,7 @@ void ONA_Setup() {
     
     xTaskCreate(ONA_sendMeasurementTask, "ONAHTTPTask", 8192, NULL, 1, NULL);
 #elif defined(ESP8266)
+    ona_client.setSession(&ona_ssl_session);
     ona_client.setBufferSizes(1024, 512);
     ona_client.setTrustAnchors(&cert);
     ona_client.probeMaxFragmentLength("www.ortsnetz-auslastung.de", 443, 1024); 
