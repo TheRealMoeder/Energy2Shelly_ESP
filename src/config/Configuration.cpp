@@ -3,6 +3,9 @@
 #include "../parsers/SunspecParser.h"
 const char* configPath = "/config.json";
 unsigned long startMillis = 0;
+#ifdef ONA_ACTIVE
+unsigned long ONA_Millis = 0;
+#endif
 unsigned long currentMillis;
 // for time synchronization
 time_t now;
@@ -52,6 +55,13 @@ bool shouldReboot = false;
 
 // flags for data sources
 input_type_enum current_input_type  = input_type_enum::NONE;
+
+#ifdef ONA_ACTIVE
+bool enableONA = false;
+bool ONA_validfrequency = false;
+bool ONA_validVoltage = false;
+#endif
+
 
 // ============================================================================
 // NETWORK OBJECTS
@@ -222,8 +232,11 @@ void interprete_parameters()
   JsonDocument filter;
   config_doc.clear();
 
-  filter["shelly"]=true; filter["basic"]=true; filter["console"]=true; filter["led"]=true;
-
+  filter["shelly"]=true; filter["basic"]=true; filter["console"]=true; filter["led"]=true; 
+#ifdef ONA_ACTIVE
+  filter["ona"]=true;
+#endif
+  
   // Interpret the loaded parameters and set flags accordingly
   load_filtered_parameters(filter);
   serializeJsonPretty(config_doc,Serial);
@@ -291,7 +304,8 @@ void interprete_parameters()
     led_i = false;
   }
 
-  String temp=config_doc["console"]["web_console"]|"";
+  if (config_doc["console"]["web_console"].isNull())  config_doc["console"]["web_console"]="true";
+  String temp=config_doc["console"]["web_console"];
   if (strlen(temp.c_str())>=4 && strncmp(temp.c_str(), "true",4) == 0) {
     enableConsoleOutputWeb=true;
   }
@@ -318,7 +332,13 @@ void interprete_parameters()
     shelly_name = shelly_name.substring(0, 128);
   }
 
-config_doc.shrinkToFit();
+#ifdef ONA_ACTIVE
+  if (config_doc["ona"]["publish_period"].isNull())  config_doc["ona"]["publish_period"]=0;
+  enableONA=config_doc["ona"]["publish_period"].as<int>()>0;
+#endif
+  if (config_doc["ona"]["latitude"].isNull())  config_doc["ona"]["latitude"]=0.0;
+  if (config_doc["ona"]["longitude"].isNull()) config_doc["ona"]["longitude"]=0.0;
+  config_doc.shrinkToFit();
 
 }
 
@@ -458,13 +478,13 @@ void load_filtered_parameters(JsonVariantConst filter) {
 
 #if DEBUG
 WebDebugLogger DebugConsole;
-bool enableConsoleOutputSerial = true;
-bool enableConsoleOutputWeb = true;
+volatile bool enableConsoleOutputSerial = true;
+volatile bool enableConsoleOutputWeb = true;
 
 #else
 NullDebug EmptyConsole;
-bool enableConsoleOutputSerial = false;
-bool enableConsoleOutputWeb = false;
+volatile bool enableConsoleOutputSerial = false;
+volatile bool enableConsoleOutputWeb = false;
 
 #endif
 

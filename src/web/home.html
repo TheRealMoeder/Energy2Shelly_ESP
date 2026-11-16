@@ -68,7 +68,7 @@ function formatValue(value, unit = '', decimals = 1, scale = 1) {
 }
 
 function updatePowerData() {
-  fetch('/rpc/EM.GetStatus')
+  return fetch('/rpc/EM.GetStatus')
     .then(response => response.json())
     .then(data => {
       const phases = [
@@ -105,7 +105,7 @@ function updatePowerData() {
 }
 
 function updateEnergyData() {
-  fetch('/rpc/EMData.GetStatus')
+  return fetch('/rpc/EMData.GetStatus')
     .then(response => response.json())
     .then(data => {
       const phases = [
@@ -141,20 +141,24 @@ function updateTimestamp() {
   document.getElementById('timestamp').textContent = 'Last updated: ' + now.toLocaleString();
 }
 
-function refreshData() {
-  updatePowerData();
-  updateEnergyData();
+async function refreshData() {
+  await updatePowerData();
+  await updateEnergyData();
   updateTimestamp();
 }
 
+async function runUpdateLoop() {
+  try {
+    await refreshData();
+  } catch (error) {
+    console.error("Error Update:", error);
+  } finally {
+    setTimeout(runUpdateLoop, 5000);
+  }
+}
 // Initial load
 window.addEventListener('load', () => {
-  setTimeout(() => {
-    refreshData();
-    
-    
-    setInterval(refreshData, 5000);
-  }, 400); // 400ms delay to allow the page to render before fetching data
+  setTimeout(runUpdateLoop, 400); // 400ms delay to allow the page to render before fetching data
 });
 </script>
 </body>

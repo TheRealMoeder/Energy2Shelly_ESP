@@ -234,8 +234,14 @@ float convert_modbus_type(int16_t *data, ModbusType type) {
 double check_and_deliver_default_value(double *target)
 {
   for (int n=0;n<3;n++) {
-    if (target==&PhasePower[n].voltage) return 230.0;
-    if (target==&PhasePower[n].frequency) return 50.0;
+    if (target==&PhasePower[n].voltage) {
+      ONA_validVoltage = false;
+      return 230.0;
+    }
+    if (target==&PhasePower[n].frequency) {
+      ONA_validfrequency = false;  
+      return 50.0;
+    }
     if (target==&PhasePower[n].powerFactor) return 1.0;
   }
   return 0;
@@ -247,8 +253,12 @@ bool modbusSunSpecCallback(Modbus::ResultCode event, uint16_t transactionId, voi
  
   if (event == Modbus::EX_SUCCESS)
   {
-    // data available, process it
+#ifdef ONA_ACTIVE
+    ONA_validVoltage = true;
+    ONA_validfrequency = true;
+#endif
 
+    // data available, process it
  
     int32_t power = 0;
     float scale=1.0f;
