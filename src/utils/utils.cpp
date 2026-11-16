@@ -370,12 +370,14 @@ void status_print(void)
 
 String getISO8601Time() {
     time_t now;
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) {
-        return "1970-01-01T00:00:00Z"; // Fallback, 
+    time(&now); 
+
+    if (now < 1577836800) {//2020
+        return F("1970-01-01T00:00:00Z"); 
     }
-    time(&now);
-    gmtime_r(&now, &timeinfo); // In UTC 
+
+    struct tm timeinfo;
+    gmtime_r(&now, &timeinfo); 
 
     char buf[25];
     strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
@@ -383,14 +385,18 @@ String getISO8601Time() {
 }
 
 void getISO8601Time(char *buf, size_t size_buffer) {
+    if (size_buffer == 0) return; 
+
     time_t now;
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) {
-       strncpy(buf,"1970-01-01T00:00:00Z",size_buffer-1); //Fallback
+    time(&now); 
+
+    if (now < 1577836800) { //2020
+        snprintf_P(buf, size_buffer, PSTR("1970-01-01T00:00:00Z"));
+        return; 
     }
-    time(&now);
-    gmtime_r(&now, &timeinfo); // In UTC 
+
+    struct tm timeinfo;
+    gmtime_r(&now, &timeinfo); 
 
     strftime(buf, size_buffer, "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
-
 }
