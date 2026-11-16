@@ -19,8 +19,6 @@
 
 struct MeasurementData {
     char timeStr[25]; 
-    double latitude;
-    double longitude;
     float l1_v;
     float l2_v;
     float l3_v;
@@ -28,7 +26,10 @@ struct MeasurementData {
 };
 
 
-const char* api_url = "https://www.ortsnetz-auslastung.de/v1/measurements";
+double ONA_latitude;
+double ONA_longitude;
+
+const char api_url[] PROGMEM = "https://www.ortsnetz-auslastung.de/v1/measurements";
 
 
 const char ona_root_ca[] PROGMEM = R"=====(
@@ -77,8 +78,8 @@ void ONA_sendMeasurementTask(void * pvParameters) {
             if (WiFi.status() == WL_CONNECTED) {
                 doc.clear();
                 doc["observed_at"] = data.timeStr;
-                doc["latitude"] = config_doc["ona"]["latitude"].as<double>();
-                doc["longitude"] = config_doc["ona"]["longitude"].as<double>();
+                doc["latitude"] = ONA_latitude;
+                doc["longitude"] = ONA_longitude;
                 doc["l1_v"] = data.l1_v;
                 doc["l2_v"] = data.l2_v;
                 doc["l3_v"] = data.l3_v;
@@ -149,8 +150,8 @@ void ONA_loop_state_machine() {
                                 "\"smartmeter_model\":\"Energy2Shelly\","
                                 "\"integration_version\":\"%s\"%s}"),
                                 timestr,
-                                config_doc["ona"]["latitude"].as<double>(),
-                                config_doc["ona"]["longitude"].as<double>(),
+                                ONA_latitude,
+                                ONA_longitude,
                                 fabs(PhasePower[0].voltage),
                                 fabs(PhasePower[1].voltage),
                                 fabs(PhasePower[2].voltage),
@@ -233,10 +234,7 @@ bool ONA_sendMeasurement() {
     
     memset(data.timeStr,0,sizeof(data.timeStr));
     getISO8601Time(data.timeStr,sizeof(data.timeStr) - 1);
-
-    data.latitude = config_doc["ona"]["latitude"].as<double>();
-    data.longitude = config_doc["ona"]["longitude"].as<double>();
-    
+   
     //maybe some sources are indicating with the sign, if we have import or export. Force positiv
     data.l1_v = fabs(PhasePower[0].voltage); 
     data.l2_v = fabs(PhasePower[1].voltage);
@@ -268,6 +266,9 @@ BearSSL::X509List cert(ona_root_ca);
 #endif
 
 void ONA_Setup() {
+
+    ONA_latitude = config_doc["ona"]["latitude"].as<double>();
+    ONA_longitude = config_doc["ona"]["longitude"].as<double>();
 #ifdef ESP32
     ona_client.setCACert(ona_root_ca);
     onaQueue = xQueueCreate(ONA_QUEUE_SIZE, sizeof(MeasurementData));
