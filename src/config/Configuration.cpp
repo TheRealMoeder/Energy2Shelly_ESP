@@ -483,8 +483,8 @@ volatile bool enableConsoleOutputWeb = true;
 
 #else
 NullDebug EmptyConsole;
-bool enableConsoleOutputSerial = false;
-bool enableConsoleOutputWeb = false;
+volatile bool enableConsoleOutputSerial = false;
+volatile bool enableConsoleOutputWeb = false;
 
 #endif
 
