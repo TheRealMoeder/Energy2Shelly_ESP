@@ -21,6 +21,7 @@ struct MeasurementData {
     float l2_v;
     float l3_v;
     float frequency;
+    bool validFrequency;
 };
 
 
